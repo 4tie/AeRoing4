@@ -335,7 +335,7 @@ class AeRoing4Orchestrator:
                 if self._cancel_requested:
                     return
 
-                from ..pair_selection import PairSelectionMode
+                from ..aeroing4.pair_selection import PairSelectionMode
                 selection_mode = PairSelectionMode.AUTO_BEST_N
                 if run.pair_selection_mode == "manual":
                     selection_mode = PairSelectionMode.MANUAL

@@ -19,6 +19,7 @@ import pytest
 from backend.services.aeroing4.models import (
     AeRoing4RunStatus,
     AeRoing4StepStatus,
+    BiasCheckOutcome,
     PairCandidateStatus,
     PairDiscoveryResult,
     PairEvaluationRecord,
@@ -83,6 +84,11 @@ class TestPairDiscoveryOrchestration:
             AeRoing4StepStatus.PASSED,
             {"outcome": SmokeBacktestOutcome.PASS_ACTIVITY.value},
         )
+        bias_pass = _make_step_result(
+            "bias_check",
+            AeRoing4StepStatus.PASSED,
+            {"outcome": BiasCheckOutcome.PASS.value},
+        )
 
         # Discovery result: one valid candidate
         discovery_result = PairDiscoveryResult(
@@ -110,16 +116,40 @@ class TestPairDiscoveryOrchestration:
             },
         )
 
+        selection_ok = _make_step_result(
+            "pair_selection",
+            AeRoing4StepStatus.PASSED,
+            {"outcome": "selection_complete"},
+        )
+        baseline_ok = _make_step_result(
+            "portfolio_baseline",
+            AeRoing4StepStatus.PASSED,
+            {"outcome": "baseline_created"},
+        )
+        champion_ok = _make_step_result(
+            "initial_champion",
+            AeRoing4StepStatus.PASSED,
+            {"outcome": "champion_created"},
+        )
+
         with (
             patch("backend.services.aeroing4.orchestrator.ValidationStep") as val_cls,
             patch("backend.services.aeroing4.orchestrator.DataPreparationStep") as dp_cls,
             patch("backend.services.aeroing4.orchestrator.SmokeBacktestStep") as smoke_cls,
+            patch("backend.services.aeroing4.orchestrator.BiasCheckStep") as bias_cls,
             patch("backend.services.aeroing4.orchestrator.PairDiscoveryStep") as disc_cls,
+            patch("backend.services.aeroing4.orchestrator.PairSelectionStep") as sel_cls,
+            patch("backend.services.aeroing4.orchestrator.PortfolioBaselineStep") as base_cls,
+            patch("backend.services.aeroing4.orchestrator.InitialChampionStep") as champ_cls,
         ):
             val_cls.return_value.execute = AsyncMock(return_value=validation_ok)
             dp_cls.return_value.execute = AsyncMock(return_value=data_ok)
             smoke_cls.return_value.execute = AsyncMock(return_value=smoke_pass)
+            bias_cls.return_value.execute = AsyncMock(return_value=bias_pass)
             disc_cls.return_value.execute = AsyncMock(return_value=discovery_ok)
+            sel_cls.return_value.execute = AsyncMock(return_value=selection_ok)
+            base_cls.return_value.execute = AsyncMock(return_value=baseline_ok)
+            champ_cls.return_value.execute = AsyncMock(return_value=champion_ok)
 
             await orchestrator.start_run(run.run_id)
             await orchestrator._active_task
@@ -152,11 +182,13 @@ class TestPairDiscoveryOrchestration:
             patch("backend.services.aeroing4.orchestrator.ValidationStep") as val_cls,
             patch("backend.services.aeroing4.orchestrator.DataPreparationStep") as dp_cls,
             patch("backend.services.aeroing4.orchestrator.SmokeBacktestStep") as smoke_cls,
+            patch("backend.services.aeroing4.orchestrator.BiasCheckStep") as bias_cls,
             patch("backend.services.aeroing4.orchestrator.PairDiscoveryStep") as disc_cls,
         ):
             val_cls.return_value.execute = AsyncMock(return_value=validation_ok)
             dp_cls.return_value.execute = AsyncMock(return_value=data_ok)
             smoke_cls.return_value.execute = AsyncMock(return_value=smoke_no_signal)
+            # Bias check should not be called for NO_SIGNAL_ACTIVITY
 
             await orchestrator.start_run(run.run_id)
             await orchestrator._active_task
@@ -191,11 +223,13 @@ class TestPairDiscoveryOrchestration:
             patch("backend.services.aeroing4.orchestrator.ValidationStep") as val_cls,
             patch("backend.services.aeroing4.orchestrator.DataPreparationStep") as dp_cls,
             patch("backend.services.aeroing4.orchestrator.SmokeBacktestStep") as smoke_cls,
+            patch("backend.services.aeroing4.orchestrator.BiasCheckStep") as bias_cls,
             patch("backend.services.aeroing4.orchestrator.PairDiscoveryStep") as disc_cls,
         ):
             val_cls.return_value.execute = AsyncMock(return_value=validation_ok)
             dp_cls.return_value.execute = AsyncMock(return_value=data_ok)
             smoke_cls.return_value.execute = AsyncMock(return_value=smoke_fail)
+            # Bias check should not be called for EXECUTION_FAILURE
 
             await orchestrator.start_run(run.run_id)
             await orchestrator._active_task
@@ -223,16 +257,44 @@ class TestPairDiscoveryOrchestration:
             AeRoing4StepStatus.PASSED,
             {"outcome": SmokeBacktestOutcome.PASS_ACTIVITY.value},
         )
+        bias_pass = _make_step_result(
+            "bias_check",
+            AeRoing4StepStatus.PASSED,
+            {"outcome": BiasCheckOutcome.PASS.value},
+        )
+        selection_ok = _make_step_result(
+            "pair_selection",
+            AeRoing4StepStatus.PASSED,
+            {"outcome": "selection_complete"},
+        )
+        baseline_ok = _make_step_result(
+            "portfolio_baseline",
+            AeRoing4StepStatus.PASSED,
+            {"outcome": "baseline_created"},
+        )
+        champion_ok = _make_step_result(
+            "initial_champion",
+            AeRoing4StepStatus.PASSED,
+            {"outcome": "champion_created"},
+        )
 
         with (
             patch("backend.services.aeroing4.orchestrator.ValidationStep") as val_cls,
             patch("backend.services.aeroing4.orchestrator.DataPreparationStep") as dp_cls,
             patch("backend.services.aeroing4.orchestrator.SmokeBacktestStep") as smoke_cls,
+            patch("backend.services.aeroing4.orchestrator.BiasCheckStep") as bias_cls,
             patch("backend.services.aeroing4.orchestrator.PairDiscoveryStep") as disc_cls,
+            patch("backend.services.aeroing4.orchestrator.PairSelectionStep") as sel_cls,
+            patch("backend.services.aeroing4.orchestrator.PortfolioBaselineStep") as base_cls,
+            patch("backend.services.aeroing4.orchestrator.InitialChampionStep") as champ_cls,
         ):
             val_cls.return_value.execute = AsyncMock(return_value=validation_ok)
             dp_cls.return_value.execute = AsyncMock(return_value=data_ok)
             smoke_cls.return_value.execute = AsyncMock(return_value=smoke_pass)
+            bias_cls.return_value.execute = AsyncMock(return_value=bias_pass)
+            sel_cls.return_value.execute = AsyncMock(return_value=selection_ok)
+            base_cls.return_value.execute = AsyncMock(return_value=baseline_ok)
+            champ_cls.return_value.execute = AsyncMock(return_value=champion_ok)
 
             await orchestrator.start_run(run.run_id)
             await orchestrator._active_task
@@ -260,22 +322,50 @@ class TestPairDiscoveryOrchestration:
             AeRoing4StepStatus.PASSED,
             {"outcome": SmokeBacktestOutcome.PASS_ACTIVITY.value},
         )
+        bias_pass = _make_step_result(
+            "bias_check",
+            AeRoing4StepStatus.PASSED,
+            {"outcome": BiasCheckOutcome.PASS.value},
+        )
         discovery_no_candidates = _make_step_result(
             "pair_discovery",
             AeRoing4StepStatus.PASSED,
             {"outcome": "no_pair_candidates", "discovery_result": {}},
+        )
+        selection_ok = _make_step_result(
+            "pair_selection",
+            AeRoing4StepStatus.PASSED,
+            {"outcome": "no_pairs_selected"},
+        )
+        baseline_ok = _make_step_result(
+            "portfolio_baseline",
+            AeRoing4StepStatus.PASSED,
+            {"outcome": "baseline_created"},
+        )
+        champion_ok = _make_step_result(
+            "initial_champion",
+            AeRoing4StepStatus.PASSED,
+            {"outcome": "champion_created"},
         )
 
         with (
             patch("backend.services.aeroing4.orchestrator.ValidationStep") as val_cls,
             patch("backend.services.aeroing4.orchestrator.DataPreparationStep") as dp_cls,
             patch("backend.services.aeroing4.orchestrator.SmokeBacktestStep") as smoke_cls,
+            patch("backend.services.aeroing4.orchestrator.BiasCheckStep") as bias_cls,
             patch("backend.services.aeroing4.orchestrator.PairDiscoveryStep") as disc_cls,
+            patch("backend.services.aeroing4.orchestrator.PairSelectionStep") as sel_cls,
+            patch("backend.services.aeroing4.orchestrator.PortfolioBaselineStep") as base_cls,
+            patch("backend.services.aeroing4.orchestrator.InitialChampionStep") as champ_cls,
         ):
             val_cls.return_value.execute = AsyncMock(return_value=validation_ok)
             dp_cls.return_value.execute = AsyncMock(return_value=data_ok)
             smoke_cls.return_value.execute = AsyncMock(return_value=smoke_pass)
+            bias_cls.return_value.execute = AsyncMock(return_value=bias_pass)
             disc_cls.return_value.execute = AsyncMock(return_value=discovery_no_candidates)
+            sel_cls.return_value.execute = AsyncMock(return_value=selection_ok)
+            base_cls.return_value.execute = AsyncMock(return_value=baseline_ok)
+            champ_cls.return_value.execute = AsyncMock(return_value=champion_ok)
 
             await orchestrator.start_run(run.run_id)
             await orchestrator._active_task
@@ -335,10 +425,30 @@ class TestPairDiscoveryOrchestration:
             AeRoing4StepStatus.PASSED,
             {"outcome": SmokeBacktestOutcome.PASS_ACTIVITY.value},
         )
+        bias_pass = _make_step_result(
+            "bias_check",
+            AeRoing4StepStatus.PASSED,
+            {"outcome": BiasCheckOutcome.PASS.value},
+        )
         discovery_ok = _make_step_result(
             "pair_discovery",
             AeRoing4StepStatus.PASSED,
             {"outcome": "valid_candidates_found"},
+        )
+        selection_ok = _make_step_result(
+            "pair_selection",
+            AeRoing4StepStatus.PASSED,
+            {"outcome": "selection_complete"},
+        )
+        baseline_ok = _make_step_result(
+            "portfolio_baseline",
+            AeRoing4StepStatus.PASSED,
+            {"outcome": "baseline_created"},
+        )
+        champion_ok = _make_step_result(
+            "initial_champion",
+            AeRoing4StepStatus.PASSED,
+            {"outcome": "champion_created"},
         )
 
         captured_kwargs: dict = {}
@@ -351,12 +461,20 @@ class TestPairDiscoveryOrchestration:
             patch("backend.services.aeroing4.orchestrator.ValidationStep") as val_cls,
             patch("backend.services.aeroing4.orchestrator.DataPreparationStep") as dp_cls,
             patch("backend.services.aeroing4.orchestrator.SmokeBacktestStep") as smoke_cls,
+            patch("backend.services.aeroing4.orchestrator.BiasCheckStep") as bias_cls,
             patch("backend.services.aeroing4.orchestrator.PairDiscoveryStep") as disc_cls,
+            patch("backend.services.aeroing4.orchestrator.PairSelectionStep") as sel_cls,
+            patch("backend.services.aeroing4.orchestrator.PortfolioBaselineStep") as base_cls,
+            patch("backend.services.aeroing4.orchestrator.InitialChampionStep") as champ_cls,
         ):
             val_cls.return_value.execute = AsyncMock(return_value=validation_ok)
             dp_cls.return_value.execute = AsyncMock(return_value=data_ok)
             smoke_cls.return_value.execute = AsyncMock(return_value=smoke_pass)
+            bias_cls.return_value.execute = AsyncMock(return_value=bias_pass)
             disc_cls.return_value.execute = AsyncMock(side_effect=capture_execute)
+            sel_cls.return_value.execute = AsyncMock(return_value=selection_ok)
+            base_cls.return_value.execute = AsyncMock(return_value=baseline_ok)
+            champ_cls.return_value.execute = AsyncMock(return_value=champion_ok)
 
             await orchestrator.start_run(run.run_id)
             await orchestrator._active_task
