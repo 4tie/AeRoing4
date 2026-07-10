@@ -1,0 +1,15 @@
+{
+  "version_id": "opt_v001_t0001_18cb6866",
+  "strategy_name": "MultiMa",
+  "parent_version_id": "v001",
+  "created_at": "2026-05-30T16:14:45.782725Z",
+  "change_type": "optimization",
+  "creation_source": "optimizer_trial",
+  "proposal_id": null,
+  "source_run_id": null,
+  "acceptance_status": "rejected",
+  "accepted_at": null,
+  "rejected_at": "2026-05-30T16:14:59.655194Z",
+  "result_summary_run_id": "20260530T161445Z_MultiMa_opt_v001_t0001_18cb6866_bt001",
+  "quality_gate_results": []
+}

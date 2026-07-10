@@ -1,0 +1,48 @@
+{
+  "schema_version": "assistant_chat_session_v1",
+  "session_id": "4bc2094b-746c-42b9-b2a1-2d442490b3da",
+  "created_at": "2026-07-06T06:00:22.911226+00:00",
+  "updated_at": "2026-07-06T06:05:23.937988+00:00",
+  "model": "qwen3.5:4b",
+  "title": "AI Assistant Chat",
+  "messages": [
+    {
+      "id": "24812810-c033-47a3-bb38-b6bf8ab10f32",
+      "role": "user",
+      "content": "Think step by step: If I have 5 apples and eat 2, then buy 3 more, how many do I have? Show your reasoning in thinking tags.",
+      "created_at": "2026-07-06T06:05:23.937955+00:00"
+    },
+    {
+      "id": "c71c7f7c-20c5-4ddb-81a2-b6f99c2e748d",
+      "role": "assistant",
+      "content": "Ollama returned an empty response.",
+      "created_at": "2026-07-06T06:05:23.937980+00:00"
+    }
+  ],
+  "last_context_summary": {
+    "active_tab": "auto-quant",
+    "active_panel": null,
+    "strategy_name": "AIStrategy",
+    "optimizer_session_id": null,
+    "optimizer_trial_number": null,
+    "backtest_run_id": null,
+    "auto_quant_run_id": null,
+    "optimizer_phase": null,
+    "backtest_status": null,
+    "auto_quant_status": null,
+    "chips": [
+      {
+        "kind": "strategy",
+        "label": "AIStrategy"
+      },
+      {
+        "kind": "params",
+        "label": "strategy files"
+      }
+    ],
+    "warnings": [
+      "No active run or optimizer session is selected."
+    ]
+  },
+  "last_context_overrides": {}
+}

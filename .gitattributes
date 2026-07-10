@@ -1,0 +1,4 @@
+zipFile.zip filter=lfs diff=lfs merge=lfs -text
+user_data/hyperopt_results/*.fthypt filter=lfs diff=lfs merge=lfs -text
+user_data/backups/** filter=lfs diff=lfs merge=lfs -text
+*.sqlite filter=lfs diff=lfs merge=lfs -text

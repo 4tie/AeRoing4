@@ -1,0 +1,46 @@
+{
+  "style": "position",
+  "description": "Thresholds for position trading strategies (1d+ timeframes)",
+  "discovery": {
+    "min_profit_factor": 1.12,
+    "max_drawdown": 30.0,
+    "min_trades_per_year": 25,
+    "min_trades_floor": 8,
+    "min_trades_cap": 60,
+    "min_expectancy": 0.001,
+    "min_win_rate": 48.0
+  },
+  "validation": {
+    "min_profit_factor": 1.35,
+    "max_drawdown": 25.0,
+    "min_trades_per_year": 30,
+    "min_trades_floor": 8,
+    "min_trades_cap": 80,
+    "min_expectancy": 0.0015,
+    "min_win_rate": 50.0,
+    "min_pair_pass_rate": 0.6,
+    "min_oos_retention": 0.5
+  },
+  "elite_validation": {
+    "min_profit_factor": 1.55,
+    "max_drawdown": 20.0,
+    "min_trades_per_year": 40,
+    "min_trades_floor": 10,
+    "min_trades_cap": 100,
+    "min_expectancy": 0.002,
+    "min_win_rate": 55.0,
+    "min_pair_pass_rate": 0.7,
+    "min_oos_retention": 0.6,
+    "min_walk_forward_pass_rate": 0.6,
+    "min_robustness_score": 0.75
+  },
+  "ranking": {
+    "expectancy_weight": 0.20,
+    "profit_factor_weight": 0.20,
+    "drawdown_weight": 0.20,
+    "walk_forward_weight": 0.15,
+    "robustness_weight": 0.15,
+    "pair_consistency_weight": 0.05,
+    "trade_quality_weight": 0.05
+  }
+}

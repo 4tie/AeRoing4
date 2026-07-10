@@ -1,0 +1,33 @@
+{
+  "strategy_name": "DualMomentum",
+  "params": {
+    "buy": {
+      "ema_fast": 8,
+      "ema_slow": 21,
+      "rsi_long_min": 50,
+      "rsi_long_max": 65,
+      "rsi_short_exit": 55,
+      "volume_mult": 1.0
+    },
+    "sell": {
+      "rsi_short_min": 35,
+      "rsi_short_max": 50,
+      "rsi_long_exit": 45
+    },
+    "roi": {
+      "0": 0.02,
+      "30": 0.01,
+      "60": 0.005,
+      "120": 0.0
+    },
+    "stoploss": {
+      "stoploss": -0.03
+    },
+    "trailing": {
+      "trailing_stop": false,
+      "trailing_stop_positive": 0.0,
+      "trailing_stop_positive_offset": 0.0,
+      "trailing_only_offset_is_reached": false
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "strategy_name": "AIStrategy_Optimized",
+  "version_id": "v001",
+  "extracted_at": "2026-06-22T15:22:09.034275Z",
+  "pair_list": null,
+  "buy_params": {
+    "buy_ma_count": 4,
+    "buy_ma_gap": 15
+  },
+  "sell_params": {
+    "sell_ma_count": 12,
+    "sell_ma_gap": 68
+  },
+  "protection_params": {},
+  "roi_table": {
+    "0": 0.523,
+    "1553": 0.123,
+    "2332": 0.076,
+    "3169": 0.0
+  },
+  "stoploss": -0.3,
+  "trailing_stop": false,
+  "trailing_stop_positive": null,
+  "trailing_stop_positive_offset": 0.0,
+  "trailing_only_offset_is_reached": false,
+  "custom_params": {}
+}

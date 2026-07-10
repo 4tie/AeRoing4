@@ -1,0 +1,48 @@
+{
+  "schema_version": "assistant_chat_session_v1",
+  "session_id": "3fad9290-6b63-4cd3-b038-f2504162ae6f",
+  "created_at": "2026-07-06T06:20:05.401138+00:00",
+  "updated_at": "2026-07-06T06:23:29.355767+00:00",
+  "model": "qwen3.5:4b",
+  "title": "AI Assistant Chat",
+  "messages": [
+    {
+      "id": "5bac6d87-0857-49be-834c-6fb36c96d7cb",
+      "role": "user",
+      "content": "Explain the difference between RSI and MACD indicators in detail, including when to use each one.",
+      "created_at": "2026-07-06T06:23:29.355731+00:00"
+    },
+    {
+      "id": "d1c3d4f3-a256-482d-b199-dca083662bab",
+      "role": "assistant",
+      "content": "Here is the practical breakdown of RSI and MACD for strategy building:\n\n### 1. Core Functionality\n\n| Feature | **RSI (Relative Strength Index)** | **MACD (Moving Average Convergence Divergence)** |\n| :--- | :--- | :--- |\n| **Type** | Momentum Oscillator | Trend + Momentum Indicator |\n| **Range** | 0 to 100 | Centered around zero (+/-) |\n| **Primary Goal** | Identify overbought/oversold conditions (Reversal bias). | Identify trend direction and momentum shifts. |\n| **Signal Type** | Divergence or crossing above/below thresholds (e.g., 70/30). | Crossover of MACD line & Signal Line, or Zero-line cross. |\n\n### 2. How They Work\n\n*   **RSI:** Measures the speed and change of price movements over a set period (usually 14 bars).\n    *   It calculates how many times candles closed above vs below their previous close average.\n    *   **Logic:** If RSI > 70, it suggests \"overbought\" (price might drop). If < 30, \"oversold\" (price might rise).\n*   **MACD:** Compares two moving averages of price data (typically the EMA(12) and EMA(26)).\n    *   It generates a MACD line (difference between EMAs) and a Signal Line.\n    *   **Logic:** When the MACD crosses above the signal line, it suggests bullish momentum is increasing.\n\n### 3. When to Use Each One in Strategies\n\n**Use RSI when:**\n*",
+      "created_at": "2026-07-06T06:23:29.355758+00:00"
+    }
+  ],
+  "last_context_summary": {
+    "active_tab": "auto-quant",
+    "active_panel": null,
+    "strategy_name": "AIStrategy",
+    "optimizer_session_id": null,
+    "optimizer_trial_number": null,
+    "backtest_run_id": null,
+    "auto_quant_run_id": null,
+    "optimizer_phase": null,
+    "backtest_status": null,
+    "auto_quant_status": null,
+    "chips": [
+      {
+        "kind": "strategy",
+        "label": "AIStrategy"
+      },
+      {
+        "kind": "params",
+        "label": "strategy files"
+      }
+    ],
+    "warnings": [
+      "No active run or optimizer session is selected."
+    ]
+  },
+  "last_context_overrides": {}
+}

@@ -1,0 +1,7 @@
+# Development dependencies - testing and development tools
+# Install with: pip install -r requirements-dev.txt
+# Requires: requirements-core.txt
+
+# Testing
+pytest
+pytest-asyncio

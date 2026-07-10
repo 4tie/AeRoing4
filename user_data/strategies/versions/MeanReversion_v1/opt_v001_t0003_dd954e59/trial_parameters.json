@@ -1,0 +1,21 @@
+{
+  "strategy_name": "MeanReversion_v1",
+  "version_id": "opt_v001_t0003_dd954e59",
+  "extracted_at": "2026-06-19T00:45:30.124283Z",
+  "pair_list": null,
+  "buy_params": {},
+  "sell_params": {},
+  "protection_params": {},
+  "roi_table": {
+    "0": 0.104,
+    "23": 0.01,
+    "72": 0.009,
+    "190": 0.002
+  },
+  "stoploss": -0.23,
+  "trailing_stop": true,
+  "trailing_stop_positive": 0.085,
+  "trailing_stop_positive_offset": 0.045,
+  "trailing_only_offset_is_reached": null,
+  "custom_params": {}
+}

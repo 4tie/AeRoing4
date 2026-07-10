@@ -1,0 +1,48 @@
+{
+  "schema_version": "assistant_chat_session_v1",
+  "session_id": "48c5bff3-2c73-4f12-87bc-34b3a0a66c52",
+  "created_at": "2026-07-06T06:18:55.578948+00:00",
+  "updated_at": "2026-07-06T06:19:18.011190+00:00",
+  "model": "qwen3.5:4b",
+  "title": "AI Assistant Chat",
+  "messages": [
+    {
+      "id": "ca990f53-eabc-40c3-9f9b-60a274d48229",
+      "role": "user",
+      "content": "Please think step by step and show your reasoning in <thinking> tags before answering: What is the capital of France?",
+      "created_at": "2026-07-06T06:19:18.011164+00:00"
+    },
+    {
+      "id": "45d65961-842e-47eb-9e15-7c10773b9246",
+      "role": "assistant",
+      "content": "<thinking>\nThis question doesn't require any AutoQuant/Freqtrade knowledge - it's just general geography facts. I should answer directly and concisely since the user didn't ask for deep explanation or step-by-step reasoning on anything technical related to my trading assistant function.\n</thinking>\n\nThe capital of France is **Paris**.",
+      "created_at": "2026-07-06T06:19:18.011183+00:00"
+    }
+  ],
+  "last_context_summary": {
+    "active_tab": "auto-quant",
+    "active_panel": null,
+    "strategy_name": "AIStrategy",
+    "optimizer_session_id": null,
+    "optimizer_trial_number": null,
+    "backtest_run_id": null,
+    "auto_quant_run_id": null,
+    "optimizer_phase": null,
+    "backtest_status": null,
+    "auto_quant_status": null,
+    "chips": [
+      {
+        "kind": "strategy",
+        "label": "AIStrategy"
+      },
+      {
+        "kind": "params",
+        "label": "strategy files"
+      }
+    ],
+    "warnings": [
+      "No active run or optimizer session is selected."
+    ]
+  },
+  "last_context_overrides": {}
+}

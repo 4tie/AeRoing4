@@ -1,0 +1,37 @@
+{
+  "schema_version": "assistant_copilot_session_v2",
+  "session_id": "d92c8d5e-699c-409a-b4c7-51d07eeeea06",
+  "created_at": "2026-07-07T12:58:27.338317+00:00",
+  "updated_at": "2026-07-07T12:58:27.339317+00:00",
+  "model": "qwen3.5:9b",
+  "mode": "analysis",
+  "title": "AI Copilot Chat",
+  "messages": [
+    {
+      "id": "d8427768-3c8d-4179-9b74-d9943a89830e",
+      "role": "user",
+      "content": "Explain what AutoQuant is waiting for me to review. Tell me why the current pairs or candidates were selected or rejected and what I should check before approving.",
+      "created_at": "2026-07-07T12:58:27.339317+00:00"
+    }
+  ],
+  "tool_runs": [],
+  "pending_actions": [],
+  "active_jobs": [],
+  "last_context_summary": null,
+  "last_context_overrides": {
+    "active_tab": "auto-quant",
+    "active_panel": "stage-1",
+    "strategy_name": "AIStrategy",
+    "auto_quant_run_id": "6fd9eb84-7896-4138-962f-608c156d27e9",
+    "current_stage": 1,
+    "pipeline_status": "awaiting_user_approval",
+    "optimizer_session_id": null,
+    "optimizer_trial_number": null,
+    "backtest_run_id": null,
+    "candidate_run_id": null,
+    "stress_session_id": null,
+    "temporal_stress_session_id": null,
+    "readiness_profile": null,
+    "api_session_id": null
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "version": "pair_universe_v1",
+  "quote_currency": "USDT",
+  "tiers": {
+    "A": ["BTC/USDT", "ETH/USDT", "BNB/USDT", "SOL/USDT", "XRP/USDT"],
+    "B": ["ADA/USDT", "DOGE/USDT", "LINK/USDT", "AVAX/USDT", "SUI/USDT", "LTC/USDT", "TRX/USDT", "DOT/USDT", "ATOM/USDT", "NEAR/USDT"],
+    "C": ["MATIC/USDT", "UNI/USDT", "ETC/USDT", "FIL/USDT", "ALGO/USDT", "OP/USDT", "ARB/USDT", "APT/USDT", "AAVE/USDT", "MKR/USDT", "INJ/USDT", "RNDR/USDT", "IMX/USDT", "GRT/USDT", "LDO/USDT", "PENDLE/USDT", "GMX/USDT", "SAND/USDT", "MANA/USDT", "AXS/USDT", "ENJ/USDT", "QNT/USDT", "COMP/USDT", "SNX/USDT", "KAVA/USDT"]
+  },
+  "target_counts": {
+    "scalping": {"conservative": 20, "balanced": 30, "aggressive": 40},
+    "intraday": {"conservative": 15, "balanced": 20, "aggressive": 25},
+    "swing": {"conservative": 10, "balanced": 12, "aggressive": 15},
+    "position": {"conservative": 5, "balanced": 8, "aggressive": 10}
+  }
+}

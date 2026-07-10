@@ -1,0 +1,62 @@
+{
+  "schema_version": "assistant_copilot_session_v2",
+  "session_id": "55a11f6c-8f9a-442c-b03f-227b75dda282",
+  "created_at": "2026-07-07T08:08:42.269415+00:00",
+  "updated_at": "2026-07-07T08:08:59.956982+00:00",
+  "model": "qwen3.5:9b",
+  "mode": "analysis",
+  "title": "AI Copilot Chat",
+  "messages": [
+    {
+      "id": "093dda99-ddde-4335-998c-380bc1f298dc",
+      "role": "user",
+      "content": "are you searching ?",
+      "created_at": "2026-07-07T08:08:42.273432+00:00"
+    },
+    {
+      "id": "d3e3105b-a118-4bf2-8f80-fe2fc0f78c16",
+      "role": "assistant",
+      "content": "No, I'm not actively searching for anything currently based on the available information. \n\nLooking at your application state:\n- You're in a **backtest** active tab\n- There's no optimizer session selected or running\n- No recent logs activity detected\n\nI'm ready to help you with several Freqtrade tasks:\n\n1. **Strategy Analysis** - Review and analyze trading strategy code\n2. **Backtesting** - Run backtests on historical data, configure timeframes, dry runs mode settings\n3. **Optimization** - Set up parameter optimization sessions (hyperopt) for your strategies\n4. **Stress Testing** - Test strategies against different market conditions\n\nWhat would you like to work on? I can:\n- Create or modify strategy configurations based on Freqtrade best practices\n- Help analyze backtest results when available\n- Design optimization workflows with parameter spaces\n- Review and improve existing trading logic",
+      "created_at": "2026-07-07T08:08:59.948552+00:00"
+    }
+  ],
+  "tool_runs": [],
+  "pending_actions": [],
+  "active_jobs": [],
+  "last_context_summary": {
+    "active_tab": "backtest",
+    "active_panel": null,
+    "strategy_name": null,
+    "optimizer_session_id": null,
+    "optimizer_trial_number": null,
+    "backtest_run_id": null,
+    "candidate_run_id": null,
+    "stress_session_id": null,
+    "temporal_stress_session_id": null,
+    "auto_quant_run_id": null,
+    "optimizer_phase": null,
+    "backtest_status": null,
+    "auto_quant_status": null,
+    "readiness_status": null,
+    "readiness_score": null,
+    "readiness_blocking_failures": 0,
+    "chips": [],
+    "warnings": [
+      "No active run or optimizer session is selected."
+    ]
+  },
+  "last_context_overrides": {
+    "active_tab": "backtest",
+    "active_panel": null,
+    "strategy_name": null,
+    "auto_quant_run_id": null,
+    "optimizer_session_id": null,
+    "optimizer_trial_number": null,
+    "backtest_run_id": null,
+    "candidate_run_id": null,
+    "stress_session_id": null,
+    "temporal_stress_session_id": null,
+    "readiness_profile": null,
+    "api_session_id": null
+  }
+}

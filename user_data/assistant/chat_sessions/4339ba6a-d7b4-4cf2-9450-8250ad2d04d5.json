@@ -1,0 +1,65 @@
+{
+  "schema_version": "assistant_copilot_session_v2",
+  "session_id": "4339ba6a-d7b4-4cf2-9450-8250ad2d04d5",
+  "created_at": "2026-07-09T02:24:48.138764+00:00",
+  "updated_at": "2026-07-09T02:24:51.877108+00:00",
+  "model": "qwen3.5:9b",
+  "mode": "analysis",
+  "title": "AI Copilot Chat",
+  "messages": [
+    {
+      "id": "c04b366e-00b6-4e39-9aa7-368f1d1afa2c",
+      "role": "user",
+      "content": "Read the AIStrategy strategy file and tell me the buy conditions",
+      "created_at": "2026-07-09T02:24:48.138764+00:00"
+    },
+    {
+      "id": "b76f98a0-650b-4fe8-8725-cc21236cf492",
+      "role": "assistant",
+      "content": "",
+      "created_at": "2026-07-09T02:24:51.867656+00:00"
+    }
+  ],
+  "tool_runs": [],
+  "pending_actions": [],
+  "active_jobs": [],
+  "last_context_summary": {
+    "active_tab": "auto-quant",
+    "active_panel": null,
+    "strategy_name": "AIStrategy",
+    "timeframe": null,
+    "timerange": null,
+    "selected_pair_count": null,
+    "pairs": null,
+    "dry_run_wallet": null,
+    "max_open_trades": null,
+    "backtest_status": null,
+    "optimizer_session_id": null,
+    "optimizer_trial_number": null,
+    "backtest_run_id": null,
+    "candidate_run_id": null,
+    "stress_session_id": null,
+    "temporal_stress_session_id": null,
+    "auto_quant_run_id": null,
+    "optimizer_phase": null,
+    "auto_quant_status": null,
+    "readiness_status": null,
+    "readiness_score": null,
+    "readiness_blocking_failures": 0,
+    "chips": [
+      {
+        "kind": "strategy",
+        "label": "AIStrategy"
+      },
+      {
+        "kind": "params",
+        "label": "strategy files"
+      }
+    ],
+    "warnings": [
+      "Multiple AutoQuant runs are active; provide auto_quant_run_id explicitly.",
+      "No active run or optimizer session is selected."
+    ]
+  },
+  "last_context_overrides": {}
+}

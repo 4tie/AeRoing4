@@ -1,0 +1,12 @@
+{
+  "version": "robustness_score_v1",
+  "weights": {
+    "expectancy": 0.25,
+    "profit_factor": 0.20,
+    "drawdown": 0.15,
+    "robustness": 0.15,
+    "oos": 0.10,
+    "walk_forward": 0.10,
+    "pair_consistency": 0.05
+  }
+}

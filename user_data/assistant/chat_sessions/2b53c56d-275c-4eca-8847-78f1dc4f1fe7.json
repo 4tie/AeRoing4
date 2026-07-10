@@ -1,0 +1,48 @@
+{
+  "schema_version": "assistant_copilot_session_v2",
+  "session_id": "2b53c56d-275c-4eca-8847-78f1dc4f1fe7",
+  "created_at": "2026-07-07T07:26:38.081899+00:00",
+  "updated_at": "2026-07-07T07:27:04.142993+00:00",
+  "model": "laguna-xs-2.1:latest",
+  "mode": "analysis",
+  "title": "AI Copilot Chat",
+  "messages": [
+    {
+      "id": "b78ce9c4-8795-479a-84d1-956b6d6e3b18",
+      "role": "user",
+      "content": "frf",
+      "created_at": "2026-07-07T07:26:38.082900+00:00"
+    },
+    {
+      "id": "c9982aad-1b6d-4a77-b877-5f034036c089",
+      "role": "assistant",
+      "content": "I notice you've sent \"frf\" - could you please clarify what you'd like help with? I'm here to assist with Freqtrade strategy development, backtesting, optimization, or other trading-related tasks.\n\nLet me check the current state of your application to see if there's an active session or run:",
+      "created_at": "2026-07-07T07:27:04.142993+00:00",
+      "tool_calls": [
+        {
+          "name": "get-state",
+          "arguments": {},
+          "tool_call_id": "call_1_0"
+        }
+      ]
+    }
+  ],
+  "tool_runs": [],
+  "pending_actions": [],
+  "active_jobs": [],
+  "last_context_summary": null,
+  "last_context_overrides": {
+    "active_tab": "backtest",
+    "active_panel": null,
+    "strategy_name": null,
+    "auto_quant_run_id": null,
+    "optimizer_session_id": null,
+    "optimizer_trial_number": null,
+    "backtest_run_id": null,
+    "candidate_run_id": null,
+    "stress_session_id": null,
+    "temporal_stress_session_id": null,
+    "readiness_profile": null,
+    "api_session_id": null
+  }
+}

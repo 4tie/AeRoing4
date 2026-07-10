@@ -1,0 +1,10 @@
+{
+  "version": "readiness_labels_v2",
+  "labels": [
+    {"min_score": 85, "status": "Elite", "readiness": "Elite"},
+    {"min_score": 75, "status": "Validated", "readiness": "Validated"},
+    {"min_score": 65, "status": "Promising", "readiness": "Promising"},
+    {"min_score": 50, "status": "Candidate", "readiness": "Candidate"},
+    {"min_score": 0, "status": "Rejected", "readiness": "Not Ready"}
+  ]
+}

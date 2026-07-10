@@ -1,0 +1,46 @@
+{
+  "style": "intraday",
+  "description": "Thresholds for intraday strategies (15m-1h timeframes)",
+  "discovery": {
+    "min_profit_factor": 1.08,
+    "max_drawdown": 35.0,
+    "min_trades_per_year": 220,
+    "min_trades_floor": 50,
+    "min_trades_cap": 600,
+    "min_expectancy": 0.0002,
+    "min_win_rate": 42.0
+  },
+  "validation": {
+    "min_profit_factor": 1.25,
+    "max_drawdown": 28.0,
+    "min_trades_per_year": 250,
+    "min_trades_floor": 60,
+    "min_trades_cap": 700,
+    "min_expectancy": 0.0004,
+    "min_win_rate": 47.0,
+    "min_pair_pass_rate": 0.6,
+    "min_oos_retention": 0.5
+  },
+  "elite_validation": {
+    "min_profit_factor": 1.45,
+    "max_drawdown": 22.0,
+    "min_trades_per_year": 300,
+    "min_trades_floor": 70,
+    "min_trades_cap": 900,
+    "min_expectancy": 0.0006,
+    "min_win_rate": 52.0,
+    "min_pair_pass_rate": 0.7,
+    "min_oos_retention": 0.6,
+    "min_walk_forward_pass_rate": 0.6,
+    "min_robustness_score": 0.65
+  },
+  "ranking": {
+    "expectancy_weight": 0.20,
+    "profit_factor_weight": 0.20,
+    "drawdown_weight": 0.20,
+    "walk_forward_weight": 0.15,
+    "robustness_weight": 0.15,
+    "pair_consistency_weight": 0.05,
+    "trade_quality_weight": 0.05
+  }
+}

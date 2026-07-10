@@ -1,0 +1,31 @@
+{
+  "strategy_name": "Diamond",
+  "version_id": "opt_v001_t0005_fe44f34d",
+  "extracted_at": "2026-06-14T11:28:26.778900Z",
+  "pair_list": null,
+  "buy_params": {
+    "buy_fast_key": "ma_fast",
+    "buy_horizontal_push": 1,
+    "buy_slow_key": "ma_slow",
+    "buy_vertical_push": 0.7
+  },
+  "sell_params": {
+    "sell_fast_key": "ma_fast",
+    "sell_horizontal_push": 5,
+    "sell_slow_key": "ma_slow",
+    "sell_vertical_push": 1.51
+  },
+  "protection_params": {},
+  "roi_table": {
+    "0": 0.242,
+    "13": 0.044,
+    "51": 0.02,
+    "170": 0.0
+  },
+  "stoploss": -0.25,
+  "trailing_stop": true,
+  "trailing_stop_positive": 0.011,
+  "trailing_stop_positive_offset": 0.054,
+  "trailing_only_offset_is_reached": false,
+  "custom_params": {}
+}

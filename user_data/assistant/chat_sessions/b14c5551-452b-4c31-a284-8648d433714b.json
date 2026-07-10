@@ -1,0 +1,108 @@
+{
+  "schema_version": "assistant_copilot_session_v2",
+  "session_id": "b14c5551-452b-4c31-a284-8648d433714b",
+  "created_at": "2026-07-09T18:46:12.151284+00:00",
+  "updated_at": "2026-07-09T19:34:52.310650+00:00",
+  "model": "qwen3.5:9b",
+  "mode": "analysis",
+  "title": "AI Copilot Chat",
+  "messages": [
+    {
+      "id": "4fe65ea7-50fe-446a-a618-5b9c95063140",
+      "role": "user",
+      "content": "What is working well in this run? What is failing or showing weak results? Are there any concerning patterns in the data?",
+      "created_at": "2026-07-09T18:46:12.152790+00:00"
+    },
+    {
+      "id": "9c92c6dc-0cfd-4a8d-8b1a-3bfac77ab46b",
+      "role": "user",
+      "content": "What is working well in this run? What is failing or showing weak results? Are there any concerning patterns in the data?",
+      "created_at": "2026-07-09T18:46:43.641439+00:00"
+    },
+    {
+      "id": "d551a18f-e489-43bf-970a-fb153418df12",
+      "role": "user",
+      "content": "What is working well in this run? What is failing or showing weak results? Are there any concerning patterns in the data?",
+      "created_at": "2026-07-09T19:08:15.331564+00:00"
+    },
+    {
+      "id": "b7fca2ef-8af7-4764-8239-5f5e06007f78",
+      "role": "user",
+      "content": "hi",
+      "created_at": "2026-07-09T19:34:04.809227+00:00"
+    },
+    {
+      "id": "1f4de9af-0722-4631-91c3-09780cf0761c",
+      "role": "assistant",
+      "content": "Hi! \ud83d\udc4b How's it going? Is there anything you'd like help with \u2014 whether it's analyzing the trading backtest data above, explaining metrics like profit factors or drawdowns, optimizing strategies, or just chatting about crypto markets in general? Let me know what you need! \ud83d\ude0a",
+      "created_at": "2026-07-09T19:34:52.303354+00:00"
+    }
+  ],
+  "tool_runs": [],
+  "pending_actions": [],
+  "active_jobs": [],
+  "last_context_summary": {
+    "active_tab": "auto-quant",
+    "active_panel": "stage-3",
+    "strategy_name": "AIStrategy",
+    "timeframe": null,
+    "timerange": null,
+    "selected_pair_count": null,
+    "pairs": null,
+    "dry_run_wallet": null,
+    "max_open_trades": null,
+    "backtest_status": null,
+    "optimizer_session_id": null,
+    "optimizer_trial_number": null,
+    "backtest_run_id": null,
+    "candidate_run_id": null,
+    "stress_session_id": null,
+    "temporal_stress_session_id": null,
+    "auto_quant_run_id": "969e2dd8-54fc-4808-b72c-96e4f6c59e1f",
+    "optimizer_phase": null,
+    "auto_quant_status": "awaiting_user_approval",
+    "readiness_status": null,
+    "readiness_score": null,
+    "readiness_blocking_failures": 0,
+    "chips": [
+      {
+        "kind": "strategy",
+        "label": "AIStrategy"
+      },
+      {
+        "kind": "params",
+        "label": "strategy files"
+      },
+      {
+        "kind": "autoquant",
+        "label": "969e2dd8"
+      }
+    ],
+    "warnings": []
+  },
+  "last_context_overrides": {
+    "active_tab": "auto-quant",
+    "active_panel": "stage-3",
+    "strategy_name": "AIStrategy",
+    "auto_quant_run_id": "969e2dd8-54fc-4808-b72c-96e4f6c59e1f",
+    "current_stage": 3,
+    "pipeline_status": "awaiting_user_approval",
+    "optimizer_session_id": null,
+    "optimizer_trial_number": null,
+    "backtest_run_id": null,
+    "candidate_run_id": null,
+    "stress_session_id": null,
+    "temporal_stress_session_id": null,
+    "readiness_profile": null,
+    "api_session_id": null,
+    "timeframe": null,
+    "timerange": null,
+    "start_date": null,
+    "end_date": null,
+    "pairs": [],
+    "dry_run_wallet": null,
+    "max_open_trades": null,
+    "backtest_status": null
+  },
+  "auto_confirm": false
+}

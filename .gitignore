@@ -1,0 +1,56 @@
+# Environment and Virtual Environments
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+venv_test/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+coverage/
+playwright-report/
+test-results/
+
+# Logs
+*.log
+logs/
+
+# App local data
+data/
+
+# Sensitive user config
+user_data/config.json
+user_data/*.secret.json
+user_data/*token*
+user_data/*key*
+
+# Freqtrade/runtime artifacts
+user_data/backtest_results/
+user_data/hyperopt_results/
+user_data/data_downloads/
+user_data/auto_quant/
+user_data/logs/
+user_data/data/
+
+# Generated/rendered strategies only
+user_data/strategies/rendered/
+
+# Intentionally tracked source strategies:
+user_data/strategies/*.py
+user_data/strategies/*.json
+
+
+
+
+# Ignore Smart Environment folder
+.smart-env

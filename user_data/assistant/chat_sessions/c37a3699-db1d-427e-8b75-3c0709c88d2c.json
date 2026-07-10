@@ -1,0 +1,22 @@
+{
+  "schema_version": "assistant_copilot_session_v2",
+  "session_id": "c37a3699-db1d-427e-8b75-3c0709c88d2c",
+  "created_at": "2026-07-09T03:18:56.451478+00:00",
+  "updated_at": "2026-07-09T03:18:56.451478+00:00",
+  "model": "qwen3.5:9b",
+  "mode": "analysis",
+  "title": "AI Copilot Chat",
+  "messages": [
+    {
+      "id": "5de50e83-47ef-4494-bc32-d6ea2d80578f",
+      "role": "user",
+      "content": "list all strategies",
+      "created_at": "2026-07-09T03:18:56.451478+00:00"
+    }
+  ],
+  "tool_runs": [],
+  "pending_actions": [],
+  "active_jobs": [],
+  "last_context_summary": null,
+  "last_context_overrides": {}
+}

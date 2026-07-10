@@ -1,0 +1,438 @@
+[
+  {
+    "session_id": "98b1bd3a-b9c9-4fbe-ac69-77513221493c",
+    "operation": "optimizer",
+    "status": "cancelled",
+    "created_at": "2026-07-06T05:17:53.497872+00:00",
+    "started_at": "2026-07-06T05:17:53.502577+00:00",
+    "completed_at": "2026-07-06T05:24:37.740981+00:00",
+    "result": {
+      "optimizer_session_id": "aaa5b79f-c312-4133-a7a6-ca02c970bee8",
+      "phase": "cancelled",
+      "total_trials": 50,
+      "completed_trials": 3,
+      "failed_trials": 1,
+      "best_trial_number": 2,
+      "best_score": -55.12028818756421,
+      "stop_reason": "Cancelled by user"
+    },
+    "error": null
+  },
+  {
+    "session_id": "cd0ca9b6-a4aa-4b97-9027-d76bd712169e",
+    "operation": "backtest",
+    "status": "completed",
+    "created_at": "2026-07-06T17:31:15.190604+00:00",
+    "started_at": "2026-07-06T17:31:15.191549+00:00",
+    "completed_at": "2026-07-06T17:31:20.941345+00:00",
+    "result": {
+      "run_id": "20260706T173115Z_AIStrategy_v001_bt005",
+      "strategy_name": "AIStrategy",
+      "version_id": "v001",
+      "timerange": "20260107-20260706",
+      "command": "L:\\M4tie\\Documents\\fortiesr\\.venv\\Scripts\\freqtrade.exe backtesting --user-data-dir L:\\M4tie\\Documents\\fortiesr\\user_data --config L:\\M4tie\\Documents\\fortiesr\\user_data\\config.json --strategy-path L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T173115Z_AIStrategy_v001_bt005 --strategy AIStrategy --timerange 20260107-20260706 --timeframe 5m --dry-run-wallet 100.0 --max-open-trades 2 --export trades --export-filename L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T173115Z_AIStrategy_v001_bt005\\raw_result.json --pairs AXS/USDT JTO/USDT"
+    },
+    "error": null
+  },
+  {
+    "session_id": "452a3221-2ff6-4a1c-bb1e-fdce4018573a",
+    "operation": "backtest",
+    "status": "completed",
+    "created_at": "2026-07-06T17:32:18.091277+00:00",
+    "started_at": "2026-07-06T17:32:18.092033+00:00",
+    "completed_at": "2026-07-06T17:32:23.177884+00:00",
+    "result": {
+      "run_id": "20260706T173218Z_AIStrategy_v001_bt006",
+      "strategy_name": "AIStrategy",
+      "version_id": "v001",
+      "timerange": "20260107-20260706",
+      "command": "L:\\M4tie\\Documents\\fortiesr\\.venv\\Scripts\\freqtrade.exe backtesting --user-data-dir L:\\M4tie\\Documents\\fortiesr\\user_data --config L:\\M4tie\\Documents\\fortiesr\\user_data\\config.json --strategy-path L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T173218Z_AIStrategy_v001_bt006 --strategy AIStrategy --timerange 20260107-20260706 --timeframe 5m --dry-run-wallet 100.0 --max-open-trades 2 --export trades --export-filename L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T173218Z_AIStrategy_v001_bt006\\raw_result.json --pairs JTO/USDT ETH/USDT"
+    },
+    "error": null
+  },
+  {
+    "session_id": "4a535df3-1ab7-475b-a559-a5e094774777",
+    "operation": "backtest",
+    "status": "completed",
+    "created_at": "2026-07-06T18:36:22.686319+00:00",
+    "started_at": "2026-07-06T18:36:22.687319+00:00",
+    "completed_at": "2026-07-06T18:36:28.264232+00:00",
+    "result": {
+      "run_id": "20260706T183622Z_AIStrategy_v001_bt007",
+      "strategy_name": "AIStrategy",
+      "version_id": "v001",
+      "timerange": "20260107-20260706",
+      "command": "L:\\M4tie\\Documents\\fortiesr\\.venv\\Scripts\\freqtrade.exe backtesting --user-data-dir L:\\M4tie\\Documents\\fortiesr\\user_data --config L:\\M4tie\\Documents\\fortiesr\\user_data\\config.json --strategy-path L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T183622Z_AIStrategy_v001_bt007 --strategy AIStrategy --timerange 20260107-20260706 --timeframe 5m --dry-run-wallet 100.0 --max-open-trades 2 --export trades --export-filename L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T183622Z_AIStrategy_v001_bt007\\raw_result.json --pairs ETH/USDT JTO/USDT"
+    },
+    "error": null
+  },
+  {
+    "session_id": "2bc44a47-0d18-4ac8-8a3f-59db933d58ff",
+    "operation": "data_download",
+    "status": "completed",
+    "created_at": "2026-07-06T18:36:35.263253+00:00",
+    "started_at": "2026-07-06T18:36:35.264254+00:00",
+    "completed_at": "2026-07-06T18:36:57.282742+00:00",
+    "result": {
+      "download_id": "download_20260706_183635",
+      "command": "L:\\M4tie\\Documents\\fortiesr\\.venv\\Scripts\\freqtrade.exe download-data --user-data-dir L:\\M4tie\\Documents\\fortiesr\\user_data --config L:\\M4tie\\Documents\\fortiesr\\user_data\\config.json --timerange 20250706-20260706 --timeframes 5m --pairs 1INCH/USDT AAVE/USDT ADA/USDT ALGO/USDT APT/USDT ARB/USDT ATOM/USDT AVAX/USDT AXS/USDT BAL/USDT BCH/USDT BLUR/USDT BNB/USDT BONK/USDT BTC/USDT COMP/USDT CRV/USDT DOGE/USDT DOT/USDT DYDX/USDT EGLD/USDT ENJ/USDT ETC/USDT ETH/USDT FIL/USDT FTM/USDT GALA/USDT GMX/USDT HBAR/USDT ICP/USDT IMX/USDT INJ/USDT JTO/USDT LDO/USDT LINK/USDT LTC/USDT MANA/USDT MATIC/USDT MINA/USDT MKR/USDT NEAR/USDT OP/USDT PENDLE/USDT PYTH/USDT RPL/USDT SAND/USDT SEI/USDT SHIB/USDT SNX/USDT SOL/USDT STRK/USDT STX/USDT SUI/USDT SUSHI/USDT TIA/USDT TRX/USDT UNI/USDT VET/USDT WIF/USDT XLM/USDT XRP/USDT XTZ/USDT YFI/USDT ZK/USDT --prepend",
+      "pairs": [
+        "1INCH/USDT",
+        "AAVE/USDT",
+        "ADA/USDT",
+        "ALGO/USDT",
+        "APT/USDT",
+        "ARB/USDT",
+        "ATOM/USDT",
+        "AVAX/USDT",
+        "AXS/USDT",
+        "BAL/USDT",
+        "BCH/USDT",
+        "BLUR/USDT",
+        "BNB/USDT",
+        "BONK/USDT",
+        "BTC/USDT",
+        "COMP/USDT",
+        "CRV/USDT",
+        "DOGE/USDT",
+        "DOT/USDT",
+        "DYDX/USDT",
+        "EGLD/USDT",
+        "ENJ/USDT",
+        "ETC/USDT",
+        "ETH/USDT",
+        "FIL/USDT",
+        "FTM/USDT",
+        "GALA/USDT",
+        "GMX/USDT",
+        "HBAR/USDT",
+        "ICP/USDT",
+        "IMX/USDT",
+        "INJ/USDT",
+        "JTO/USDT",
+        "LDO/USDT",
+        "LINK/USDT",
+        "LTC/USDT",
+        "MANA/USDT",
+        "MATIC/USDT",
+        "MINA/USDT",
+        "MKR/USDT",
+        "NEAR/USDT",
+        "OP/USDT",
+        "PENDLE/USDT",
+        "PYTH/USDT",
+        "RPL/USDT",
+        "SAND/USDT",
+        "SEI/USDT",
+        "SHIB/USDT",
+        "SNX/USDT",
+        "SOL/USDT",
+        "STRK/USDT",
+        "STX/USDT",
+        "SUI/USDT",
+        "SUSHI/USDT",
+        "TIA/USDT",
+        "TRX/USDT",
+        "UNI/USDT",
+        "VET/USDT",
+        "WIF/USDT",
+        "XLM/USDT",
+        "XRP/USDT",
+        "XTZ/USDT",
+        "YFI/USDT",
+        "ZK/USDT"
+      ],
+      "timeframes": [
+        "5m"
+      ],
+      "timerange": "20250706-20260706"
+    },
+    "error": null
+  },
+  {
+    "session_id": "653dff74-bfd0-4a29-b51f-11c35f728eae",
+    "operation": "backtest",
+    "status": "completed",
+    "created_at": "2026-07-06T18:37:03.660722+00:00",
+    "started_at": "2026-07-06T18:37:03.662722+00:00",
+    "completed_at": "2026-07-06T18:38:25.394439+00:00",
+    "result": {
+      "run_id": "20260706T183703Z_AIStrategy_v001_bt008",
+      "strategy_name": "AIStrategy",
+      "version_id": "v001",
+      "timerange": "20250706-20260706",
+      "command": "L:\\M4tie\\Documents\\fortiesr\\.venv\\Scripts\\freqtrade.exe backtesting --user-data-dir L:\\M4tie\\Documents\\fortiesr\\user_data --config L:\\M4tie\\Documents\\fortiesr\\user_data\\config.json --strategy-path L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T183703Z_AIStrategy_v001_bt008 --strategy AIStrategy --timerange 20250706-20260706 --timeframe 5m --dry-run-wallet 100.0 --max-open-trades 2 --export trades --export-filename L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T183703Z_AIStrategy_v001_bt008\\raw_result.json --pairs 1INCH/USDT AAVE/USDT ADA/USDT ALGO/USDT APT/USDT ARB/USDT ATOM/USDT AVAX/USDT AXS/USDT BAL/USDT BCH/USDT BLUR/USDT BNB/USDT BONK/USDT BTC/USDT COMP/USDT CRV/USDT DOGE/USDT DOT/USDT DYDX/USDT EGLD/USDT ENJ/USDT ETC/USDT ETH/USDT FIL/USDT FTM/USDT GALA/USDT GMX/USDT HBAR/USDT ICP/USDT IMX/USDT INJ/USDT JTO/USDT LDO/USDT LINK/USDT LTC/USDT MANA/USDT MATIC/USDT MINA/USDT MKR/USDT NEAR/USDT OP/USDT PENDLE/USDT PYTH/USDT RPL/USDT SAND/USDT SEI/USDT SHIB/USDT SNX/USDT SOL/USDT STRK/USDT STX/USDT SUI/USDT SUSHI/USDT TIA/USDT TRX/USDT UNI/USDT VET/USDT WIF/USDT XLM/USDT XRP/USDT XTZ/USDT YFI/USDT ZK/USDT"
+    },
+    "error": null
+  },
+  {
+    "session_id": "636c5a68-e514-4799-8c7b-c0af42b33064",
+    "operation": "backtest",
+    "status": "completed",
+    "created_at": "2026-07-06T18:43:00.242805+00:00",
+    "started_at": "2026-07-06T18:43:00.242805+00:00",
+    "completed_at": "2026-07-06T18:43:07.412594+00:00",
+    "result": {
+      "run_id": "20260706T184300Z_AIStrategy_v001_bt009",
+      "strategy_name": "AIStrategy",
+      "version_id": "v001",
+      "timerange": "20250706-20260706",
+      "command": "L:\\M4tie\\Documents\\fortiesr\\.venv\\Scripts\\freqtrade.exe backtesting --user-data-dir L:\\M4tie\\Documents\\fortiesr\\user_data --config L:\\M4tie\\Documents\\fortiesr\\user_data\\config.json --strategy-path L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T184300Z_AIStrategy_v001_bt009 --strategy AIStrategy --timerange 20250706-20260706 --timeframe 5m --dry-run-wallet 100.0 --max-open-trades 2 --export trades --export-filename L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T184300Z_AIStrategy_v001_bt009\\raw_result.json --pairs JTO/USDT ETH/USDT"
+    },
+    "error": null
+  },
+  {
+    "session_id": "56e5ab40-b927-48f1-ad46-5c2fb1c9c709",
+    "operation": "optimizer",
+    "status": "failed",
+    "created_at": "2026-07-06T18:43:58.060633+00:00",
+    "started_at": "2026-07-06T18:43:58.065190+00:00",
+    "completed_at": "2026-07-06T18:50:28.508633+00:00",
+    "result": {
+      "optimizer_session_id": "e04648ed-feaa-4879-a49a-9387874d9c17",
+      "phase": "failed",
+      "total_trials": 50,
+      "completed_trials": 37,
+      "failed_trials": 0,
+      "best_trial_number": 1,
+      "best_score": 4.656003416915555,
+      "stop_reason": "[WinError 5] Access is denied: 'L:\\\\M4tie\\\\Documents\\\\fortiesr\\\\user_data\\\\optimizer_sessions\\\\e04648ed-feaa-4879-a49a-9387874d9c17\\\\tmpki711gux' -> 'L:\\\\M4tie\\\\Documents\\\\fortiesr\\\\user_data\\\\optimizer_sessions\\\\e04648ed-feaa-4879-a49a-9387874d9c17\\\\session.json'"
+    },
+    "error": null
+  },
+  {
+    "session_id": "c0a57515-f2e3-4803-930b-0f3fcf6d4a0c",
+    "operation": "backtest",
+    "status": "completed",
+    "created_at": "2026-07-06T18:57:07.900329+00:00",
+    "started_at": "2026-07-06T18:57:07.902329+00:00",
+    "completed_at": "2026-07-06T18:57:15.933673+00:00",
+    "result": {
+      "run_id": "20260706T185707Z_AIStrategy_v001_bt048",
+      "strategy_name": "AIStrategy",
+      "version_id": "v001",
+      "timerange": "20250706-20260706",
+      "command": "L:\\M4tie\\Documents\\fortiesr\\.venv\\Scripts\\freqtrade.exe backtesting --user-data-dir L:\\M4tie\\Documents\\fortiesr\\user_data --config L:\\M4tie\\Documents\\fortiesr\\user_data\\config.json --strategy-path L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T185707Z_AIStrategy_v001_bt048 --strategy AIStrategy --timerange 20250706-20260706 --timeframe 5m --dry-run-wallet 100.0 --max-open-trades 2 --export trades --export-filename L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T185707Z_AIStrategy_v001_bt048\\raw_result.json --pairs JTO/USDT ETH/USDT"
+    },
+    "error": null
+  },
+  {
+    "session_id": "71d0043c-e4a4-42ae-89c6-04cc7643171e",
+    "operation": "backtest",
+    "status": "completed",
+    "created_at": "2026-07-06T20:14:27.085869+00:00",
+    "started_at": "2026-07-06T20:14:27.086871+00:00",
+    "completed_at": "2026-07-06T20:14:35.320256+00:00",
+    "result": {
+      "run_id": "20260706T201427Z_AIStrategy_v001_bt049",
+      "strategy_name": "AIStrategy",
+      "version_id": "v001",
+      "timerange": "20250706-20260706",
+      "command": "L:\\M4tie\\Documents\\fortiesr\\.venv\\Scripts\\freqtrade.exe backtesting --user-data-dir L:\\M4tie\\Documents\\fortiesr\\user_data --config L:\\M4tie\\Documents\\fortiesr\\user_data\\config.json --strategy-path L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T201427Z_AIStrategy_v001_bt049 --strategy AIStrategy --timerange 20250706-20260706 --timeframe 5m --dry-run-wallet 100.0 --max-open-trades 2 --export trades --export-filename L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T201427Z_AIStrategy_v001_bt049\\raw_result.json --pairs JTO/USDT ETH/USDT"
+    },
+    "error": null
+  },
+  {
+    "session_id": "578449c1-0173-4d9e-9906-e65410e798a2",
+    "operation": "backtest",
+    "status": "completed",
+    "created_at": "2026-07-06T20:35:35.847409+00:00",
+    "started_at": "2026-07-06T20:35:35.849408+00:00",
+    "completed_at": "2026-07-06T20:35:43.634464+00:00",
+    "result": {
+      "run_id": "20260706T203535Z_AIStrategy_v001_bt050",
+      "strategy_name": "AIStrategy",
+      "version_id": "v001",
+      "timerange": "20250706-20260706",
+      "command": "L:\\M4tie\\Documents\\fortiesr\\.venv\\Scripts\\freqtrade.exe backtesting --user-data-dir L:\\M4tie\\Documents\\fortiesr\\user_data --config L:\\M4tie\\Documents\\fortiesr\\user_data\\config.json --strategy-path L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T203535Z_AIStrategy_v001_bt050 --strategy AIStrategy --timerange 20250706-20260706 --timeframe 5m --dry-run-wallet 100.0 --max-open-trades 2 --export trades --export-filename L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T203535Z_AIStrategy_v001_bt050\\raw_result.json --pairs JTO/USDT ETH/USDT"
+    },
+    "error": null
+  },
+  {
+    "session_id": "13769a00-0fc1-40b6-bddd-bd91feea4105",
+    "operation": "backtest",
+    "status": "completed",
+    "created_at": "2026-07-06T21:03:24.015584+00:00",
+    "started_at": "2026-07-06T21:03:24.016588+00:00",
+    "completed_at": "2026-07-06T21:03:35.821331+00:00",
+    "result": {
+      "run_id": "20260706T210324Z_AIStrategy_v001_bt051",
+      "strategy_name": "AIStrategy",
+      "version_id": "v001",
+      "timerange": "20250707-20260707",
+      "command": "L:\\M4tie\\Documents\\fortiesr\\.venv\\Scripts\\freqtrade.exe backtesting --user-data-dir L:\\M4tie\\Documents\\fortiesr\\user_data --config L:\\M4tie\\Documents\\fortiesr\\user_data\\config.json --strategy-path L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T210324Z_AIStrategy_v001_bt051 --strategy AIStrategy --timerange 20250707-20260707 --timeframe 5m --dry-run-wallet 100.0 --max-open-trades 2 --export trades --export-filename L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T210324Z_AIStrategy_v001_bt051\\raw_result.json --pairs JTO/USDT ETH/USDT"
+    },
+    "error": null
+  },
+  {
+    "session_id": "41aae43b-41a2-48cb-9252-0bbb4e95db99",
+    "operation": "backtest",
+    "status": "completed",
+    "created_at": "2026-07-06T21:05:02.918911+00:00",
+    "started_at": "2026-07-06T21:05:02.921156+00:00",
+    "completed_at": "2026-07-06T21:05:14.911744+00:00",
+    "result": {
+      "run_id": "20260706T210502Z_AIStrategy_v001_bt052",
+      "strategy_name": "AIStrategy",
+      "version_id": "v001",
+      "timerange": "20250707-20260707",
+      "command": "L:\\M4tie\\Documents\\fortiesr\\.venv\\Scripts\\freqtrade.exe backtesting --user-data-dir L:\\M4tie\\Documents\\fortiesr\\user_data --config L:\\M4tie\\Documents\\fortiesr\\user_data\\config.json --strategy-path L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T210502Z_AIStrategy_v001_bt052 --strategy AIStrategy --timerange 20250707-20260707 --timeframe 5m --dry-run-wallet 100.0 --max-open-trades 2 --export trades --export-filename L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T210502Z_AIStrategy_v001_bt052\\raw_result.json --pairs JTO/USDT ETH/USDT"
+    },
+    "error": null
+  },
+  {
+    "session_id": "f251a047-fe7a-41bc-8ca8-c7fb7205a8b4",
+    "operation": "backtest",
+    "status": "completed",
+    "created_at": "2026-07-06T21:38:56.776563+00:00",
+    "started_at": "2026-07-06T21:38:56.777564+00:00",
+    "completed_at": "2026-07-06T21:39:09.798505+00:00",
+    "result": {
+      "run_id": "20260706T213856Z_AIStrategy_v001_bt053",
+      "strategy_name": "AIStrategy",
+      "version_id": "v001",
+      "timerange": "20250707-20260707",
+      "command": "L:\\M4tie\\Documents\\fortiesr\\.venv\\Scripts\\freqtrade.exe backtesting --user-data-dir L:\\M4tie\\Documents\\fortiesr\\user_data --config L:\\M4tie\\Documents\\fortiesr\\user_data\\config.json --strategy-path L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T213856Z_AIStrategy_v001_bt053 --strategy AIStrategy --timerange 20250707-20260707 --timeframe 5m --dry-run-wallet 100.0 --max-open-trades 2 --export trades --export-filename L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T213856Z_AIStrategy_v001_bt053\\raw_result.json --pairs JTO/USDT ETH/USDT"
+    },
+    "error": null
+  },
+  {
+    "session_id": "086790ab-b731-4bcd-aaba-ec33b76fa821",
+    "operation": "backtest",
+    "status": "completed",
+    "created_at": "2026-07-06T22:02:38.279630+00:00",
+    "started_at": "2026-07-06T22:02:38.280631+00:00",
+    "completed_at": "2026-07-06T22:02:49.158394+00:00",
+    "result": {
+      "run_id": "20260706T220238Z_AIStrategy_v001_bt054",
+      "strategy_name": "AIStrategy",
+      "version_id": "v001",
+      "timerange": "20250707-20260707",
+      "command": "L:\\M4tie\\Documents\\fortiesr\\.venv\\Scripts\\freqtrade.exe backtesting --user-data-dir L:\\M4tie\\Documents\\fortiesr\\user_data --config L:\\M4tie\\Documents\\fortiesr\\user_data\\config.json --strategy-path L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T220238Z_AIStrategy_v001_bt054 --strategy AIStrategy --timerange 20250707-20260707 --timeframe 5m --dry-run-wallet 100.0 --max-open-trades 2 --export trades --export-filename L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T220238Z_AIStrategy_v001_bt054\\raw_result.json --pairs JTO/USDT ETH/USDT"
+    },
+    "error": null
+  },
+  {
+    "session_id": "17b2a541-5312-447f-a13d-117f60b9cb00",
+    "operation": "backtest",
+    "status": "completed",
+    "created_at": "2026-07-06T22:46:44.765371+00:00",
+    "started_at": "2026-07-06T22:46:44.766370+00:00",
+    "completed_at": "2026-07-06T22:46:54.256275+00:00",
+    "result": {
+      "run_id": "20260706T224644Z_AIStrategy_v001_bt055",
+      "strategy_name": "AIStrategy",
+      "version_id": "v001",
+      "timerange": "20250707-20260707",
+      "command": "L:\\M4tie\\Documents\\fortiesr\\.venv\\Scripts\\freqtrade.exe backtesting --user-data-dir L:\\M4tie\\Documents\\fortiesr\\user_data --config L:\\M4tie\\Documents\\fortiesr\\user_data\\config.json --strategy-path L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T224644Z_AIStrategy_v001_bt055 --strategy AIStrategy --timerange 20250707-20260707 --timeframe 5m --dry-run-wallet 100.0 --max-open-trades 1 --export trades --export-filename L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T224644Z_AIStrategy_v001_bt055\\raw_result.json --pairs JTO/USDT"
+    },
+    "error": null
+  },
+  {
+    "session_id": "17314902-9d34-452a-9853-665bac58ec91",
+    "operation": "backtest",
+    "status": "completed",
+    "created_at": "2026-07-06T22:47:54.445084+00:00",
+    "started_at": "2026-07-06T22:47:54.446083+00:00",
+    "completed_at": "2026-07-06T22:48:02.019190+00:00",
+    "result": {
+      "run_id": "20260706T224754Z_AIStrategy_v001_bt056",
+      "strategy_name": "AIStrategy",
+      "version_id": "v001",
+      "timerange": "20260401-20260707",
+      "command": "L:\\M4tie\\Documents\\fortiesr\\.venv\\Scripts\\freqtrade.exe backtesting --user-data-dir L:\\M4tie\\Documents\\fortiesr\\user_data --config L:\\M4tie\\Documents\\fortiesr\\user_data\\config.json --strategy-path L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T224754Z_AIStrategy_v001_bt056 --strategy AIStrategy --timerange 20260401-20260707 --timeframe 5m --dry-run-wallet 100.0 --max-open-trades 1 --export trades --export-filename L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260706T224754Z_AIStrategy_v001_bt056\\raw_result.json --pairs JTO/USDT"
+    },
+    "error": null
+  },
+  {
+    "session_id": "f428b1f3-2b19-42e5-a3d8-9ef0711c5f3d",
+    "operation": "backtest",
+    "status": "downloading",
+    "created_at": "2026-07-07T07:05:47.336860+00:00",
+    "started_at": "2026-07-07T07:05:47.338586+00:00",
+    "completed_at": null,
+    "result": {
+      "command": "L:\\\\M4tie\\\\Documents\\\\fortiesr\\\\.venv\\\\Scripts\\\\freqtrade.exe backtesting --user-data-dir L:\\\\M4tie\\\\Documents\\\\fortiesr\\\\user_data --config L:\\\\M4tie\\\\Documents\\\\fortiesr\\\\user_data\\\\config.json --strategy-path L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260707T070547Z_AIStrategy_v001_bt001 --strategy AIStrategy --timerange 20260108-20260707 --timeframe 5m --dry-run-wallet 101.0 --max-open-trades 4 --export trades --export-filename L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260707T070547Z_AIStrategy_v001_bt001\\raw_result.json --pairs ATOM/USDT BNB/USDT MATIC/USDT VET/USDT UNI/USDT TRX/USDT SHIB/USDT DOT/USDT SOL/USDT ARB/USDT BCH/USDT FIL/USDT SEI/USDT LTC/USDT DOGE/USDT ETH/USDT XLM/USDT FTM/USDT HBAR/USDT SUI/USDT XRP/USDT ADA/USDT NEAR/USDT BTC/USDT AVAX/USDT INJ/USDT LINK/USDT OP/USDT ICP/USDT TIA/USDT ETC/USDT APT/USDT STRK/USDT SUSHI/USDT IMX/USDT SAND/USDT BAL/USDT YFI/USDT GALA/USDT AXS/USDT EGLD/USDT LDO/USDT XTZ/USDT GMX/USDT MANA/USDT DYDX/USDT JTO/USDT 1INCH/USDT COMP/USDT PENDLE/USDT ALGO/USDT CRV/USDT MKR/USDT MINA/USDT BONK/USDT RPL/USDT ZK/USDT BLUR/USDT ENJ/USDT STX/USDT PYTH/USDT WIF/USDT AAVE/USDT SNX/USDT"
+    },
+    "error": null
+  },
+  {
+    "session_id": "d88add7c-f099-44d4-bae6-f6f4b4c47e22",
+    "operation": "backtest",
+    "status": "downloading",
+    "created_at": "2026-07-07T07:10:01.049029+00:00",
+    "started_at": "2026-07-07T07:10:01.050543+00:00",
+    "completed_at": null,
+    "result": {
+      "command": "L:\\\\M4tie\\\\Documents\\\\fortiesr\\\\.venv\\\\Scripts\\\\freqtrade.exe backtesting --user-data-dir L:\\\\M4tie\\\\Documents\\\\fortiesr\\\\user_data --config L:\\\\M4tie\\\\Documents\\\\fortiesr\\\\user_data\\\\config.json --strategy-path L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260707T071001Z_AIStrategy_v001_bt002 --strategy AIStrategy --timerange 20260108-20260707 --timeframe 5m --dry-run-wallet 101.0 --max-open-trades 4 --export trades --export-filename L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260707T071001Z_AIStrategy_v001_bt002\\raw_result.json --pairs SEI/USDT PYTH/USDT SAND/USDT LTC/USDT"
+    },
+    "error": null
+  },
+  {
+    "session_id": "a21d7945-3fa0-4da6-b72a-445d02fc35c3",
+    "operation": "data_download",
+    "status": "completed",
+    "created_at": "2026-07-07T07:10:36.025373+00:00",
+    "started_at": "2026-07-07T07:10:36.027373+00:00",
+    "completed_at": "2026-07-07T07:10:41.615364+00:00",
+    "result": {
+      "download_id": "download_20260707_071036",
+      "command": "L:\\\\M4tie\\\\Documents\\\\fortiesr\\\\.venv\\\\Scripts\\\\freqtrade.exe download-data --user-data-dir L:\\\\M4tie\\\\Documents\\\\fortiesr\\\\user_data --config L:\\\\M4tie\\\\Documents\\\\fortiesr\\\\user_data\\\\config.json --timerange 20260108-20260707 --timeframes 5m --pairs SEI/USDT PYTH/USDT SAND/USDT LTC/USDT --prepend",
+      "pairs": [
+        "SEI/USDT",
+        "PYTH/USDT",
+        "SAND/USDT",
+        "LTC/USDT"
+      ],
+      "timeframes": [
+        "5m"
+      ],
+      "timerange": "20260108-20260707"
+    },
+    "error": null
+  },
+  {
+    "session_id": "f4007ae4-c3c7-4c79-a8bb-db1cbebf38c9",
+    "operation": "backtest",
+    "status": "downloading",
+    "created_at": "2026-07-07T07:10:43.557224+00:00",
+    "started_at": "2026-07-07T07:10:43.558733+00:00",
+    "completed_at": null,
+    "result": {
+      "command": "L:\\\\M4tie\\\\Documents\\\\fortiesr\\\\.venv\\\\Scripts\\\\freqtrade.exe backtesting --user-data-dir L:\\\\M4tie\\\\Documents\\\\fortiesr\\\\user_data --config L:\\\\M4tie\\\\Documents\\\\fortiesr\\\\user_data\\\\config.json --strategy-path L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260707T071043Z_AIStrategy_v001_bt003 --strategy AIStrategy --timerange 20260108-20260707 --timeframe 5m --dry-run-wallet 101.0 --max-open-trades 4 --export trades --export-filename L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260707T071043Z_AIStrategy_v001_bt003\\raw_result.json --pairs SEI/USDT PYTH/USDT SAND/USDT LTC/USDT"
+    },
+    "error": null
+  },
+  {
+    "session_id": "fedb1dae-f909-4b3c-836c-5f3fb96deaf9",
+    "operation": "backtest",
+    "status": "completed",
+    "created_at": "2026-07-07T20:52:32.397365+00:00",
+    "started_at": "2026-07-07T20:52:32.398458+00:00",
+    "completed_at": "2026-07-07T20:52:46.806984+00:00",
+    "result": {
+      "run_id": "20260707T205232Z_AIStrategy_v001_bt004",
+      "strategy_name": "AIStrategy",
+      "version_id": "v001",
+      "timerange": "20250707-20260707",
+      "command": "L:\\\\M4tie\\\\Documents\\\\fortiesr\\\\.venv\\\\Scripts\\\\freqtrade.exe backtesting --user-data-dir L:\\\\M4tie\\\\Documents\\\\fortiesr\\\\user_data --config L:\\\\M4tie\\\\Documents\\\\fortiesr\\\\user_data\\\\config.json --strategy-path L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260707T205232Z_AIStrategy_v001_bt004 --strategy AIStrategy --timerange 20250707-20260707 --timeframe 5m --dry-run-wallet 101.0 --max-open-trades 4 --export trades --export-filename L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260707T205232Z_AIStrategy_v001_bt004\\raw_result.json --pairs SEI/USDT PYTH/USDT SAND/USDT JTO/USDT"
+    },
+    "error": null
+  },
+  {
+    "session_id": "165daf3a-a575-4c7d-9733-f1c651998249",
+    "operation": "backtest",
+    "status": "completed",
+    "created_at": "2026-07-09T05:25:22.484051+00:00",
+    "started_at": "2026-07-09T05:25:22.493227+00:00",
+    "completed_at": "2026-07-09T05:25:30.402056+00:00",
+    "result": {
+      "run_id": "20260709T052522Z_AIStrategy_v001_bt001",
+      "strategy_name": "AIStrategy",
+      "version_id": "v001",
+      "timerange": "20230101-20230115",
+      "command": "L:\\\\M4tie\\\\Documents\\\\fortiesr\\\\.venv\\\\Scripts\\\\freqtrade.exe backtesting --user-data-dir L:\\\\M4tie\\\\Documents\\\\fortiesr\\\\user_data --config L:\\\\M4tie\\\\Documents\\\\fortiesr\\\\user_data\\\\config.json --strategy-path L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260709T052522Z_AIStrategy_v001_bt001 --strategy AIStrategy --timerange 20230101-20230115 --timeframe 4h --dry-run-wallet 1000.0 --max-open-trades 1 --export trades --export-filename L:\\M4tie\\Documents\\fortiesr\\user_data\\backtest_results\\AIStrategy\\20260709T052522Z_AIStrategy_v001_bt001\\raw_result.json --pairs BTC/USDT"
+    },
+    "error": null
+  }
+]

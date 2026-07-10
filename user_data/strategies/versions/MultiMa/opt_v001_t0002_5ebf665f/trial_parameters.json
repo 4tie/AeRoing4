@@ -1,0 +1,27 @@
+{
+  "strategy_name": "MultiMa",
+  "version_id": "opt_v001_t0002_5ebf665f",
+  "extracted_at": "2026-05-30T16:19:48.046873Z",
+  "pair_list": null,
+  "buy_params": {
+    "buy_ma_count": 8,
+    "buy_ma_gap": 14
+  },
+  "sell_params": {
+    "sell_ma_count": 15,
+    "sell_ma_gap": 66
+  },
+  "protection_params": {},
+  "roi_table": {
+    "0": 0.523,
+    "1553": 0.123,
+    "2332": 0.076,
+    "3169": 0.0
+  },
+  "stoploss": -0.345,
+  "trailing_stop": false,
+  "trailing_stop_positive": null,
+  "trailing_stop_positive_offset": 0.0,
+  "trailing_only_offset_is_reached": false,
+  "custom_params": {}
+}

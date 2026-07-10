@@ -1,0 +1,24 @@
+{
+  "strategy_name": "MomentumRobust",
+  "version_id": "opt_v001_t0039_23335191",
+  "extracted_at": "2026-06-16T18:43:27.403376Z",
+  "pair_list": null,
+  "buy_params": {
+    "rsi_oversold": 38
+  },
+  "sell_params": {},
+  "protection_params": {},
+  "roi_table": {
+    "0": 0.02,
+    "4": 0.015,
+    "8": 0.01,
+    "16": 0.005,
+    "32": 0.0
+  },
+  "stoploss": -0.03,
+  "trailing_stop": false,
+  "trailing_stop_positive": 0.0,
+  "trailing_stop_positive_offset": 0.0,
+  "trailing_only_offset_is_reached": false,
+  "custom_params": {}
+}

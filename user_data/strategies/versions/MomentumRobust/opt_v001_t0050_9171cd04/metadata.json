@@ -1,0 +1,15 @@
+{
+  "version_id": "opt_v001_t0050_9171cd04",
+  "strategy_name": "MomentumRobust",
+  "parent_version_id": "v001",
+  "created_at": "2026-06-16T18:50:37.432618Z",
+  "change_type": "optimization",
+  "creation_source": "optimizer_trial",
+  "proposal_id": null,
+  "source_run_id": null,
+  "acceptance_status": "rejected",
+  "accepted_at": null,
+  "rejected_at": "2026-06-16T18:51:24.919138Z",
+  "result_summary_run_id": "20260616T185037Z_MomentumRobust_opt_v001_t0050_9171cd04_bt047",
+  "quality_gate_results": []
+}

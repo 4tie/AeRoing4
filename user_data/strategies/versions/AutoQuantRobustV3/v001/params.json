@@ -1,0 +1,27 @@
+{
+  "strategy_name": "AutoQuantRobustV3",
+  "version_id": "v001",
+  "extracted_at": "2026-06-15T11:47:00.724051Z",
+  "pair_list": null,
+  "buy_params": {
+    "buy_ma_count": 3,
+    "buy_ma_gap": 10
+  },
+  "sell_params": {
+    "sell_ma_count": 4,
+    "sell_ma_gap": 20
+  },
+  "protection_params": {},
+  "roi_table": {
+    "0": 0.08,
+    "240": 0.04,
+    "720": 0.02,
+    "1440": 0.0
+  },
+  "stoploss": -0.15,
+  "trailing_stop": true,
+  "trailing_stop_positive": 0.02,
+  "trailing_stop_positive_offset": 0.04,
+  "trailing_only_offset_is_reached": true,
+  "custom_params": {}
+}

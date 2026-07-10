@@ -1,0 +1,65 @@
+{
+  "schema_version": "assistant_copilot_session_v2",
+  "session_id": "214ab042-1c60-4f48-a281-e285e44fb2b2",
+  "created_at": "2026-07-09T02:23:25.025121+00:00",
+  "updated_at": "2026-07-09T02:23:42.094103+00:00",
+  "model": "qwen3.5:9b",
+  "mode": "analysis",
+  "title": "AI Copilot Chat",
+  "messages": [
+    {
+      "id": "564f19a1-b384-4166-9007-ef69240bbad0",
+      "role": "user",
+      "content": "hello",
+      "created_at": "2026-07-09T02:23:25.025121+00:00"
+    },
+    {
+      "id": "2f39a83d-621f-4bc1-97fc-b051b55ac2fd",
+      "role": "assistant",
+      "content": "Hello! \ud83d\udc4b I'm ready to assist you with your Freqtrade trading strategy development work. \n\nBased on the current state, I can see you're working with:\n- **Strategy**: `AIStrategy` \n- Active tab set to AutoQuant mode\n- Multiple versions available (v001 - accepted base version, plus v002 and v003 as candidate variants)\n\nWhat would you like help with today? I can assist with:\n\n- Running pair discovery or finding profitable pairs\n- Backtesting strategy performance  \n- Parameter optimization sessions\n- Strategy analysis and improvement suggestions\n- Or any other Freqtrade development tasks",
+      "created_at": "2026-07-09T02:23:42.088544+00:00"
+    }
+  ],
+  "tool_runs": [],
+  "pending_actions": [],
+  "active_jobs": [],
+  "last_context_summary": {
+    "active_tab": "auto-quant",
+    "active_panel": null,
+    "strategy_name": "AIStrategy",
+    "timeframe": null,
+    "timerange": null,
+    "selected_pair_count": null,
+    "pairs": null,
+    "dry_run_wallet": null,
+    "max_open_trades": null,
+    "backtest_status": null,
+    "optimizer_session_id": null,
+    "optimizer_trial_number": null,
+    "backtest_run_id": null,
+    "candidate_run_id": null,
+    "stress_session_id": null,
+    "temporal_stress_session_id": null,
+    "auto_quant_run_id": null,
+    "optimizer_phase": null,
+    "auto_quant_status": null,
+    "readiness_status": null,
+    "readiness_score": null,
+    "readiness_blocking_failures": 0,
+    "chips": [
+      {
+        "kind": "strategy",
+        "label": "AIStrategy"
+      },
+      {
+        "kind": "params",
+        "label": "strategy files"
+      }
+    ],
+    "warnings": [
+      "Multiple AutoQuant runs are active; provide auto_quant_run_id explicitly.",
+      "No active run or optimizer session is selected."
+    ]
+  },
+  "last_context_overrides": {}
+}

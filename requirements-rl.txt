@@ -1,0 +1,8 @@
+# Reinforcement Learning dependencies - heavy, install only if needed
+# Install with: pip install -r requirements-rl.txt
+# Requires: requirements-core.txt, requirements-ai.txt
+
+# RL frameworks
+stable-baselines3>=2.0.0
+gymnasium>=0.29.0
+shimmy>=0.2.1

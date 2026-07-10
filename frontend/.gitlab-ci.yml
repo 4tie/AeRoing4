@@ -1,0 +1,48 @@
+stages:
+  - sync
+  - bundle
+
+sync-to-external:
+  stage: sync
+  image: alpine/git:latest
+  only:
+    - main
+  script:
+    - git push --force "https://${EXTERNAL_USER}:${EXTERNAL_TOKEN}@${EXTERNAL_HOST}/${EXTERNAL_PROJECT}.git" HEAD:main
+
+# Package git bundle and upload to S3
+bundle-to-s3:
+  stage: bundle
+  retry: 2
+  image: amazon/aws-cli:latest
+  only:
+    - main
+  before_script:
+    - yum install -y git
+  script:
+    - export AWS_ACCESS_KEY_ID=${REACTUS_TEMPLATE_BUNDLE_S3_ACCESS_KEY_ID}
+    - export AWS_SECRET_ACCESS_KEY=${REACTUS_TEMPLATE_BUNDLE_S3_ACCESS_KEY_SECRET}
+    - git bundle create vibe-web-template.bundle --all
+    - git bundle verify vibe-web-template.bundle
+    - aws s3 cp vibe-web-template.bundle s3://${REACTUS_TEMPLATE_BUNDLE_BUCKET}/reactus-template-bundles/vibe-web-template/vibe-web-template.bundle
+  variables:
+    REACTUS_TEMPLATE_BUNDLE_BUCKET: bty-reactus-assets
+    AWS_DEFAULT_REGION: us-east-1
+
+# Package git bundle and upload to OSS (using ossutil)
+bundle-to-oss:
+  stage: bundle
+  retry: 2
+  image: amazon/aws-cli:latest
+  only:
+    - main
+  before_script:
+    - yum install -y git
+    - curl -o /usr/local/bin/ossutil https://gosspublic.alicdn.com/ossutil/1.7.15/ossutil64
+    - chmod +x /usr/local/bin/ossutil
+  script:
+    - git bundle create vibe-web-template.bundle --all
+    - git bundle verify vibe-web-template.bundle
+    - ossutil cp -f vibe-web-template.bundle oss://${REACTUS_TEMPLATE_BUNDLE_BUCKET}/reactus-template-bundles/vibe-web-template/vibe-web-template.bundle -e https://oss-cn-hangzhou.aliyuncs.com -i ${REACTUS_TEMPLATE_BUNDLE_OSS_ACCESS_KEY_ID} -k ${REACTUS_TEMPLATE_BUNDLE_OSS_ACCESS_KEY_SECRET}
+  variables:
+    REACTUS_TEMPLATE_BUNDLE_BUCKET: bty-reactus-assets

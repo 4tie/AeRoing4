@@ -1,0 +1,90 @@
+{
+  "strategy": "GAProfitableStrategy",
+  "strategy_path": "user_data/strategies",
+  "dry_run": true,
+  "max_open_trades": 3,
+  "stake_currency": "USDT",
+  "stake_amount": "unlimited",
+  "tradable_balance_ratio": 0.99,
+  "fiat_display_currency": "USD",
+  "timeframe": "1h",
+  "dry_run_wallet": 100,
+  "cancel_open_orders_on_exit": false,
+  "trading_mode": "spot",
+  "margin_mode": "isolated",
+  "unfilledtimeout": {
+    "entry": 10,
+    "exit": 10,
+    "exit_timeout_count": 0,
+    "unit": "minutes"
+  },
+  "exchange": {
+    "name": "binance",
+    "key": "",
+    "secret": "",
+    "ccxt_config": {
+      "enableRateLimit": false
+    },
+    "ccxt_async_config": {
+      "resolver": "system",
+      "aiohttp_trust_env": true,
+      "options": {
+        "adjustForTimeDifference": false,
+        "defaultType": "spot"
+      },
+      "enableRateLimit": false,
+      "use_asyncio_dns": false
+    },
+    "skip_pair_validation": true,
+    "skip_open_order_update": true,
+    "pair_whitelist": [
+      "XRP/USDT",
+      "ADA/USDT",
+      "NEAR/USDT",
+      "BTC/USDT"
+    ],
+    "pair_validation": {
+      "enabled": false
+    },
+    "exchange": "binance",
+    "sandbox": false
+  },
+  "entry_pricing": {
+    "price_side": "same",
+    "use_order_book": true,
+    "order_book_top": 1,
+    "price_last_balance": 0.0,
+    "check_depth_of_market": {
+      "enabled": false,
+      "bids_to_ask_delta": 1
+    }
+  },
+  "exit_pricing": {
+    "price_side": "same",
+    "use_order_book": true,
+    "order_book_top": 1
+  },
+  "pairlists": [
+    {
+      "method": "StaticPairList"
+    }
+  ],
+  "dataformat_ohlcv": "feather",
+  "dataformat_trades": "feather",
+  "api_server": {
+    "enabled": true,
+    "listen_ip_address": "127.0.0.1",
+    "listen_port": 8080,
+    "username": "4t",
+    "password": "2312"
+  },
+  "bot_name": "strategy_lab",
+  "initial_state": "running",
+  "force_entry_enable": false,
+  "internals": {
+    "process_throttle_secs": 5
+  },
+  "export": {
+    "export_filename": "L:\\M4tie\\Documents\\fortiesr\\user_data\\pair_explorer_results\\pe_ce14d871_9d124f54\\pe_ce14d871_9d124f54"
+  }
+}

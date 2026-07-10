@@ -1,0 +1,286 @@
+{
+  "schema_version": "assistant_copilot_session_v2",
+  "session_id": "4def77b7-1fc9-46ab-96f9-829e57f78244",
+  "created_at": "2026-07-09T03:14:22.558004+00:00",
+  "updated_at": "2026-07-09T03:14:56.193362+00:00",
+  "model": "qwen3.5:9b",
+  "mode": "analysis",
+  "title": "AI Copilot Chat",
+  "messages": [
+    {
+      "id": "d3e83e00-bb2f-4143-92e6-e8922cc5ff62",
+      "role": "user",
+      "content": "list all strategies",
+      "created_at": "2026-07-09T03:14:22.558004+00:00"
+    },
+    {
+      "id": "f0171aec-4a40-4fe8-b4ed-87675564f349",
+      "role": "assistant",
+      "content": "",
+      "created_at": "2026-07-09T03:14:34.686986+00:00",
+      "tool_calls": [
+        {
+          "name": "list_strategies",
+          "arguments": {},
+          "tool_call_id": "call_1_0"
+        }
+      ]
+    },
+    {
+      "id": "883ae488-12b1-4c64-98ff-72ff76b96c9d",
+      "role": "tool",
+      "content": "{\"strategies\": [{\"name\": \"AIStrategy\", \"class_name\": \"AIStrategy\", \"py_file\": \"AIStrategy.py\", \"json_file\": \"AIStrategy.json\", \"has_json\": true}, {\"name\": \"AIStrategy_Optimized\", \"class_name\": \"AIStrategy_Optimized\", \"py_file\": \"AIStrategy_Optimized.py\", \"json_file\": \"AIStrategy_Optimized.json\", \"has_json\": true}, {\"name\": \"AIStrategy_baseline_backup\", \"class_name\": \"AIStrategy\", \"py_file\": \"AIStrategy_baseline_backup.py\", \"json_file\": \"AIStrategy_baseline_backup.json\", \"has_json\": true}, {\"name\": \"AutoQuantRobustV1\", \"class_name\": \"AutoQuantRobustV1\", \"py_file\": \"AutoQuantRobustV1.py\", \"json_file\": \"AutoQuantRobustV1.json\", \"has_json\": true}, {\"name\": \"AutoQuantRobustV2\", \"class_name\": \"AutoQuantRobustV2\", \"py_file\": \"AutoQuantRobustV2.py\", \"json_file\": \"AutoQuantRobustV2.json\", \"has_json\": true}, {\"name\": \"AutoQuantRobustV3\", \"class_name\": \"AutoQuantRobustV3\", \"py_file\": \"AutoQuantRobustV3.py\", \"json_file\": \"AutoQuantRobustV3.json\", \"has_json\": true}, {\"name\": \"AutoQuantRobustV4\", \"class_name\": \"AutoQuantRobustV4\", \"py_file\": \"AutoQuantRobustV4.py\", \"json_file\": \"AutoQuantRobustV4.json\", \"has_json\": true}, {\"name\": \"CatFactory\", \"class_name\": \"CatFactory\", \"py_file\": \"CatFactory.py\", \"json_file\": \"CatFactory.json\", \"has_json\": true}, {\"name\": \"Diamond\", \"class_name\": \"Diamond\", \"py_file\": \"Diamond.py\", \"json_file\": \"Diamond.json\", \"has_json\": true}, {\"name\": \"EnsembleFactory\", \"class_name\": \"EnsembleFactory\", \"py_file\": \"EnsembleFactory.py\", \"json_file\": \"EnsembleFactory.json\", \"has_json\": true}, {\"name\": \"HermesTestStrategy\", \"class_name\": \"HermesTestStrategy\", \"py_file\": \"HermesTestStrategy.py\", \"json_file\": \"HermesTestStrategy.json\", \"has_json\": true}, {\"name\": \"IntradayAdaptive_v1\", \"class_name\": \"IntradayAdaptive_v1\", \"py_file\": \"IntradayAdaptive_v1.py\", \"json_file\": \"IntradayAdaptive_v1.json\", \"has_json\": true}, {\"name\": \"IntradayBasic_v1\", \"class_name\": \"IntradayBasic_v1\", \"py_file\": \"IntradayBasic_v1.py\", \"json_file\": \"IntradayBasic_v1.json\", \"has_json\": true}, {\"name\": \"IntradayMomentum_v1\", \"class_name\": \"IntradayMomentum_v1\", \"py_file\": \"IntradayMomentum_v1.py\", \"json_file\": \"IntradayMomentum_v1.json\", \"has_json\": true}, {\"name\": \"IntradayOmni_v1\", \"class_name\": \"IntradayOmni_v1\", \"py_file\": \"IntradayOmni_v1.py\", \"json_file\": \"IntradayOmni_v1.json\", \"has_json\": true}, {\"name\": \"MomentumRobust\", \"class_name\": \"MomentumRobust\", \"py_file\": \"MomentumRobust.py\", \"json_file\": \"MomentumRobust.json\", \"has_json\": true}, {\"name\": \"MultiMa\", \"class_name\": \"MultiMa\", \"py_file\": \"MultiMa.py\", \"json_file\": \"MultiMa.json\", \"has_json\": true}, {\"name\": \"MultiMa2\", \"class_name\": \"MultiMa2\", \"py_file\": \"MultiMa2.py\", \"json_file\": \"MultiMa2.json\", \"has_json\": true}, {\"name\": \"MultiMa_v2\", \"class_name\": \"MultiMa_v2\", \"py_file\": \"MultiMa_v2.py\", \"json_file\": \"MultiMa_v2.json\", \"has_json\": true}, {\"name\": \"MultiMa_v3\", \"class_name\": \"MultiMa_v3\", \"py_file\": \"MultiMa_v3.py\", \"json_file\": \"MultiMa_v3.json\", \"has_json\": true}, {\"name\": \"MultiMeee\", \"class_name\": \"MultiMeee\", \"py_file\": \"MultiMeee.py\", \"json_file\": \"MultiMeee.json\", \"has_json\": true}, {\"name\": \"PatternRecognition\", \"class_name\": \"PatternRecognition\", \"py_file\": \"PatternRecognition.py\", \"json_file\": \"PatternRecognition.json\", \"has_json\": true}, {\"name\": \"ScalpMomentum_v1\", \"class_name\": \"ScalpMomentum_v1\", \"py_file\": \"ScalpMomentum_v1.py\", \"json_file\": \"ScalpMomentum_v1.json\", \"has_json\": true}, {\"name\": \"TestStrat_1781099171\", \"class_name\": \"TestStrat_1781099171\", \"py_file\": \"TestStrat_1781099171.py\", \"json_file\": \"TestStrat_1781099171.json\", \"has_json\": true}, {\"name\": \"TestStrat_1781099171_baseline_backup\", \"class_name\": \"TestStrat_1781099171\", \"py_file\": \"TestStrat_1781099171_baseline_backup.py\", \"json_file\": \"TestStrat_1781099171_baseline_backup.json\", \"has_json\": true}, {\"name\": \"mabStra\", \"class_name\": \"mabStra\", \"py_file\": \"mabStra.py\", \"json_file\": \"mabStra.json\", \"has_json\": true}], \"count\": 26}",
+      "created_at": "2026-07-09T03:14:34.693429+00:00",
+      "tool_call_id": "call_1_0"
+    },
+    {
+      "id": "cdb5bcbd-17af-4942-abfb-6b1289ccdae6",
+      "role": "assistant",
+      "content": "Here's the complete list of available Freqtrade trading strategies:\n\n## All Strategies (26 total):\n\n1. **AIStrategy** - Your current active strategy\n2. **AIStrategy_Optimized**\n3. **AIStrategy_baseline_backup**\n4. **AutoQuantRobustV1** through **AutoQuantRobustV4** (4 variants)\n5. **CatFactory**\n6. **Diamond**\n7. **EnsembleFactory**\n8. **HermesTestStrategy**\n9. **IntradayAdaptive_v1**, **IntradayBasic_v1**, **IntradayMomentum_v1**, **IntradayOmni_v1** (4 intraday variants)\n10. **MomentumRobust**\n11. **MultiMa**, **MultiMa2**, **MultiMa_v2**, **MultiMa_v3**, **MultiMeee** (5 multi-ma strategies)\n12. **PatternRecognition**\n13. **ScalpMomentum_v1**\n14. **TestStrat_1781099171** and baseline backup\n\nEach strategy has both `.py` and `.json` configuration files available for analysis. Would you like me to read the details of any specific strategy, or would you prefer to proceed with backtesting/optimization using one of these strategies?",
+      "created_at": "2026-07-09T03:14:56.181707+00:00"
+    }
+  ],
+  "tool_runs": [
+    {
+      "tool_run_id": "a0e1705c-6f06-47bc-a41a-32c094ff59cf",
+      "tool_call_id": "call_1_0",
+      "tool_name": "list_strategies",
+      "arguments": {},
+      "safety": "read_only",
+      "status": "completed",
+      "created_at": "2026-07-09T03:14:34.691854+00:00",
+      "started_at": "2026-07-09T03:14:34.689102+00:00",
+      "completed_at": "2026-07-09T03:14:34.691312+00:00",
+      "job_ref": null,
+      "result_summary": {
+        "strategies": [
+          {
+            "name": "AIStrategy",
+            "class_name": "AIStrategy",
+            "py_file": "AIStrategy.py",
+            "json_file": "AIStrategy.json",
+            "has_json": true
+          },
+          {
+            "name": "AIStrategy_Optimized",
+            "class_name": "AIStrategy_Optimized",
+            "py_file": "AIStrategy_Optimized.py",
+            "json_file": "AIStrategy_Optimized.json",
+            "has_json": true
+          },
+          {
+            "name": "AIStrategy_baseline_backup",
+            "class_name": "AIStrategy",
+            "py_file": "AIStrategy_baseline_backup.py",
+            "json_file": "AIStrategy_baseline_backup.json",
+            "has_json": true
+          },
+          {
+            "name": "AutoQuantRobustV1",
+            "class_name": "AutoQuantRobustV1",
+            "py_file": "AutoQuantRobustV1.py",
+            "json_file": "AutoQuantRobustV1.json",
+            "has_json": true
+          },
+          {
+            "name": "AutoQuantRobustV2",
+            "class_name": "AutoQuantRobustV2",
+            "py_file": "AutoQuantRobustV2.py",
+            "json_file": "AutoQuantRobustV2.json",
+            "has_json": true
+          },
+          {
+            "name": "AutoQuantRobustV3",
+            "class_name": "AutoQuantRobustV3",
+            "py_file": "AutoQuantRobustV3.py",
+            "json_file": "AutoQuantRobustV3.json",
+            "has_json": true
+          },
+          {
+            "name": "AutoQuantRobustV4",
+            "class_name": "AutoQuantRobustV4",
+            "py_file": "AutoQuantRobustV4.py",
+            "json_file": "AutoQuantRobustV4.json",
+            "has_json": true
+          },
+          {
+            "name": "CatFactory",
+            "class_name": "CatFactory",
+            "py_file": "CatFactory.py",
+            "json_file": "CatFactory.json",
+            "has_json": true
+          },
+          {
+            "name": "Diamond",
+            "class_name": "Diamond",
+            "py_file": "Diamond.py",
+            "json_file": "Diamond.json",
+            "has_json": true
+          },
+          {
+            "name": "EnsembleFactory",
+            "class_name": "EnsembleFactory",
+            "py_file": "EnsembleFactory.py",
+            "json_file": "EnsembleFactory.json",
+            "has_json": true
+          },
+          {
+            "name": "HermesTestStrategy",
+            "class_name": "HermesTestStrategy",
+            "py_file": "HermesTestStrategy.py",
+            "json_file": "HermesTestStrategy.json",
+            "has_json": true
+          },
+          {
+            "name": "IntradayAdaptive_v1",
+            "class_name": "IntradayAdaptive_v1",
+            "py_file": "IntradayAdaptive_v1.py",
+            "json_file": "IntradayAdaptive_v1.json",
+            "has_json": true
+          },
+          {
+            "name": "IntradayBasic_v1",
+            "class_name": "IntradayBasic_v1",
+            "py_file": "IntradayBasic_v1.py",
+            "json_file": "IntradayBasic_v1.json",
+            "has_json": true
+          },
+          {
+            "name": "IntradayMomentum_v1",
+            "class_name": "IntradayMomentum_v1",
+            "py_file": "IntradayMomentum_v1.py",
+            "json_file": "IntradayMomentum_v1.json",
+            "has_json": true
+          },
+          {
+            "name": "IntradayOmni_v1",
+            "class_name": "IntradayOmni_v1",
+            "py_file": "IntradayOmni_v1.py",
+            "json_file": "IntradayOmni_v1.json",
+            "has_json": true
+          },
+          {
+            "name": "MomentumRobust",
+            "class_name": "MomentumRobust",
+            "py_file": "MomentumRobust.py",
+            "json_file": "MomentumRobust.json",
+            "has_json": true
+          },
+          {
+            "name": "MultiMa",
+            "class_name": "MultiMa",
+            "py_file": "MultiMa.py",
+            "json_file": "MultiMa.json",
+            "has_json": true
+          },
+          {
+            "name": "MultiMa2",
+            "class_name": "MultiMa2",
+            "py_file": "MultiMa2.py",
+            "json_file": "MultiMa2.json",
+            "has_json": true
+          },
+          {
+            "name": "MultiMa_v2",
+            "class_name": "MultiMa_v2",
+            "py_file": "MultiMa_v2.py",
+            "json_file": "MultiMa_v2.json",
+            "has_json": true
+          },
+          {
+            "name": "MultiMa_v3",
+            "class_name": "MultiMa_v3",
+            "py_file": "MultiMa_v3.py",
+            "json_file": "MultiMa_v3.json",
+            "has_json": true
+          },
+          {
+            "name": "MultiMeee",
+            "class_name": "MultiMeee",
+            "py_file": "MultiMeee.py",
+            "json_file": "MultiMeee.json",
+            "has_json": true
+          },
+          {
+            "name": "PatternRecognition",
+            "class_name": "PatternRecognition",
+            "py_file": "PatternRecognition.py",
+            "json_file": "PatternRecognition.json",
+            "has_json": true
+          },
+          {
+            "name": "ScalpMomentum_v1",
+            "class_name": "ScalpMomentum_v1",
+            "py_file": "ScalpMomentum_v1.py",
+            "json_file": "ScalpMomentum_v1.json",
+            "has_json": true
+          },
+          {
+            "name": "TestStrat_1781099171",
+            "class_name": "TestStrat_1781099171",
+            "py_file": "TestStrat_1781099171.py",
+            "json_file": "TestStrat_1781099171.json",
+            "has_json": true
+          },
+          {
+            "name": "TestStrat_1781099171_baseline_backup",
+            "class_name": "TestStrat_1781099171",
+            "py_file": "TestStrat_1781099171_baseline_backup.py",
+            "json_file": "TestStrat_1781099171_baseline_backup.json",
+            "has_json": true
+          },
+          {
+            "name": "mabStra",
+            "class_name": "mabStra",
+            "py_file": "mabStra.py",
+            "json_file": "mabStra.json",
+            "has_json": true
+          }
+        ],
+        "count": 26
+      },
+      "error": null
+    }
+  ],
+  "pending_actions": [],
+  "active_jobs": [],
+  "last_context_summary": {
+    "active_tab": "auto-quant",
+    "active_panel": null,
+    "strategy_name": "AIStrategy",
+    "timeframe": null,
+    "timerange": null,
+    "selected_pair_count": null,
+    "pairs": null,
+    "dry_run_wallet": null,
+    "max_open_trades": null,
+    "backtest_status": null,
+    "optimizer_session_id": null,
+    "optimizer_trial_number": null,
+    "backtest_run_id": null,
+    "candidate_run_id": null,
+    "stress_session_id": null,
+    "temporal_stress_session_id": null,
+    "auto_quant_run_id": null,
+    "optimizer_phase": null,
+    "auto_quant_status": null,
+    "readiness_status": null,
+    "readiness_score": null,
+    "readiness_blocking_failures": 0,
+    "chips": [
+      {
+        "kind": "strategy",
+        "label": "AIStrategy"
+      },
+      {
+        "kind": "params",
+        "label": "strategy files"
+      }
+    ],
+    "warnings": [
+      "Multiple AutoQuant runs are active; provide auto_quant_run_id explicitly.",
+      "No active run or optimizer session is selected."
+    ]
+  },
+  "last_context_overrides": {}
+}

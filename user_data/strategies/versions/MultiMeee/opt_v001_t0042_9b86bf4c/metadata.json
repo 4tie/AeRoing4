@@ -1,0 +1,15 @@
+{
+  "version_id": "opt_v001_t0042_9b86bf4c",
+  "strategy_name": "MultiMeee",
+  "parent_version_id": "v001",
+  "created_at": "2026-05-30T07:48:35.067983Z",
+  "change_type": "optimization",
+  "creation_source": "optimizer_trial",
+  "proposal_id": null,
+  "source_run_id": null,
+  "acceptance_status": "rejected",
+  "accepted_at": null,
+  "rejected_at": "2026-05-30T07:48:47.223017Z",
+  "result_summary_run_id": "20260530T074835Z_MultiMeee_opt_v001_t0042_9b86bf4c_bt057",
+  "quality_gate_results": []
+}

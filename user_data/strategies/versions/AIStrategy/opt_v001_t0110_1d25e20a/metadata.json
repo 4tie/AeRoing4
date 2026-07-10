@@ -1,0 +1,15 @@
+{
+  "version_id": "opt_v001_t0110_1d25e20a",
+  "strategy_name": "AIStrategy",
+  "parent_version_id": "v001",
+  "created_at": "2026-06-14T15:14:50.392508Z",
+  "change_type": "optimization",
+  "creation_source": "optimizer_trial",
+  "proposal_id": null,
+  "source_run_id": null,
+  "acceptance_status": "rejected",
+  "accepted_at": null,
+  "rejected_at": "2026-06-14T15:15:06.178390Z",
+  "result_summary_run_id": "20260614T151450Z_AIStrategy_opt_v001_t0110_1d25e20a_bt195",
+  "quality_gate_results": []
+}

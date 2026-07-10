@@ -1,0 +1,15 @@
+{
+  "version_id": "opt_v001_t0011_19f537e9",
+  "strategy_name": "MeanReversion_v1",
+  "parent_version_id": "v001",
+  "created_at": "2026-06-18T15:39:47.953467Z",
+  "change_type": "optimization",
+  "creation_source": "optimizer_trial",
+  "proposal_id": null,
+  "source_run_id": null,
+  "acceptance_status": "rejected",
+  "accepted_at": null,
+  "rejected_at": "2026-06-18T15:39:52.111948Z",
+  "result_summary_run_id": "20260618T153947Z_MeanReversion_v1_opt_v001_t0011_19f537e9_bt064",
+  "quality_gate_results": []
+}

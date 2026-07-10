@@ -1,0 +1,228 @@
+{
+  "main": {
+    "id": "5222eb1f07fcc974",
+    "type": "split",
+    "children": [
+      {
+        "id": "eed2d1eaf7a4e834",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "d897c987c89723d5",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Graph view"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "1b34b9c3e571d59e",
+    "type": "split",
+    "children": [
+      {
+        "id": "2f1f73b2e7df1196",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "37399b236765d5ec",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "98dc18565a557867",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "35e648ab38685ce4",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "bfd343772dd040b0",
+    "type": "split",
+    "children": [
+      {
+        "id": "b99ca9f7d9f8f135",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "fcbddee92412fe6b",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks"
+            }
+          },
+          {
+            "id": "49f0ff494ef3fd2f",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links"
+            }
+          },
+          {
+            "id": "2cc9ba734f7e16fa",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "92e7426c871c9d0a",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "b4af4685b957766d",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline"
+            }
+          },
+          {
+            "id": "bb1cc86cadf9d428",
+            "type": "leaf",
+            "state": {
+              "type": "footnotes",
+              "state": {},
+              "icon": "lucide-file-signature",
+              "title": "Footnotes"
+            }
+          },
+          {
+            "id": "afbfec3dfe568fef",
+            "type": "leaf",
+            "state": {
+              "type": "smart-connections-view",
+              "state": {},
+              "icon": "smart-connections",
+              "title": "Connections"
+            }
+          }
+        ],
+        "currentTab": 6
+      }
+    ],
+    "direction": "horizontal",
+    "width": 570.5
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false,
+      "omnisearch:Omnisearch": false,
+      "audio-recorder:Start/stop recording": false,
+      "smart-connections:Smart Connections: Open connections view": false,
+      "smart-connections:Toggle Footer Connections": false,
+      "smart-connections:Smart Connections: Open random connection": false
+    }
+  },
+  "active": "37399b236765d5ec",
+  "lastOpenFiles": [
+    "README.md",
+    "backend/README.md",
+    "docs/AEROING4_PORTFOLIO_BASELINE_IMPLEMENTATION_REPORT.md",
+    "0, 0.12.md",
+    "docs/AEROING4_PORTFOLIO_BASELINE.md",
+    "docs/AEROING4_MILESTONE1_INTEGRATION_REPORT.md",
+    "user_data/aeroing4/runs/925ba172-531b-4fe7-98df-cfdf4ad5e761/state.json",
+    "user_data/aeroing4/runs/925ba172-531b-4fe7-98df-cfdf4ad5e761",
+    "user_data/backtest_results/AIStrategy/20260710T232246Z_AIStrategy_v001_bt002/progress.json",
+    "user_data/backtest_results/AIStrategy/20260710T232246Z_AIStrategy_v001_bt002/logs.txt",
+    "user_data/backtest_results/AIStrategy/20260710T232246Z_AIStrategy_v001_bt002/strategy.py",
+    "user_data/backtest_results/AIStrategy/20260710T232246Z_AIStrategy_v001_bt002/strategy_params.json",
+    "user_data/backtest_results/AIStrategy/20260710T232246Z_AIStrategy_v001_bt002/metadata.json",
+    "user_data/backtest_results/AIStrategy/20260710T232246Z_AIStrategy_v001_bt002/debug_info.txt",
+    "user_data/backtest_results/AIStrategy/20260710T232246Z_AIStrategy_v001_bt002/strategy_snapshot.py",
+    "user_data/backtest_results/AIStrategy/20260710T232246Z_AIStrategy_v001_bt002/params.json",
+    "docs/AEROING4_BIAS_CHECK.md",
+    "backend/services/auto_quant/prompts/strategy_designer.md",
+    "docs/AEROING4_BACKEND_MAP.md",
+    "docs/AEROING4_RESEARCH_MEMORY.md",
+    "Untitled.md"
+  ]
+}

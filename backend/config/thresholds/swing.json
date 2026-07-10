@@ -1,0 +1,46 @@
+{
+  "style": "swing",
+  "description": "Thresholds for swing strategies (1h-4h timeframes)",
+  "discovery": {
+    "min_profit_factor": 1.1,
+    "max_drawdown": 35.0,
+    "min_trades_per_year": 80,
+    "min_trades_floor": 25,
+    "min_trades_cap": 200,
+    "min_expectancy": 0.0005,
+    "min_win_rate": 45.0
+  },
+  "validation": {
+    "min_profit_factor": 1.3,
+    "max_drawdown": 28.0,
+    "min_trades_per_year": 100,
+    "min_trades_floor": 30,
+    "min_trades_cap": 250,
+    "min_expectancy": 0.0008,
+    "min_win_rate": 48.0,
+    "min_pair_pass_rate": 0.6,
+    "min_oos_retention": 0.5
+  },
+  "elite_validation": {
+    "min_profit_factor": 1.5,
+    "max_drawdown": 22.0,
+    "min_trades_per_year": 120,
+    "min_trades_floor": 35,
+    "min_trades_cap": 300,
+    "min_expectancy": 0.001,
+    "min_win_rate": 52.0,
+    "min_pair_pass_rate": 0.7,
+    "min_oos_retention": 0.6,
+    "min_walk_forward_pass_rate": 0.6,
+    "min_robustness_score": 0.7
+  },
+  "ranking": {
+    "expectancy_weight": 0.20,
+    "profit_factor_weight": 0.20,
+    "drawdown_weight": 0.20,
+    "walk_forward_weight": 0.15,
+    "robustness_weight": 0.15,
+    "pair_consistency_weight": 0.05,
+    "trade_quality_weight": 0.05
+  }
+}

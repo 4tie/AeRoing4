@@ -1,0 +1,257 @@
+{
+  "session_id": "17d65e67-306b-4d58-8ffe-cf19c0e129de",
+  "status": "completed",
+  "total": 16,
+  "completed": 16,
+  "results": {
+    "ATOM/USDT + BNB/USDT + MATIC/USDT + VET/USDT": {
+      "group": "ATOM/USDT + BNB/USDT + MATIC/USDT + VET/USDT",
+      "pairs": [
+        "ATOM/USDT",
+        "BNB/USDT",
+        "MATIC/USDT",
+        "VET/USDT"
+      ],
+      "status": "failed",
+      "error": ""
+    },
+    "UNI/USDT + TRX/USDT + SHIB/USDT + DOT/USDT": {
+      "group": "UNI/USDT + TRX/USDT + SHIB/USDT + DOT/USDT",
+      "pairs": [
+        "UNI/USDT",
+        "TRX/USDT",
+        "SHIB/USDT",
+        "DOT/USDT"
+      ],
+      "status": "failed",
+      "error": ""
+    },
+    "SOL/USDT + ARB/USDT + BCH/USDT + FIL/USDT": {
+      "group": "SOL/USDT + ARB/USDT + BCH/USDT + FIL/USDT",
+      "pairs": [
+        "SOL/USDT",
+        "ARB/USDT",
+        "BCH/USDT",
+        "FIL/USDT"
+      ],
+      "status": "failed",
+      "error": ""
+    },
+    "SEI/USDT + LTC/USDT + DOGE/USDT + ETH/USDT": {
+      "group": "SEI/USDT + LTC/USDT + DOGE/USDT + ETH/USDT",
+      "pairs": [
+        "SEI/USDT",
+        "LTC/USDT",
+        "DOGE/USDT",
+        "ETH/USDT"
+      ],
+      "status": "failed",
+      "error": ""
+    },
+    "XLM/USDT + FTM/USDT + HBAR/USDT + SUI/USDT": {
+      "group": "XLM/USDT + FTM/USDT + HBAR/USDT + SUI/USDT",
+      "pairs": [
+        "XLM/USDT",
+        "FTM/USDT",
+        "HBAR/USDT",
+        "SUI/USDT"
+      ],
+      "status": "failed",
+      "error": ""
+    },
+    "XRP/USDT + ADA/USDT + NEAR/USDT + BTC/USDT": {
+      "group": "XRP/USDT + ADA/USDT + NEAR/USDT + BTC/USDT",
+      "pairs": [
+        "XRP/USDT",
+        "ADA/USDT",
+        "NEAR/USDT",
+        "BTC/USDT"
+      ],
+      "status": "failed",
+      "error": ""
+    },
+    "AVAX/USDT + INJ/USDT + LINK/USDT + OP/USDT": {
+      "group": "AVAX/USDT + INJ/USDT + LINK/USDT + OP/USDT",
+      "pairs": [
+        "AVAX/USDT",
+        "INJ/USDT",
+        "LINK/USDT",
+        "OP/USDT"
+      ],
+      "status": "failed",
+      "error": ""
+    },
+    "ICP/USDT + TIA/USDT + ETC/USDT + APT/USDT": {
+      "group": "ICP/USDT + TIA/USDT + ETC/USDT + APT/USDT",
+      "pairs": [
+        "ICP/USDT",
+        "TIA/USDT",
+        "ETC/USDT",
+        "APT/USDT"
+      ],
+      "status": "failed",
+      "error": ""
+    },
+    "STRK/USDT + SUSHI/USDT + IMX/USDT + SAND/USDT": {
+      "group": "STRK/USDT + SUSHI/USDT + IMX/USDT + SAND/USDT",
+      "pairs": [
+        "STRK/USDT",
+        "SUSHI/USDT",
+        "IMX/USDT",
+        "SAND/USDT"
+      ],
+      "status": "failed",
+      "error": ""
+    },
+    "BAL/USDT + YFI/USDT + GALA/USDT + AXS/USDT": {
+      "group": "BAL/USDT + YFI/USDT + GALA/USDT + AXS/USDT",
+      "pairs": [
+        "BAL/USDT",
+        "YFI/USDT",
+        "GALA/USDT",
+        "AXS/USDT"
+      ],
+      "status": "failed",
+      "error": ""
+    },
+    "EGLD/USDT + LDO/USDT + XTZ/USDT + GMX/USDT": {
+      "group": "EGLD/USDT + LDO/USDT + XTZ/USDT + GMX/USDT",
+      "pairs": [
+        "EGLD/USDT",
+        "LDO/USDT",
+        "XTZ/USDT",
+        "GMX/USDT"
+      ],
+      "status": "failed",
+      "error": ""
+    },
+    "MANA/USDT + DYDX/USDT + JTO/USDT + 1INCH/USDT": {
+      "group": "MANA/USDT + DYDX/USDT + JTO/USDT + 1INCH/USDT",
+      "pairs": [
+        "MANA/USDT",
+        "DYDX/USDT",
+        "JTO/USDT",
+        "1INCH/USDT"
+      ],
+      "status": "failed",
+      "error": ""
+    },
+    "COMP/USDT + PENDLE/USDT + ALGO/USDT + CRV/USDT": {
+      "group": "COMP/USDT + PENDLE/USDT + ALGO/USDT + CRV/USDT",
+      "pairs": [
+        "COMP/USDT",
+        "PENDLE/USDT",
+        "ALGO/USDT",
+        "CRV/USDT"
+      ],
+      "status": "failed",
+      "error": ""
+    },
+    "MKR/USDT + MINA/USDT + BONK/USDT + RPL/USDT": {
+      "group": "MKR/USDT + MINA/USDT + BONK/USDT + RPL/USDT",
+      "pairs": [
+        "MKR/USDT",
+        "MINA/USDT",
+        "BONK/USDT",
+        "RPL/USDT"
+      ],
+      "status": "failed",
+      "error": ""
+    },
+    "ZK/USDT + BLUR/USDT + ENJ/USDT + STX/USDT": {
+      "group": "ZK/USDT + BLUR/USDT + ENJ/USDT + STX/USDT",
+      "pairs": [
+        "ZK/USDT",
+        "BLUR/USDT",
+        "ENJ/USDT",
+        "STX/USDT"
+      ],
+      "status": "failed",
+      "error": ""
+    },
+    "PYTH/USDT + WIF/USDT + AAVE/USDT + SNX/USDT": {
+      "group": "PYTH/USDT + WIF/USDT + AAVE/USDT + SNX/USDT",
+      "pairs": [
+        "PYTH/USDT",
+        "WIF/USDT",
+        "AAVE/USDT",
+        "SNX/USDT"
+      ],
+      "status": "failed",
+      "error": ""
+    }
+  },
+  "strategy_name": "AIStrategy",
+  "timeframe": "5m",
+  "timerange": "20260108-20260707",
+  "dry_run_wallet": 101.0,
+  "max_open_trades": 4,
+  "pairs": [
+    "ATOM/USDT",
+    "BNB/USDT",
+    "MATIC/USDT",
+    "VET/USDT",
+    "UNI/USDT",
+    "TRX/USDT",
+    "SHIB/USDT",
+    "DOT/USDT",
+    "SOL/USDT",
+    "ARB/USDT",
+    "BCH/USDT",
+    "FIL/USDT",
+    "SEI/USDT",
+    "LTC/USDT",
+    "DOGE/USDT",
+    "ETH/USDT",
+    "XLM/USDT",
+    "FTM/USDT",
+    "HBAR/USDT",
+    "SUI/USDT",
+    "XRP/USDT",
+    "ADA/USDT",
+    "NEAR/USDT",
+    "BTC/USDT",
+    "AVAX/USDT",
+    "INJ/USDT",
+    "LINK/USDT",
+    "OP/USDT",
+    "ICP/USDT",
+    "TIA/USDT",
+    "ETC/USDT",
+    "APT/USDT",
+    "STRK/USDT",
+    "SUSHI/USDT",
+    "IMX/USDT",
+    "SAND/USDT",
+    "BAL/USDT",
+    "YFI/USDT",
+    "GALA/USDT",
+    "AXS/USDT",
+    "EGLD/USDT",
+    "LDO/USDT",
+    "XTZ/USDT",
+    "GMX/USDT",
+    "MANA/USDT",
+    "DYDX/USDT",
+    "JTO/USDT",
+    "1INCH/USDT",
+    "COMP/USDT",
+    "PENDLE/USDT",
+    "ALGO/USDT",
+    "CRV/USDT",
+    "MKR/USDT",
+    "MINA/USDT",
+    "BONK/USDT",
+    "RPL/USDT",
+    "ZK/USDT",
+    "BLUR/USDT",
+    "ENJ/USDT",
+    "STX/USDT",
+    "PYTH/USDT",
+    "WIF/USDT",
+    "AAVE/USDT",
+    "SNX/USDT"
+  ],
+  "created_at": "2026-07-07T07:05:21.671242+00:00",
+  "completed_at": "2026-07-07T07:05:38.933501+00:00"
+}

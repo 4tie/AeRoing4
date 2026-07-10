@@ -1,0 +1,1671 @@
+{
+  "session_id": "e04648ed-feaa-4879-a49a-9387874d9c17",
+  "strategy_name": "AIStrategy",
+  "config": {
+    "strategy_name": "AIStrategy",
+    "timeframe": "5m",
+    "timerange": "20250706-20260706",
+    "pairs": [
+      "JTO/USDT",
+      "ETH/USDT"
+    ],
+    "config_file": "L:\\M4tie\\Documents\\fortiesr\\user_data\\config.json",
+    "dry_run_wallet": 100.0,
+    "max_open_trades": 2,
+    "fee_rate": 0.001,
+    "total_trials": 50,
+    "search_strategy": "random",
+    "parameter_mode": "auto_safe",
+    "score_metric": "composite",
+    "score_weights": {
+      "net_profit_pct": 0.35,
+      "net_profit_abs": 0.0,
+      "sharpe_ratio": 0.25,
+      "profit_factor": 0.2,
+      "win_rate_pct": 0.0,
+      "max_drawdown_pct": 0.2,
+      "total_trades": 0.0
+    },
+    "target_trades": null,
+    "target_profit_pct": null,
+    "max_drawdown_pct": null,
+    "target_romad": null,
+    "search_spaces": [
+      {
+        "name": "buy_ma_count",
+        "param_type": "int",
+        "space": "buy",
+        "default": 12,
+        "enabled": true,
+        "optimizable": true,
+        "min_value": 6.0,
+        "max_value": 18.0,
+        "step": 1.0,
+        "choices": null,
+        "depends_on": null,
+        "depends_on_value": null
+      },
+      {
+        "name": "buy_ma_gap",
+        "param_type": "int",
+        "space": "buy",
+        "default": 68,
+        "enabled": true,
+        "optimizable": true,
+        "min_value": 34.0,
+        "max_value": 102.0,
+        "step": 1.0,
+        "choices": null,
+        "depends_on": null,
+        "depends_on_value": null
+      },
+      {
+        "name": "sell_ma_count",
+        "param_type": "int",
+        "space": "sell",
+        "default": 12,
+        "enabled": true,
+        "optimizable": true,
+        "min_value": 6.0,
+        "max_value": 18.0,
+        "step": 1.0,
+        "choices": null,
+        "depends_on": null,
+        "depends_on_value": null
+      },
+      {
+        "name": "sell_ma_gap",
+        "param_type": "int",
+        "space": "sell",
+        "default": 68,
+        "enabled": true,
+        "optimizable": true,
+        "min_value": 34.0,
+        "max_value": 102.0,
+        "step": 1.0,
+        "choices": null,
+        "depends_on": null,
+        "depends_on_value": null
+      },
+      {
+        "name": "stoploss__value",
+        "param_type": "decimal",
+        "space": "stoploss",
+        "default": -0.336,
+        "enabled": false,
+        "optimizable": true,
+        "min_value": -0.34,
+        "max_value": -0.16,
+        "step": 0.01,
+        "choices": null,
+        "depends_on": null,
+        "depends_on_value": null
+      },
+      {
+        "name": "roi__0",
+        "param_type": "decimal",
+        "space": "roi",
+        "default": 0.192,
+        "enabled": false,
+        "optimizable": true,
+        "min_value": 0.001,
+        "max_value": 0.3,
+        "step": 0.001,
+        "choices": null,
+        "depends_on": null,
+        "depends_on_value": null
+      },
+      {
+        "name": "roi__12",
+        "param_type": "decimal",
+        "space": "roi",
+        "default": 0.061,
+        "enabled": false,
+        "optimizable": true,
+        "min_value": 0.001,
+        "max_value": 0.3,
+        "step": 0.001,
+        "choices": null,
+        "depends_on": null,
+        "depends_on_value": null
+      },
+      {
+        "name": "roi__33",
+        "param_type": "decimal",
+        "space": "roi",
+        "default": 0.017,
+        "enabled": false,
+        "optimizable": true,
+        "min_value": 0.001,
+        "max_value": 0.3,
+        "step": 0.001,
+        "choices": null,
+        "depends_on": null,
+        "depends_on_value": null
+      },
+      {
+        "name": "roi__145",
+        "param_type": "decimal",
+        "space": "roi",
+        "default": 0,
+        "enabled": false,
+        "optimizable": true,
+        "min_value": 0.001,
+        "max_value": 0.3,
+        "step": 0.001,
+        "choices": null,
+        "depends_on": null,
+        "depends_on_value": null
+      },
+      {
+        "name": "roi__1553",
+        "param_type": "decimal",
+        "space": "roi",
+        "default": 0.123,
+        "enabled": false,
+        "optimizable": true,
+        "min_value": 0.001,
+        "max_value": 0.3,
+        "step": 0.001,
+        "choices": null,
+        "depends_on": null,
+        "depends_on_value": null
+      },
+      {
+        "name": "roi__2332",
+        "param_type": "decimal",
+        "space": "roi",
+        "default": 0.076,
+        "enabled": false,
+        "optimizable": true,
+        "min_value": 0.001,
+        "max_value": 0.3,
+        "step": 0.001,
+        "choices": null,
+        "depends_on": null,
+        "depends_on_value": null
+      },
+      {
+        "name": "roi__3169",
+        "param_type": "decimal",
+        "space": "roi",
+        "default": 0,
+        "enabled": false,
+        "optimizable": true,
+        "min_value": 0.001,
+        "max_value": 0.3,
+        "step": 0.001,
+        "choices": null,
+        "depends_on": null,
+        "depends_on_value": null
+      },
+      {
+        "name": "trailing__stop",
+        "param_type": "boolean",
+        "space": "trailing",
+        "default": false,
+        "enabled": false,
+        "optimizable": true,
+        "min_value": null,
+        "max_value": null,
+        "step": null,
+        "choices": [
+          true,
+          false
+        ],
+        "depends_on": null,
+        "depends_on_value": null
+      },
+      {
+        "name": "trailing__positive",
+        "param_type": "decimal",
+        "space": "trailing",
+        "default": 0.01,
+        "enabled": false,
+        "optimizable": true,
+        "min_value": 0.001,
+        "max_value": 0.1,
+        "step": 0.001,
+        "choices": null,
+        "depends_on": null,
+        "depends_on_value": null
+      },
+      {
+        "name": "trailing__offset",
+        "param_type": "decimal",
+        "space": "trailing",
+        "default": 0,
+        "enabled": false,
+        "optimizable": true,
+        "min_value": 0.001,
+        "max_value": 0.05,
+        "step": 0.001,
+        "choices": null,
+        "depends_on": null,
+        "depends_on_value": null
+      }
+    ],
+    "enable_vectorbt_screening": true,
+    "vectorbt_candidate_count": 1000,
+    "vectorbt_keep_ratio": 0.1,
+    "vectorbt_timeout_seconds": 120
+  },
+  "phase": "failed",
+  "created_at": "2026-07-06T18:43:58.061629Z",
+  "started_at": "2026-07-06T18:43:58.072252Z",
+  "completed_at": "2026-07-06T18:50:27.895979Z",
+  "total_trials": 50,
+  "completed_trials": 37,
+  "failed_trials": 0,
+  "elapsed_seconds": 382.556149,
+  "eta_seconds": 134.41161991891892,
+  "best_trial_number": 1,
+  "best_metrics": {
+    "net_profit_pct": 21.900324149999992,
+    "net_profit_abs": 21.900324149999992,
+    "win_rate_pct": 56.766917293233085,
+    "max_drawdown_pct": 17.44782726738705,
+    "max_drawdown_abs": 17.845657070000005,
+    "total_trades": 266,
+    "profit_factor": 1.2406120658333701,
+    "sharpe_ratio": 0.929332018905181,
+    "score": 4.656003416915555
+  },
+  "trials": [
+    {
+      "trial_number": 1,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 18,
+        "buy_ma_gap": 95,
+        "sell_ma_count": 17,
+        "sell_ma_gap": 54
+      },
+      "metrics": {
+        "net_profit_pct": 21.900324149999992,
+        "net_profit_abs": 21.900324149999992,
+        "win_rate_pct": 56.766917293233085,
+        "max_drawdown_pct": 17.44782726738705,
+        "max_drawdown_abs": 17.845657070000005,
+        "total_trades": 266,
+        "profit_factor": 1.2406120658333701,
+        "sharpe_ratio": 0.929332018905181,
+        "score": 4.656003416915555
+      },
+      "run_id": "20260706T184558Z_AIStrategy_opt_v001_t0001_8618f4bf_bt010",
+      "started_at": "2026-07-06T18:45:58.616723Z",
+      "completed_at": "2026-07-06T18:46:05.647296Z",
+      "error": null,
+      "is_best": true
+    },
+    {
+      "trial_number": 2,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 14,
+        "buy_ma_gap": 102,
+        "sell_ma_count": 16,
+        "sell_ma_gap": 64
+      },
+      "metrics": {
+        "net_profit_pct": 5.895349909999997,
+        "net_profit_abs": 5.895349909999997,
+        "win_rate_pct": 57.434402332361515,
+        "max_drawdown_pct": 22.196268504678077,
+        "max_drawdown_abs": 22.396474030000007,
+        "total_trades": 343,
+        "profit_factor": 1.0514239080562622,
+        "sharpe_ratio": 0.2766937592370724,
+        "score": -2.096423011015096
+      },
+      "run_id": "20260706T184605Z_AIStrategy_opt_v001_t0002_1a19283e_bt011",
+      "started_at": "2026-07-06T18:46:05.654316Z",
+      "completed_at": "2026-07-06T18:46:12.549306Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 3,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 14,
+        "buy_ma_gap": 102,
+        "sell_ma_count": 11,
+        "sell_ma_gap": 42
+      },
+      "metrics": {
+        "net_profit_pct": 7.313904510000004,
+        "net_profit_abs": 7.313904510000004,
+        "win_rate_pct": 58.75912408759124,
+        "max_drawdown_pct": 25.5626626483786,
+        "max_drawdown_abs": 25.57558892000001,
+        "total_trades": 274,
+        "profit_factor": 1.079048314950836,
+        "sharpe_ratio": 0.33650515239389023,
+        "score": -2.252730000087079
+      },
+      "run_id": "20260706T184612Z_AIStrategy_opt_v001_t0003_1169fa8b_bt012",
+      "started_at": "2026-07-06T18:46:12.555863Z",
+      "completed_at": "2026-07-06T18:46:19.531590Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 4,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 18,
+        "buy_ma_gap": 93,
+        "sell_ma_count": 9,
+        "sell_ma_gap": 86
+      },
+      "metrics": {
+        "net_profit_pct": 5.568862169999996,
+        "net_profit_abs": 5.568862169999996,
+        "win_rate_pct": 53.333333333333336,
+        "max_drawdown_pct": 24.44964265772042,
+        "max_drawdown_abs": 24.830208039999995,
+        "total_trades": 345,
+        "profit_factor": 1.0490648141875019,
+        "sharpe_ratio": 0.27408285576289865,
+        "score": -2.6624930952658614
+      },
+      "run_id": "20260706T184619Z_AIStrategy_opt_v001_t0004_dd505501_bt013",
+      "started_at": "2026-07-06T18:46:19.538130Z",
+      "completed_at": "2026-07-06T18:46:26.538951Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 5,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 17,
+        "buy_ma_gap": 86,
+        "sell_ma_count": 16,
+        "sell_ma_gap": 35
+      },
+      "metrics": {
+        "net_profit_pct": 3.060185800000003,
+        "net_profit_abs": 3.060185800000003,
+        "win_rate_pct": 55.319148936170215,
+        "max_drawdown_pct": 22.500882290149942,
+        "max_drawdown_abs": 22.62839254,
+        "total_trades": 235,
+        "profit_factor": 1.037225495293997,
+        "sharpe_ratio": 0.14681112709727961,
+        "score": -3.1849635471968685
+      },
+      "run_id": "20260706T184626Z_AIStrategy_opt_v001_t0005_2ea18683_bt014",
+      "started_at": "2026-07-06T18:46:26.545497Z",
+      "completed_at": "2026-07-06T18:46:33.280671Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 6,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 17,
+        "buy_ma_gap": 96,
+        "sell_ma_count": 6,
+        "sell_ma_gap": 37
+      },
+      "metrics": {
+        "net_profit_pct": -3.7818129399999996,
+        "net_profit_abs": -3.78181294,
+        "win_rate_pct": 56.30630630630631,
+        "max_drawdown_pct": 23.827012334495368,
+        "max_drawdown_abs": 24.352165959999986,
+        "total_trades": 222,
+        "profit_factor": 0.9531642190541952,
+        "sharpe_ratio": -0.17213997585301744,
+        "score": -5.941439146051489
+      },
+      "run_id": "20260706T184633Z_AIStrategy_opt_v001_t0006_7408f0fc_bt015",
+      "started_at": "2026-07-06T18:46:33.287787Z",
+      "completed_at": "2026-07-06T18:46:40.134608Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 7,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 16,
+        "buy_ma_gap": 38,
+        "sell_ma_count": 18,
+        "sell_ma_gap": 92
+      },
+      "metrics": {
+        "net_profit_pct": -0.7556568100000014,
+        "net_profit_abs": -0.7556568100000014,
+        "win_rate_pct": 57.383966244725734,
+        "max_drawdown_pct": 22.80726031203266,
+        "max_drawdown_abs": 23.244580620000008,
+        "total_trades": 237,
+        "profit_factor": 0.991190475213416,
+        "sharpe_ratio": -0.03474654410054098,
+        "score": -4.636380486888985
+      },
+      "run_id": "20260706T184640Z_AIStrategy_opt_v001_t0007_937ed663_bt016",
+      "started_at": "2026-07-06T18:46:40.140612Z",
+      "completed_at": "2026-07-06T18:46:46.821765Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 8,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 17,
+        "buy_ma_gap": 92,
+        "sell_ma_count": 13,
+        "sell_ma_gap": 54
+      },
+      "metrics": {
+        "net_profit_pct": 8.917420030000002,
+        "net_profit_abs": 8.917420030000002,
+        "win_rate_pct": 54.137931034482754,
+        "max_drawdown_pct": 22.065951862378448,
+        "max_drawdown_abs": 22.40140228,
+        "total_trades": 290,
+        "profit_factor": 1.0895085409443312,
+        "sharpe_ratio": 0.41060766898286344,
+        "score": -0.9715397365411071
+      },
+      "run_id": "20260706T184646Z_AIStrategy_opt_v001_t0008_24cb60b1_bt017",
+      "started_at": "2026-07-06T18:46:46.828397Z",
+      "completed_at": "2026-07-06T18:46:53.617641Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 9,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 11,
+        "buy_ma_gap": 101,
+        "sell_ma_count": 16,
+        "sell_ma_gap": 90
+      },
+      "metrics": {
+        "net_profit_pct": -10.566970530000006,
+        "net_profit_abs": -10.566970530000006,
+        "win_rate_pct": 52.570093457943926,
+        "max_drawdown_pct": 31.90628735890079,
+        "max_drawdown_abs": 32.67570372000004,
+        "total_trades": 428,
+        "profit_factor": 0.9196079238984619,
+        "sharpe_ratio": -0.5995979936597035,
+        "score": -10.045675070915394
+      },
+      "run_id": "20260706T184653Z_AIStrategy_opt_v001_t0009_d78fee52_bt018",
+      "started_at": "2026-07-06T18:46:53.624792Z",
+      "completed_at": "2026-07-06T18:47:00.681531Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 10,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 12,
+        "buy_ma_gap": 57,
+        "sell_ma_count": 16,
+        "sell_ma_gap": 88
+      },
+      "metrics": {
+        "net_profit_pct": 8.387578170000001,
+        "net_profit_abs": 8.387578170000001,
+        "win_rate_pct": 52.976190476190474,
+        "max_drawdown_pct": 24.044791283701997,
+        "max_drawdown_abs": 24.254392669999998,
+        "total_trades": 336,
+        "profit_factor": 1.077404354144624,
+        "sharpe_ratio": 0.4165104818628791,
+        "score": -1.5536974059457553
+      },
+      "run_id": "20260706T184700Z_AIStrategy_opt_v001_t0010_ccc50bd0_bt019",
+      "started_at": "2026-07-06T18:47:00.688046Z",
+      "completed_at": "2026-07-06T18:47:07.517554Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 11,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 17,
+        "buy_ma_gap": 90,
+        "sell_ma_count": 6,
+        "sell_ma_gap": 57
+      },
+      "metrics": {
+        "net_profit_pct": 9.039696790000008,
+        "net_profit_abs": 9.039696790000008,
+        "win_rate_pct": 53.666666666666664,
+        "max_drawdown_pct": 24.239321909210442,
+        "max_drawdown_abs": 24.566362040000012,
+        "total_trades": 300,
+        "profit_factor": 1.0926085206806957,
+        "sharpe_ratio": 0.4291028688641867,
+        "score": -1.3581730839899007
+      },
+      "run_id": "20260706T184707Z_AIStrategy_opt_v001_t0011_07cc2b97_bt020",
+      "started_at": "2026-07-06T18:47:07.525129Z",
+      "completed_at": "2026-07-06T18:47:15.194142Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 12,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 16,
+        "buy_ma_gap": 97,
+        "sell_ma_count": 10,
+        "sell_ma_gap": 36
+      },
+      "metrics": {
+        "net_profit_pct": 0.871323230000005,
+        "net_profit_abs": 0.8713232300000051,
+        "win_rate_pct": 57.64192139737992,
+        "max_drawdown_pct": 21.35725025368722,
+        "max_drawdown_abs": 21.59219863,
+        "total_trades": 229,
+        "profit_factor": 1.0106593196886873,
+        "sharpe_ratio": 0.03944755057609303,
+        "score": -3.7544931686556815
+      },
+      "run_id": "20260706T184715Z_AIStrategy_opt_v001_t0012_99e8ead9_bt021",
+      "started_at": "2026-07-06T18:47:15.200655Z",
+      "completed_at": "2026-07-06T18:47:21.920972Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 13,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 16,
+        "buy_ma_gap": 77,
+        "sell_ma_count": 10,
+        "sell_ma_gap": 70
+      },
+      "metrics": {
+        "net_profit_pct": -2.5831701200000055,
+        "net_profit_abs": -2.5831701200000055,
+        "win_rate_pct": 50.92592592592593,
+        "max_drawdown_pct": 33.00266664685874,
+        "max_drawdown_abs": 33.422233999999996,
+        "total_trades": 432,
+        "profit_factor": 0.9783384927623139,
+        "sharpe_ratio": -0.1622722087282371,
+        "score": -7.349543225001347
+      },
+      "run_id": "20260706T184721Z_AIStrategy_opt_v001_t0013_8ceecd73_bt022",
+      "started_at": "2026-07-06T18:47:21.928548Z",
+      "completed_at": "2026-07-06T18:47:28.902135Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 14,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 8,
+        "buy_ma_gap": 79,
+        "sell_ma_count": 16,
+        "sell_ma_gap": 83
+      },
+      "metrics": {
+        "net_profit_pct": -1.0405891599999997,
+        "net_profit_abs": -1.0405891599999997,
+        "win_rate_pct": 50.0,
+        "max_drawdown_pct": 32.233612313599096,
+        "max_drawdown_abs": 32.43874631000001,
+        "total_trades": 438,
+        "profit_factor": 0.9913465310950598,
+        "sharpe_ratio": -0.06611033344707322,
+        "score": -6.629186945862576
+      },
+      "run_id": "20260706T184728Z_AIStrategy_opt_v001_t0014_afc93847_bt023",
+      "started_at": "2026-07-06T18:47:28.909335Z",
+      "completed_at": "2026-07-06T18:47:35.854943Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 15,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 17,
+        "buy_ma_gap": 89,
+        "sell_ma_count": 14,
+        "sell_ma_gap": 36
+      },
+      "metrics": {
+        "net_profit_pct": 0.503698110000002,
+        "net_profit_abs": 0.503698110000002,
+        "win_rate_pct": 57.08154506437768,
+        "max_drawdown_pct": 22.973316614508327,
+        "max_drawdown_abs": 23.226043129999997,
+        "total_trades": 233,
+        "profit_factor": 1.0061281078154012,
+        "sharpe_ratio": 0.0236818373986357,
+        "score": -4.211222903488926
+      },
+      "run_id": "20260706T184735Z_AIStrategy_opt_v001_t0015_8f5cf282_bt024",
+      "started_at": "2026-07-06T18:47:35.861976Z",
+      "completed_at": "2026-07-06T18:47:43.438294Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 16,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 16,
+        "buy_ma_gap": 39,
+        "sell_ma_count": 18,
+        "sell_ma_gap": 65
+      },
+      "metrics": {
+        "net_profit_pct": -4.891931490000003,
+        "net_profit_abs": -4.891931490000003,
+        "win_rate_pct": 50.943396226415096,
+        "max_drawdown_pct": 25.289512026638317,
+        "max_drawdown_abs": 26.052914629999997,
+        "total_trades": 318,
+        "profit_factor": 0.9516007206002104,
+        "sharpe_ratio": -0.28479898568989126,
+        "score": -6.650958029130095
+      },
+      "run_id": "20260706T184743Z_AIStrategy_opt_v001_t0016_eea22b77_bt025",
+      "started_at": "2026-07-06T18:47:43.444801Z",
+      "completed_at": "2026-07-06T18:47:50.244976Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 17,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 14,
+        "buy_ma_gap": 61,
+        "sell_ma_count": 12,
+        "sell_ma_gap": 40
+      },
+      "metrics": {
+        "net_profit_pct": -3.2897906899999967,
+        "net_profit_abs": -3.2897906899999967,
+        "win_rate_pct": 49.292929292929294,
+        "max_drawdown_pct": 30.423252397743074,
+        "max_drawdown_abs": 31.228420560000014,
+        "total_trades": 495,
+        "profit_factor": 0.9781153159098707,
+        "sharpe_ratio": -0.19763147740932963,
+        "score": -7.089862027218972
+      },
+      "run_id": "20260706T184750Z_AIStrategy_opt_v001_t0017_4c394804_bt026",
+      "started_at": "2026-07-06T18:47:50.251980Z",
+      "completed_at": "2026-07-06T18:47:57.292257Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 18,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 6,
+        "buy_ma_gap": 61,
+        "sell_ma_count": 10,
+        "sell_ma_gap": 82
+      },
+      "metrics": {
+        "net_profit_pct": 5.276387250000003,
+        "net_profit_abs": 5.276387250000003,
+        "win_rate_pct": 52.40112994350282,
+        "max_drawdown_pct": 36.87315547256132,
+        "max_drawdown_abs": 37.40577296000001,
+        "total_trades": 708,
+        "profit_factor": 1.026972672212867,
+        "sharpe_ratio": 0.3187442456275134,
+        "score": -5.2428149611628125
+      },
+      "run_id": "20260706T184757Z_AIStrategy_opt_v001_t0018_05e3f3d6_bt027",
+      "started_at": "2026-07-06T18:47:57.298260Z",
+      "completed_at": "2026-07-06T18:48:05.454409Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 19,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 10,
+        "buy_ma_gap": 45,
+        "sell_ma_count": 15,
+        "sell_ma_gap": 77
+      },
+      "metrics": {
+        "net_profit_pct": 1.9367121500000053,
+        "net_profit_abs": 1.9367121500000053,
+        "win_rate_pct": 51.75202156334232,
+        "max_drawdown_pct": 29.995688732618802,
+        "max_drawdown_abs": 30.29099762000001,
+        "total_trades": 371,
+        "profit_factor": 1.0169908916087969,
+        "sharpe_ratio": 0.1098096267084152,
+        "score": -5.090437909024896
+      },
+      "run_id": "20260706T184805Z_AIStrategy_opt_v001_t0019_f883837b_bt028",
+      "started_at": "2026-07-06T18:48:05.461921Z",
+      "completed_at": "2026-07-06T18:48:12.488735Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 20,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 18,
+        "buy_ma_gap": 72,
+        "sell_ma_count": 7,
+        "sell_ma_gap": 62
+      },
+      "metrics": {
+        "net_profit_pct": -3.9092189800000026,
+        "net_profit_abs": -3.909218980000002,
+        "win_rate_pct": 49.45355191256831,
+        "max_drawdown_pct": 29.090356928974355,
+        "max_drawdown_abs": 29.205538190000006,
+        "total_trades": 366,
+        "profit_factor": 0.964065242264234,
+        "sharpe_ratio": -0.2288589457053713,
+        "score": -7.050699716768368
+      },
+      "run_id": "20260706T184812Z_AIStrategy_opt_v001_t0020_e8a231e5_bt029",
+      "started_at": "2026-07-06T18:48:12.495338Z",
+      "completed_at": "2026-07-06T18:48:19.406313Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 21,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 11,
+        "buy_ma_gap": 68,
+        "sell_ma_count": 15,
+        "sell_ma_gap": 78
+      },
+      "metrics": {
+        "net_profit_pct": -9.284126360000002,
+        "net_profit_abs": -9.284126360000002,
+        "win_rate_pct": 50.54945054945055,
+        "max_drawdown_pct": 35.76147148724155,
+        "max_drawdown_abs": 36.623308270000024,
+        "total_trades": 455,
+        "profit_factor": 0.9269670853006136,
+        "sharpe_ratio": -0.5966396185572612,
+        "score": -10.365505011027505
+      },
+      "run_id": "20260706T184819Z_AIStrategy_opt_v001_t0021_e7eadcc3_bt030",
+      "started_at": "2026-07-06T18:48:19.413397Z",
+      "completed_at": "2026-07-06T18:48:26.761867Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 22,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 17,
+        "buy_ma_gap": 58,
+        "sell_ma_count": 13,
+        "sell_ma_gap": 83
+      },
+      "metrics": {
+        "net_profit_pct": -1.6683741499999911,
+        "net_profit_abs": -1.6683741499999911,
+        "win_rate_pct": 52.23880597014925,
+        "max_drawdown_pct": 30.524071884362858,
+        "max_drawdown_abs": 31.11662941000001,
+        "total_trades": 469,
+        "profit_factor": 0.9878254765981409,
+        "sharpe_ratio": -0.09949724263589105,
+        "score": -6.516054544711913
+      },
+      "run_id": "20260706T184826Z_AIStrategy_opt_v001_t0022_e4f2290b_bt031",
+      "started_at": "2026-07-06T18:48:26.768874Z",
+      "completed_at": "2026-07-06T18:48:33.778832Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 23,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 12,
+        "buy_ma_gap": 34,
+        "sell_ma_count": 17,
+        "sell_ma_gap": 73
+      },
+      "metrics": {
+        "net_profit_pct": 0.9810784099999948,
+        "net_profit_abs": 0.981078409999995,
+        "win_rate_pct": 55.74324324324324,
+        "max_drawdown_pct": 28.051964328579682,
+        "max_drawdown_abs": 28.187050720000013,
+        "total_trades": 296,
+        "profit_factor": 1.0102457119140376,
+        "sharpe_ratio": 0.05334842419546209,
+        "score": -5.051629173784266
+      },
+      "run_id": "20260706T184833Z_AIStrategy_opt_v001_t0023_8c405ef6_bt032",
+      "started_at": "2026-07-06T18:48:33.786564Z",
+      "completed_at": "2026-07-06T18:48:40.610384Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 24,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 15,
+        "buy_ma_gap": 53,
+        "sell_ma_count": 7,
+        "sell_ma_gap": 43
+      },
+      "metrics": {
+        "net_profit_pct": 0.18949707999999887,
+        "net_profit_abs": 0.18949707999999887,
+        "win_rate_pct": 45.601436265709154,
+        "max_drawdown_pct": 25.239204499576434,
+        "max_drawdown_abs": 25.58737107999999,
+        "total_trades": 557,
+        "profit_factor": 1.0011595426919166,
+        "sharpe_ratio": 0.011792986389335377,
+        "score": -4.77833676677957
+      },
+      "run_id": "20260706T184840Z_AIStrategy_opt_v001_t0024_9d37beef_bt033",
+      "started_at": "2026-07-06T18:48:40.616894Z",
+      "completed_at": "2026-07-06T18:48:47.842774Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 25,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 15,
+        "buy_ma_gap": 72,
+        "sell_ma_count": 6,
+        "sell_ma_gap": 67
+      },
+      "metrics": {
+        "net_profit_pct": -15.912847189999994,
+        "net_profit_abs": -15.912847189999994,
+        "win_rate_pct": 47.389558232931726,
+        "max_drawdown_pct": 37.27411958116797,
+        "max_drawdown_abs": 38.164061449999984,
+        "total_trades": 498,
+        "profit_factor": 0.8843461929711628,
+        "sharpe_ratio": -1.0654372790294335,
+        "score": -13.113810513896718
+      },
+      "run_id": "20260706T184847Z_AIStrategy_opt_v001_t0025_a57eaa2b_bt034",
+      "started_at": "2026-07-06T18:48:47.851285Z",
+      "completed_at": "2026-07-06T18:48:54.956121Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 26,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 9,
+        "buy_ma_gap": 42,
+        "sell_ma_count": 17,
+        "sell_ma_gap": 52
+      },
+      "metrics": {
+        "net_profit_pct": -5.7254994,
+        "net_profit_abs": -5.7254994,
+        "win_rate_pct": 43.967280163599185,
+        "max_drawdown_pct": 30.4802506,
+        "max_drawdown_abs": 30.4802506,
+        "total_trades": 489,
+        "profit_factor": 0.960160078833762,
+        "sharpe_ratio": -0.35390964266341124,
+        "score": -7.996420304899102
+      },
+      "run_id": "20260706T184854Z_AIStrategy_opt_v001_t0026_9d25ab5e_bt035",
+      "started_at": "2026-07-06T18:48:54.962206Z",
+      "completed_at": "2026-07-06T18:49:01.841541Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 27,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 16,
+        "buy_ma_gap": 90,
+        "sell_ma_count": 15,
+        "sell_ma_gap": 96
+      },
+      "metrics": {
+        "net_profit_pct": -13.7067456,
+        "net_profit_abs": -13.706745600000001,
+        "win_rate_pct": 50.83532219570406,
+        "max_drawdown_pct": 32.83633551869078,
+        "max_drawdown_abs": 32.998725809999996,
+        "total_trades": 419,
+        "profit_factor": 0.8905887253549502,
+        "sharpe_ratio": -0.7992293130765814,
+        "score": -11.386317646936313
+      },
+      "run_id": "20260706T184901Z_AIStrategy_opt_v001_t0027_32e1fd44_bt036",
+      "started_at": "2026-07-06T18:49:01.848791Z",
+      "completed_at": "2026-07-06T18:49:08.703417Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 28,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 8,
+        "buy_ma_gap": 99,
+        "sell_ma_count": 14,
+        "sell_ma_gap": 35
+      },
+      "metrics": {
+        "net_profit_pct": -16.111639009999994,
+        "net_profit_abs": -16.111639009999994,
+        "win_rate_pct": 56.91489361702128,
+        "max_drawdown_pct": 34.34356479692966,
+        "max_drawdown_abs": 34.36814653999999,
+        "total_trades": 564,
+        "profit_factor": 0.9062072740678749,
+        "sharpe_ratio": -0.9090058330973257,
+        "score": -12.553796616346688
+      },
+      "run_id": "20260706T184908Z_AIStrategy_opt_v001_t0028_a9de5607_bt037",
+      "started_at": "2026-07-06T18:49:08.710464Z",
+      "completed_at": "2026-07-06T18:49:16.047448Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 29,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 15,
+        "buy_ma_gap": 58,
+        "sell_ma_count": 7,
+        "sell_ma_gap": 70
+      },
+      "metrics": {
+        "net_profit_pct": -5.40206542,
+        "net_profit_abs": -5.40206542,
+        "win_rate_pct": 49.66101694915254,
+        "max_drawdown_pct": 32.59028292327886,
+        "max_drawdown_abs": 33.15018781000001,
+        "total_trades": 590,
+        "profit_factor": 0.9671597402944684,
+        "sharpe_ratio": -0.34346803659644953,
+        "score": -8.301214542745992
+      },
+      "run_id": "20260706T184916Z_AIStrategy_opt_v001_t0029_097ab2db_bt038",
+      "started_at": "2026-07-06T18:49:16.054949Z",
+      "completed_at": "2026-07-06T18:49:23.412019Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 30,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 15,
+        "buy_ma_gap": 62,
+        "sell_ma_count": 15,
+        "sell_ma_gap": 52
+      },
+      "metrics": {
+        "net_profit_pct": -4.448705260000011,
+        "net_profit_abs": -4.448705260000011,
+        "win_rate_pct": 47.4609375,
+        "max_drawdown_pct": 33.496413566127856,
+        "max_drawdown_abs": 34.45995385000001,
+        "total_trades": 512,
+        "profit_factor": 0.969527287214118,
+        "sharpe_ratio": -0.2807275315673849,
+        "score": -8.132605979674597
+      },
+      "run_id": "20260706T184923Z_AIStrategy_opt_v001_t0030_7e4b34f2_bt039",
+      "started_at": "2026-07-06T18:49:23.419039Z",
+      "completed_at": "2026-07-06T18:49:30.825134Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 31,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 6,
+        "buy_ma_gap": 101,
+        "sell_ma_count": 18,
+        "sell_ma_gap": 70
+      },
+      "metrics": {
+        "net_profit_pct": -6.039625550000004,
+        "net_profit_abs": -6.039625550000004,
+        "win_rate_pct": 54.11764705882353,
+        "max_drawdown_pct": 33.07668395895455,
+        "max_drawdown_abs": 33.21922988000001,
+        "total_trades": 425,
+        "profit_factor": 0.951317199643403,
+        "sharpe_ratio": -0.3506485665813291,
+        "score": -8.626604436007563
+      },
+      "run_id": "20260706T184930Z_AIStrategy_opt_v001_t0031_9e3cc2c4_bt040",
+      "started_at": "2026-07-06T18:49:30.831730Z",
+      "completed_at": "2026-07-06T18:49:37.768905Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 32,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 11,
+        "buy_ma_gap": 49,
+        "sell_ma_count": 15,
+        "sell_ma_gap": 75
+      },
+      "metrics": {
+        "net_profit_pct": -8.129282829999994,
+        "net_profit_abs": -8.129282829999994,
+        "win_rate_pct": 50.25125628140703,
+        "max_drawdown_pct": 32.34964027999999,
+        "max_drawdown_abs": 32.34964027999998,
+        "total_trades": 398,
+        "profit_factor": 0.9302715007300576,
+        "sharpe_ratio": -0.49498523538270656,
+        "score": -9.25286905519966
+      },
+      "run_id": "20260706T184937Z_AIStrategy_opt_v001_t0032_af3cc737_bt041",
+      "started_at": "2026-07-06T18:49:37.776046Z",
+      "completed_at": "2026-07-06T18:49:44.954711Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 33,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 15,
+        "buy_ma_gap": 88,
+        "sell_ma_count": 12,
+        "sell_ma_gap": 101
+      },
+      "metrics": {
+        "net_profit_pct": -14.337739929999998,
+        "net_profit_abs": -14.337739929999998,
+        "win_rate_pct": 52.43362831858407,
+        "max_drawdown_pct": 34.485196160000015,
+        "max_drawdown_abs": 34.48519616000002,
+        "total_trades": 452,
+        "profit_factor": 0.8889428559096388,
+        "sharpe_ratio": -0.8894494905238616,
+        "score": -11.95982200894904
+      },
+      "run_id": "20260706T184944Z_AIStrategy_opt_v001_t0033_0ab5f9d5_bt042",
+      "started_at": "2026-07-06T18:49:44.962243Z",
+      "completed_at": "2026-07-06T18:49:52.009966Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 34,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 14,
+        "buy_ma_gap": 60,
+        "sell_ma_count": 10,
+        "sell_ma_gap": 57
+      },
+      "metrics": {
+        "net_profit_pct": -2.1892420900000005,
+        "net_profit_abs": -2.1892420900000005,
+        "win_rate_pct": 46.69887278582931,
+        "max_drawdown_pct": 32.07110928737427,
+        "max_drawdown_abs": 32.627996070000016,
+        "total_trades": 621,
+        "profit_factor": 0.9873646907583831,
+        "sharpe_ratio": -0.1401176198040345,
+        "score": -7.018013055774186
+      },
+      "run_id": "20260706T184952Z_AIStrategy_opt_v001_t0034_202841f9_bt043",
+      "started_at": "2026-07-06T18:49:52.017498Z",
+      "completed_at": "2026-07-06T18:49:59.147587Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 35,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 10,
+        "buy_ma_gap": 37,
+        "sell_ma_count": 11,
+        "sell_ma_gap": 101
+      },
+      "metrics": {
+        "net_profit_pct": -7.284733630000001,
+        "net_profit_abs": -7.284733630000002,
+        "win_rate_pct": 56.09756097560976,
+        "max_drawdown_pct": 27.291762575971273,
+        "max_drawdown_abs": 27.521978200000017,
+        "total_trades": 369,
+        "profit_factor": 0.9388717214640219,
+        "sharpe_ratio": -0.38255971726316607,
+        "score": -7.915874870717242
+      },
+      "run_id": "20260706T184959Z_AIStrategy_opt_v001_t0035_8ea808fa_bt044",
+      "started_at": "2026-07-06T18:49:59.154587Z",
+      "completed_at": "2026-07-06T18:50:06.032634Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 36,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 13,
+        "buy_ma_gap": 48,
+        "sell_ma_count": 12,
+        "sell_ma_gap": 77
+      },
+      "metrics": {
+        "net_profit_pct": -9.505477179999996,
+        "net_profit_abs": -9.505477179999996,
+        "win_rate_pct": 51.461988304093566,
+        "max_drawdown_pct": 38.31872758595284,
+        "max_drawdown_abs": 39.043138230000025,
+        "total_trades": 513,
+        "profit_factor": 0.9355435376484379,
+        "sharpe_ratio": -0.5880412102679786,
+        "score": -10.950564125227874
+      },
+      "run_id": "20260706T185006Z_AIStrategy_opt_v001_t0036_030b0147_bt045",
+      "started_at": "2026-07-06T18:50:06.041158Z",
+      "completed_at": "2026-07-06T18:50:13.156181Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 37,
+      "status": "completed",
+      "parameters": {
+        "buy_ma_count": 16,
+        "buy_ma_gap": 55,
+        "sell_ma_count": 10,
+        "sell_ma_gap": 77
+      },
+      "metrics": {
+        "net_profit_pct": -4.891053110000001,
+        "net_profit_abs": -4.891053110000001,
+        "win_rate_pct": 51.8850987432675,
+        "max_drawdown_pct": 36.213082094243546,
+        "max_drawdown_abs": 37.11496784999999,
+        "total_trades": 557,
+        "profit_factor": 0.96925203924295,
+        "sharpe_ratio": -0.2983011820062046,
+        "score": -8.835209895001672
+      },
+      "run_id": "20260706T185013Z_AIStrategy_opt_v001_t0037_647e3017_bt046",
+      "started_at": "2026-07-06T18:50:13.164194Z",
+      "completed_at": "2026-07-06T18:50:20.628401Z",
+      "error": null,
+      "is_best": false
+    },
+    {
+      "trial_number": 38,
+      "status": "running",
+      "parameters": {
+        "buy_ma_count": 10,
+        "buy_ma_gap": 76,
+        "sell_ma_count": 12,
+        "sell_ma_gap": 42
+      },
+      "metrics": null,
+      "run_id": null,
+      "started_at": "2026-07-06T18:50:20.635915Z",
+      "completed_at": null,
+      "error": null,
+      "is_best": false
+    }
+  ],
+  "auto_lock_events": [],
+  "vectorbt_screening": {
+    "status": "partial",
+    "started_at": "2026-07-06T18:43:58.074253Z",
+    "completed_at": "2026-07-06T18:45:58.609168Z",
+    "evaluated_count": 109,
+    "selected_count": 50,
+    "reduction_pct": 54.128,
+    "duration_seconds": 120.531,
+    "skipped_reason": "timeout",
+    "error": null,
+    "top_candidates": [
+      {
+        "rank": 1,
+        "parameters": {
+          "buy_ma_count": 18,
+          "buy_ma_gap": 95,
+          "sell_ma_count": 17,
+          "sell_ma_gap": 54
+        },
+        "metrics": {
+          "net_profit_pct": 75.88735286534666,
+          "net_profit_abs": 75.88735286534666,
+          "win_rate_pct": 37.16814159292036,
+          "max_drawdown_pct": -29.785883105867672,
+          "max_drawdown_abs": null,
+          "total_trades": 113,
+          "profit_factor": 1.7392566405051313,
+          "sharpe_ratio": 1.5271071230497293,
+          "score": 21.333024990561253
+        }
+      },
+      {
+        "rank": 2,
+        "parameters": {
+          "buy_ma_count": 14,
+          "buy_ma_gap": 102,
+          "sell_ma_count": 16,
+          "sell_ma_gap": 64
+        },
+        "metrics": {
+          "net_profit_pct": 74.48374340783668,
+          "net_profit_abs": 74.48374340783668,
+          "win_rate_pct": 35.714285714285715,
+          "max_drawdown_pct": -34.67296719287696,
+          "max_drawdown_abs": null,
+          "total_trades": 140,
+          "profit_factor": 1.5998930175877148,
+          "sharpe_ratio": 1.4352117406077325,
+          "score": 19.81349829283692
+        }
+      },
+      {
+        "rank": 3,
+        "parameters": {
+          "buy_ma_count": 14,
+          "buy_ma_gap": 102,
+          "sell_ma_count": 11,
+          "sell_ma_gap": 42
+        },
+        "metrics": {
+          "net_profit_pct": 72.53715088620181,
+          "net_profit_abs": 72.53715088620181,
+          "win_rate_pct": 37.5,
+          "max_drawdown_pct": -34.54538742469374,
+          "max_drawdown_abs": null,
+          "total_trades": 120,
+          "profit_factor": 1.6772934277054607,
+          "sharpe_ratio": 1.446131469839497,
+          "score": 19.17591687823285
+        }
+      },
+      {
+        "rank": 4,
+        "parameters": {
+          "buy_ma_count": 18,
+          "buy_ma_gap": 93,
+          "sell_ma_count": 9,
+          "sell_ma_gap": 86
+        },
+        "metrics": {
+          "net_profit_pct": 68.71942195435592,
+          "net_profit_abs": 68.71942195435592,
+          "win_rate_pct": 36.69064748201439,
+          "max_drawdown_pct": -33.07042811846189,
+          "max_drawdown_abs": null,
+          "total_trades": 139,
+          "profit_factor": 1.5742914645187163,
+          "sharpe_ratio": 1.4119904494619122,
+          "score": 18.105567965601413
+        }
+      },
+      {
+        "rank": 5,
+        "parameters": {
+          "buy_ma_count": 17,
+          "buy_ma_gap": 86,
+          "sell_ma_count": 16,
+          "sell_ma_gap": 35
+        },
+        "metrics": {
+          "net_profit_pct": 69.26393847537233,
+          "net_profit_abs": 69.26393847537233,
+          "win_rate_pct": 37.28813559322034,
+          "max_drawdown_pct": -39.13197832191961,
+          "max_drawdown_abs": null,
+          "total_trades": 118,
+          "profit_factor": 1.723783598577938,
+          "sharpe_ratio": 1.4636523287370808,
+          "score": 17.126652603896247
+        }
+      },
+      {
+        "rank": 6,
+        "parameters": {
+          "buy_ma_count": 17,
+          "buy_ma_gap": 96,
+          "sell_ma_count": 6,
+          "sell_ma_gap": 37
+        },
+        "metrics": {
+          "net_profit_pct": 63.00838766616991,
+          "net_profit_abs": 63.00838766616991,
+          "win_rate_pct": 39.62264150943396,
+          "max_drawdown_pct": -30.14590090213922,
+          "max_drawdown_abs": null,
+          "total_trades": 106,
+          "profit_factor": 1.6811958276697825,
+          "sharpe_ratio": 1.3507786077787054,
+          "score": 16.69768932021026
+        }
+      },
+      {
+        "rank": 7,
+        "parameters": {
+          "buy_ma_count": 16,
+          "buy_ma_gap": 38,
+          "sell_ma_count": 18,
+          "sell_ma_gap": 92
+        },
+        "metrics": {
+          "net_profit_pct": 63.23756955424628,
+          "net_profit_abs": 63.23756955424628,
+          "win_rate_pct": 41.44144144144144,
+          "max_drawdown_pct": -32.95841951786317,
+          "max_drawdown_abs": null,
+          "total_trades": 111,
+          "profit_factor": 1.6624810640134953,
+          "sharpe_ratio": 1.363369193738083,
+          "score": 16.214803951650783
+        }
+      },
+      {
+        "rank": 8,
+        "parameters": {
+          "buy_ma_count": 17,
+          "buy_ma_gap": 92,
+          "sell_ma_count": 13,
+          "sell_ma_gap": 54
+        },
+        "metrics": {
+          "net_profit_pct": 61.751178765897244,
+          "net_profit_abs": 61.75117876589724,
+          "win_rate_pct": 33.59375,
+          "max_drawdown_pct": -35.29567347052732,
+          "max_drawdown_abs": null,
+          "total_trades": 128,
+          "profit_factor": 1.5401697177677793,
+          "sharpe_ratio": 1.3175870894379418,
+          "score": 15.19120858987161
+        }
+      },
+      {
+        "rank": 9,
+        "parameters": {
+          "buy_ma_count": 11,
+          "buy_ma_gap": 101,
+          "sell_ma_count": 16,
+          "sell_ma_gap": 90
+        },
+        "metrics": {
+          "net_profit_pct": 61.5392277431137,
+          "net_profit_abs": 61.5392277431137,
+          "win_rate_pct": 35.75757575757576,
+          "max_drawdown_pct": -36.56287397246169,
+          "max_drawdown_abs": null,
+          "total_trades": 165,
+          "profit_factor": 1.4351755422043948,
+          "sharpe_ratio": 1.2618810634797772,
+          "score": 14.828660289908278
+        }
+      },
+      {
+        "rank": 10,
+        "parameters": {
+          "buy_ma_count": 12,
+          "buy_ma_gap": 57,
+          "sell_ma_count": 16,
+          "sell_ma_gap": 88
+        },
+        "metrics": {
+          "net_profit_pct": 62.09206082134302,
+          "net_profit_abs": 62.092060821343026,
+          "win_rate_pct": 34.01360544217687,
+          "max_drawdown_pct": -39.59724816294708,
+          "max_drawdown_abs": null,
+          "total_trades": 147,
+          "profit_factor": 1.5083957134809556,
+          "sharpe_ratio": 1.305984600091951,
+          "score": 14.440946947599816
+        }
+      },
+      {
+        "rank": 11,
+        "parameters": {
+          "buy_ma_count": 17,
+          "buy_ma_gap": 90,
+          "sell_ma_count": 6,
+          "sell_ma_gap": 57
+        },
+        "metrics": {
+          "net_profit_pct": 58.69371002575322,
+          "net_profit_abs": 58.69371002575322,
+          "win_rate_pct": 36.09022556390977,
+          "max_drawdown_pct": -38.48506878135773,
+          "max_drawdown_abs": null,
+          "total_trades": 133,
+          "profit_factor": 1.5213765113260467,
+          "sharpe_ratio": 1.269792691946547,
+          "score": 13.467508227993926
+        }
+      },
+      {
+        "rank": 12,
+        "parameters": {
+          "buy_ma_count": 16,
+          "buy_ma_gap": 97,
+          "sell_ma_count": 10,
+          "sell_ma_gap": 36
+        },
+        "metrics": {
+          "net_profit_pct": 55.231648744883714,
+          "net_profit_abs": 55.231648744883714,
+          "win_rate_pct": 38.392857142857146,
+          "max_drawdown_pct": -35.60561815625361,
+          "max_drawdown_abs": null,
+          "total_trades": 112,
+          "profit_factor": 1.5788688273520146,
+          "sharpe_ratio": 1.2281425434778497,
+          "score": 12.83276283079844
+        }
+      },
+      {
+        "rank": 13,
+        "parameters": {
+          "buy_ma_count": 16,
+          "buy_ma_gap": 77,
+          "sell_ma_count": 10,
+          "sell_ma_gap": 70
+        },
+        "metrics": {
+          "net_profit_pct": 55.49627933336892,
+          "net_profit_abs": 55.49627933336892,
+          "win_rate_pct": 36.36363636363637,
+          "max_drawdown_pct": -42.04353507457126,
+          "max_drawdown_abs": null,
+          "total_trades": 187,
+          "profit_factor": 1.4393412625037063,
+          "sharpe_ratio": 1.2081211262490044,
+          "score": 11.60488928582786
+        }
+      },
+      {
+        "rank": 14,
+        "parameters": {
+          "buy_ma_count": 8,
+          "buy_ma_gap": 79,
+          "sell_ma_count": 16,
+          "sell_ma_gap": 83
+        },
+        "metrics": {
+          "net_profit_pct": 53.34458925538961,
+          "net_profit_abs": 53.34458925538961,
+          "win_rate_pct": 35.26315789473684,
+          "max_drawdown_pct": -43.33437657644815,
+          "max_drawdown_abs": null,
+          "total_trades": 190,
+          "profit_factor": 1.4245018312905122,
+          "sharpe_ratio": 1.1725797208458342,
+          "score": 10.581776220566294
+        }
+      },
+      {
+        "rank": 15,
+        "parameters": {
+          "buy_ma_count": 17,
+          "buy_ma_gap": 89,
+          "sell_ma_count": 14,
+          "sell_ma_gap": 36
+        },
+        "metrics": {
+          "net_profit_pct": 48.72098979528906,
+          "net_profit_abs": 48.72098979528906,
+          "win_rate_pct": 36.52173913043478,
+          "max_drawdown_pct": -39.25262695517614,
+          "max_drawdown_abs": null,
+          "total_trades": 115,
+          "profit_factor": 1.4870280918611845,
+          "sharpe_ratio": 1.1399889231811577,
+          "score": 9.784223886483469
+        }
+      },
+      {
+        "rank": 16,
+        "parameters": {
+          "buy_ma_count": 16,
+          "buy_ma_gap": 39,
+          "sell_ma_count": 18,
+          "sell_ma_gap": 65
+        },
+        "metrics": {
+          "net_profit_pct": 45.722053171724426,
+          "net_profit_abs": 45.722053171724426,
+          "win_rate_pct": 38.46153846153847,
+          "max_drawdown_pct": -40.272697261570734,
+          "max_drawdown_abs": null,
+          "total_trades": 169,
+          "profit_factor": 1.3939156014346725,
+          "sharpe_ratio": 1.097546987324787,
+          "score": 8.501349024907535
+        }
+      },
+      {
+        "rank": 17,
+        "parameters": {
+          "buy_ma_count": 14,
+          "buy_ma_gap": 61,
+          "sell_ma_count": 12,
+          "sell_ma_gap": 40
+        },
+        "metrics": {
+          "net_profit_pct": 45.75612794045311,
+          "net_profit_abs": 45.75612794045311,
+          "win_rate_pct": 32.06106870229007,
+          "max_drawdown_pct": -41.66929577831484,
+          "max_drawdown_abs": null,
+          "total_trades": 262,
+          "profit_factor": 1.2766496132078762,
+          "sharpe_ratio": 1.0210573254284991,
+          "score": 8.191379877494319
+        }
+      },
+      {
+        "rank": 18,
+        "parameters": {
+          "buy_ma_count": 6,
+          "buy_ma_gap": 61,
+          "sell_ma_count": 10,
+          "sell_ma_gap": 82
+        },
+        "metrics": {
+          "net_profit_pct": 46.99396811982729,
+          "net_profit_abs": 46.99396811982729,
+          "win_rate_pct": 35.11705685618729,
+          "max_drawdown_pct": -44.34722746585316,
+          "max_drawdown_abs": null,
+          "total_trades": 299,
+          "profit_factor": 1.2260977937107334,
+          "sharpe_ratio": 0.9725899630041208,
+          "score": 8.066810398262094
+        }
+      },
+      {
+        "rank": 19,
+        "parameters": {
+          "buy_ma_count": 10,
+          "buy_ma_gap": 45,
+          "sell_ma_count": 15,
+          "sell_ma_gap": 77
+        },
+        "metrics": {
+          "net_profit_pct": 43.70417251187965,
+          "net_profit_abs": 43.70417251187965,
+          "win_rate_pct": 35.35911602209944,
+          "max_drawdown_pct": -39.50097784788888,
+          "max_drawdown_abs": null,
+          "total_trades": 181,
+          "profit_factor": 1.3374084303662026,
+          "sharpe_ratio": 1.026318080399967,
+          "score": 7.920326015753332
+        }
+      },
+      {
+        "rank": 20,
+        "parameters": {
+          "buy_ma_count": 18,
+          "buy_ma_gap": 72,
+          "sell_ma_count": 7,
+          "sell_ma_gap": 62
+        },
+        "metrics": {
+          "net_profit_pct": 41.85885737222013,
+          "net_profit_abs": 41.85885737222013,
+          "win_rate_pct": 36.36363636363637,
+          "max_drawdown_pct": -39.660978042957865,
+          "max_drawdown_abs": null,
+          "total_trades": 176,
+          "profit_factor": 1.36800754518884,
+          "sharpe_ratio": 1.0296118707888247,
+          "score": 7.249408948420445
+        }
+      }
+    ]
+  },
+  "grid_epoch": 1,
+  "grid_epoch_start_trial": 1,
+  "stop_reason": "[WinError 5] Access is denied: 'L:\\\\M4tie\\\\Documents\\\\fortiesr\\\\user_data\\\\optimizer_sessions\\\\e04648ed-feaa-4879-a49a-9387874d9c17\\\\tmpki711gux' -> 'L:\\\\M4tie\\\\Documents\\\\fortiesr\\\\user_data\\\\optimizer_sessions\\\\e04648ed-feaa-4879-a49a-9387874d9c17\\\\session.json'"
+}

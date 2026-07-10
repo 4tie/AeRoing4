@@ -1,0 +1,22 @@
+# Core dependencies - essential for basic operation
+# Install with: pip install -r requirements-core.txt
+
+# Web framework and API
+fastapi
+uvicorn
+pydantic
+httpx
+aiohttp
+requests
+
+# Data handling
+numpy
+pandas
+
+# Chart generation
+matplotlib
+
+# Utilities
+colorama
+filelock
+python-dotenv

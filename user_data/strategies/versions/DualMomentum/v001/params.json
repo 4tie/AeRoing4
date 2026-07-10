@@ -1,0 +1,32 @@
+{
+  "strategy_name": "DualMomentum",
+  "version_id": "v001",
+  "extracted_at": "2026-06-15T05:56:53.197116Z",
+  "pair_list": null,
+  "buy_params": {
+    "ema_fast": 8,
+    "ema_slow": 21,
+    "rsi_long_min": 50,
+    "rsi_long_max": 65,
+    "rsi_short_exit": 55,
+    "volume_mult": 1.0
+  },
+  "sell_params": {
+    "rsi_short_min": 35,
+    "rsi_short_max": 50,
+    "rsi_long_exit": 45
+  },
+  "protection_params": {},
+  "roi_table": {
+    "0": 0.02,
+    "30": 0.01,
+    "60": 0.005,
+    "120": 0.0
+  },
+  "stoploss": -0.03,
+  "trailing_stop": false,
+  "trailing_stop_positive": 0.0,
+  "trailing_stop_positive_offset": 0.0,
+  "trailing_only_offset_is_reached": false,
+  "custom_params": {}
+}

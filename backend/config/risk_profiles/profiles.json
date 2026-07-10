@@ -1,0 +1,21 @@
+{
+  "version": "risk_profiles_v1",
+  "profiles": {
+    "conservative": {
+      "drawdown_multiplier": 0.8,
+      "profit_factor_delta": 0.1,
+      "pair_count_key": "conservative"
+    },
+    "balanced": {
+      "drawdown_multiplier": 1.0,
+      "profit_factor_delta": 0.0,
+      "pair_count_key": "balanced"
+    },
+    "aggressive": {
+      "drawdown_multiplier": 1.2,
+      "profit_factor_delta": -0.1,
+      "min_profit_factor_floor": 1.1,
+      "pair_count_key": "aggressive"
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "api": {
+    "host": "0.0.0.0",
+    "port": 8000,
+    "cors_origins": ["http://localhost:3000", "http://localhost:5000"]
+  },
+  "data": {
+    "data_dir": "user_data",
+    "backtest_results_dir": "user_data/backtest_results",
+    "strategies_dir": "user_data/strategies",
+    "auto_quant_dir": "user_data/auto_quant"
+  },
+  "ollama": {
+    "base_url": "http://localhost:11434",
+    "model": "llama2",
+    "timeout": 60
+  },
+  "freqtrade": {
+    "data_dir": "./data",
+    "user_data_dir": "./user_data"
+  },
+  "defaults": {
+    "trading_style": "swing",
+    "risk_profile": "balanced",
+    "exchange": "binance",
+    "analysis_depth": "full",
+    "stake_amount": 100,
+    "max_open_trades": 5
+  }
+}

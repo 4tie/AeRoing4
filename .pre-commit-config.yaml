@@ -1,0 +1,11 @@
+# Pre-commit hooks for line limit enforcement
+repos:
+  - repo: local
+    hooks:
+      - id: check-line-limits
+        name: Check line limits
+        entry: python scripts/check_line_limits.py
+        language: system
+        types: [python, javascript]
+        pass_filenames: false
+        always_run: true

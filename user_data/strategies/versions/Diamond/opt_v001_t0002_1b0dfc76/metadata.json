@@ -1,0 +1,15 @@
+{
+  "version_id": "opt_v001_t0002_1b0dfc76",
+  "strategy_name": "Diamond",
+  "parent_version_id": "v001",
+  "created_at": "2026-06-14T11:27:52.707555Z",
+  "change_type": "optimization",
+  "creation_source": "optimizer_trial",
+  "proposal_id": null,
+  "source_run_id": null,
+  "acceptance_status": "rejected",
+  "accepted_at": null,
+  "rejected_at": "2026-06-14T11:28:04.360892Z",
+  "result_summary_run_id": null,
+  "quality_gate_results": []
+}

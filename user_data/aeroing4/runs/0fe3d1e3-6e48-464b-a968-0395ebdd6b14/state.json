@@ -1,0 +1,40 @@
+{
+  "run_id": "0fe3d1e3-6e48-464b-a968-0395ebdd6b14",
+  "strategy_name": "AIStrategy",
+  "timeframe": "5m",
+  "smoke_pairs": [
+    "BTC/USDT"
+  ],
+  "smoke_timerange": "20240101-20240107",
+  "status": "failed",
+  "current_step": "validation",
+  "steps": {
+    "validation": {
+      "step_name": "validation",
+      "status": "failed",
+      "started_at": "2026-07-10T11:48:13.391357Z",
+      "completed_at": "2026-07-10T11:48:13.395700Z",
+      "error": "Freqtrade validation unavailable: freqtrade not found at 'py -m freqtrade'.",
+      "data": {
+        "valid": false,
+        "errors": [
+          "Freqtrade validation unavailable"
+        ],
+        "warnings": [
+          "freqtrade not found at 'py -m freqtrade'."
+        ],
+        "output_summary": "✓ Python syntax OK\n⚠ freqtrade not found — skipping structural check."
+      }
+    }
+  },
+  "error": "Freqtrade validation unavailable: freqtrade not found at 'py -m freqtrade'.",
+  "created_at": "2026-07-10T11:48:13.380214Z",
+  "updated_at": "2026-07-10T11:48:13.396203Z",
+  "completed_at": "2026-07-10T11:48:13.396203Z",
+  "enable_pair_discovery": false,
+  "discovery_pairs": null,
+  "discovery_timerange": null,
+  "confirmation_timerange": null,
+  "final_unseen_timerange": null,
+  "research_protocol": null
+}

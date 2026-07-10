@@ -1,0 +1,17 @@
+# AI/ML dependencies - optimization and machine learning
+# Install with: pip install -r requirements-ai.txt
+# Requires: requirements-core.txt
+
+# Optimization frameworks
+optuna
+scikit-optimize
+
+# Machine learning
+scikit-learn
+
+# Genetic algorithms
+deap
+pymoo
+
+# Hidden Markov Models
+hmmlearn

@@ -1,0 +1,17 @@
+# Complete Requirements - All Dependencies
+# ========================================
+#
+# This file installs all dependencies from all modules.
+# For modular installation, use the individual requirements files:
+# - requirements-core.txt: Essential dependencies
+# - requirements-trading.txt: Freqtrade, TA-Lib, vectorbt
+# - requirements-ai.txt: AI/ML optimization
+# - requirements-rl.txt: Reinforcement learning (very heavy)
+# - requirements-dev.txt: Development tools
+
+discord
+-r requirements-dev.txt
+-r requirements-core.txt
+-r requirements-trading.txt
+-r requirements-ai.txt
+-r requirements-rl.txt

@@ -1,0 +1,81 @@
+{
+  "schema_version": "assistant_copilot_session_v2",
+  "session_id": "3830cff3-2ffe-440b-879d-35dae6f013d5",
+  "created_at": "2026-07-07T21:00:04.413125+00:00",
+  "updated_at": "2026-07-07T21:01:14.103650+00:00",
+  "model": "qwen3.5:9b",
+  "mode": "analysis",
+  "title": "AI Copilot Chat",
+  "messages": [
+    {
+      "id": "4ffa876d-fd7a-447f-931e-8d3196ce0d5d",
+      "role": "user",
+      "content": "Analyze the attached CandidateReadiness report using only backend-provided readiness context.\n\nStrategy: AIStrategy\nBacktest run id: 20260707T205232Z_AIStrategy_v001_bt004\nOptimizer session id: not attached\nTrial number: not attached\nCandidate run id: not attached\nStress session id: not attached\nTemporal stress session id: not attached\n\n\n**Accuracy Requirements**\n\n1. Use only backend context. Never invent profit, drawdown, profit factor, Sharpe, trade count, confidence, OOS, or WFO values.\n2. If a metric is missing, say it is missing and explain what cannot be concluded.\n3. Separate facts from interpretation. Use \"The context shows\" for facts and \"This may indicate\" for hypotheses.\n4. Be specific to the selected run or trial. Avoid generic trading advice.\n5. Never promise profit or imply a strategy is safe to trade live.\n\n\n**Readiness Rules**\n\n1. Treat readiness.status, overall_score, gates, blocking_failures, warnings, and missing_sources as the authority.\n2. Explain why the backend marked it Ready, Watch, Not Ready, or Insufficient Data.\n3. Do not independently decide profitability or override the backend label.\n4. Explain weak gates, missing evidence, pair concentration, drawdown, exit health, and overfitting risk.\n5. Propose actions only as drafts: OOS, walk-forward, stress-lab payload, or promotion review.\n6. Do not suggest direct overwrite, strategy file edits, live deployment, or dry-run deployment.\n\n**Response Format**\n\n1. Start with Readiness Summary.\n2. Then cover Blocking Failures, Warnings, Missing Evidence, Gate Breakdown, Risk Interpretation, and Draft Next Actions.\n3. Use exact backend numbers when present. Say missing when missing.",
+      "created_at": "2026-07-07T21:00:04.414169+00:00"
+    },
+    {
+      "id": "3f736e52-219b-4f5e-bbfd-dddce056940e",
+      "role": "assistant",
+      "content": "# CandidateReadiness Analysis for AIStrategy v001\n\n## Readiness Summary\n- **Status**: `watch`\n- **Overall Score**: 63/100 (as calculated by readiness scoring system)\n- **Label**: \"Watch\" - strategy has some concerns but no blocking failures preventing consideration\n\n---\n\n## Blocking Failures Analysis\n**Observed from backend:** The `blocking_failures` array is empty (`[]`). However, reviewing the gates:\n- Gate 3 (backtest.profit_factor): Status=`warn`, observed=1.038, threshold=\">= 1.2\", marked as blocking but no failure recorded in final status\n\nThis inconsistency suggests the backend may have applied a grace condition or the gate is flagged for review rather than hard-blocked at this time.\n\n---\n\n## Warnings\nThe `warnings` list contains:\n- **missing_oos_wfo**: \"OOS or walk-forward evidence is required before a Ready label.\"\n\nThis explains why readiness.label=\"Watch\" - the strategy lacks validation beyond backtest metrics.\n\n**Missing Evidence (from missing_sources):** All sources are present except optimizer, candidate, stress lab modules and temporal_stress:\n- `optimizer`: available=false, session_id=null\n- `candidate`: available=false, run_id=null  \n- `stress`: available=false\n- `temporal_stress`: available=false\n\n---\n\n## Gate Breakdown (by status)\n\n| Gate Key | Status | Observed Value | Threshold | Notes |\n|----------|--------|----------------|-----------|-------|\n| backtest.net_profit | pass | 4.017% | > 0% | Positive profit achieved |\n| backtest.profit_factor | warn | 1.038 | >= 1.2 | Below preferred threshold, may impact real-market sustainability |\n| backtest.max_drawdown | pass | 17.21% | <= 28% | Drawdown well within acceptable bounds |\n| backtest.trade_count | pass | 538 trades | >= 100 | Sufficient sample size for statistical confidence |\n| backtest.win_expectancy | pass | win_rate=57.06%, expectancy\u22480.0075 | win rate>=45% & non-negative | Healthy distribution of wins vs losses |\n| validation.oos_wfo_evidence | missing | \u2014 | required for Ready | No OOS or walk-forward evidence available |\n| stress.pair_sweep | missing | \u2014 | null weight (optional) | Pair-sweep data not collected yet |\n| stress.temporal_worst_segment | missing | \u2014 | null weight (optional) | Temporal segment analysis not performed |\n| pairs.pass_rate | warn | 0.5 pair pass rate, losing_pair_count=2 | >= 0.6 | Half of pairs underperformed; may indicate uneven distribution or specific weakness in certain assets |\n| pairs.dominant_pair_concentration | warn | positive_profit_concentration\u22480.635 | <= 0.70 | Profit concentrated across ~64% of trades, slightly elevated but acceptable |\n| exits.reason_balance | pass | stoploss=0%, roi/signal=100% | > 50% fails = block | Stop-loss exits minimal; most exits via planned ROI or signal conditions |\n\n---\n\n## Risk Interpretation (Based on Context)\n\n**Gate Concerns:**\n- **Profit factor below threshold**: At ~1.04, the strategy barely covers fees and risk costs. This may erode in live markets with higher slippage/fees than backtested assumptions. The readiness system requires PF >= 1.2 for confident trading conditions.\n\n**Pair Distribution Risk:**\n- Only two profitable pairs (JTO/USDT: +11.17%, PYTH/USDT: +6.42%); two losing pairs offset these gains (SEI/USDT: -4.15%, SAND/USDT: -9.43%). This unevenness may indicate strategy sensitivity to specific coin behaviors or market regimes.\n- Exit reason analysis shows \"exit_signal\" exits are heavily weighted in losses (-104.65 USDT across 192 trades) while ROI dominates wins (+109.8 U$). Signal-based failures suggest potential overfitting if signal conditions don't generalize well to live data.\n\n**Drawdown Concerns:**\n- Max drawdown of ~17% occurred with a duration spanning roughly August through January (based on log timestamps showing \"2025-08-29 01:10:00\" start and \"2026-01-26 20:40:00\" end). This long-duration drawdown may expose capital to extended periods of losses in live conditions.\n\n**Missing Validation Evidence:**\nThe readiness system explicitly requires OOS or walk-forward validation before a Ready label. Without this, the backtest results could be subject to overfitting \u2014 particularly problematic for strategies with:\n- Complex parameter configurations (5m timeframe, multiple moving average counters)\n- Parameter tuning via optimizer trials\n\n---\n\n## Draft Next Actions\n\nThe readiness object provides `draft_next_actions` as non-destructive suggestions:\n\n1. **Draft OOS validation** - Run a backtest excluding the most recent time period to verify performance degrades/holds without future data leakage\n2. **Draft walk-forward validation** - Test if strategy adapts across different market regimes (time-window shifts) rather than just performing on one continuous window\n3. **Draft stress-lab payload export** - Export pairs for sweep testing; missing pair-sweep evidence means the system can't evaluate how each coin behaves under shared risk conditions\n4. **Draft candidate promotion review** - Review existing backtest/evidence before any potential version acceptance or deployment\n\n---\n\n## Conclusion Based on Context Evidence\n\nThe readiness scoring (63/100) reflects: \u2705 net profit, trade count adequacy, drawdown control; but \u274c missing OOS validation and suboptimal profit factor. The strategy has no blocking failures per the backend's gate logic, so it may be considered for testing with appropriate risk controls \u2014 *but* without additional evidence (OOS, walk-forward), promotion to a higher readiness label remains unavailable until required metrics are generated.",
+      "created_at": "2026-07-07T21:01:14.096231+00:00"
+    }
+  ],
+  "tool_runs": [],
+  "pending_actions": [],
+  "active_jobs": [],
+  "last_context_summary": {
+    "active_tab": "backtest",
+    "active_panel": "candidate_readiness",
+    "strategy_name": "AIStrategy",
+    "optimizer_session_id": null,
+    "optimizer_trial_number": null,
+    "backtest_run_id": "20260707T205232Z_AIStrategy_v001_bt004",
+    "candidate_run_id": null,
+    "stress_session_id": null,
+    "temporal_stress_session_id": null,
+    "auto_quant_run_id": null,
+    "optimizer_phase": null,
+    "backtest_status": "completed",
+    "auto_quant_status": null,
+    "readiness_status": "watch",
+    "readiness_score": 63,
+    "readiness_blocking_failures": 0,
+    "chips": [
+      {
+        "kind": "strategy",
+        "label": "AIStrategy"
+      },
+      {
+        "kind": "params",
+        "label": "strategy files"
+      },
+      {
+        "kind": "backtest",
+        "label": "20260707"
+      },
+      {
+        "kind": "readiness",
+        "label": "Watch 63"
+      }
+    ],
+    "warnings": [
+      "Multiple AutoQuant runs are active; provide auto_quant_run_id explicitly."
+    ]
+  },
+  "last_context_overrides": {
+    "active_tab": "backtest",
+    "active_panel": "candidate_readiness",
+    "strategy_name": "AIStrategy",
+    "auto_quant_run_id": null,
+    "current_stage": null,
+    "pipeline_status": null,
+    "optimizer_session_id": null,
+    "optimizer_trial_number": null,
+    "backtest_run_id": "20260707T205232Z_AIStrategy_v001_bt004",
+    "candidate_run_id": null,
+    "stress_session_id": null,
+    "temporal_stress_session_id": null,
+    "readiness_profile": "scalping",
+    "api_session_id": null
+  }
+}

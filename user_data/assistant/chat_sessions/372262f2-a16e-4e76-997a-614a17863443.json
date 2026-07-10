@@ -1,0 +1,48 @@
+{
+  "schema_version": "assistant_chat_session_v1",
+  "session_id": "372262f2-a16e-4e76-997a-614a17863443",
+  "created_at": "2026-07-06T06:37:51.722212+00:00",
+  "updated_at": "2026-07-06T06:41:00.829577+00:00",
+  "model": "qwen3.5:4b",
+  "title": "AI Assistant Chat",
+  "messages": [
+    {
+      "id": "312cb617-3556-45eb-a7a4-b31841f9688f",
+      "role": "user",
+      "content": "Please think step by step and show your reasoning in <thinking> tags before answering: What is the capital of France?",
+      "created_at": "2026-07-06T06:41:00.829554+00:00"
+    },
+    {
+      "id": "a20b06da-17c5-466e-b23a-79a55da91a03",
+      "role": "assistant",
+      "content": "Ollama returned an empty response.",
+      "created_at": "2026-07-06T06:41:00.829571+00:00"
+    }
+  ],
+  "last_context_summary": {
+    "active_tab": "auto-quant",
+    "active_panel": null,
+    "strategy_name": "AIStrategy",
+    "optimizer_session_id": null,
+    "optimizer_trial_number": null,
+    "backtest_run_id": null,
+    "auto_quant_run_id": null,
+    "optimizer_phase": null,
+    "backtest_status": null,
+    "auto_quant_status": null,
+    "chips": [
+      {
+        "kind": "strategy",
+        "label": "AIStrategy"
+      },
+      {
+        "kind": "params",
+        "label": "strategy files"
+      }
+    ],
+    "warnings": [
+      "No active run or optimizer session is selected."
+    ]
+  },
+  "last_context_overrides": {}
+}

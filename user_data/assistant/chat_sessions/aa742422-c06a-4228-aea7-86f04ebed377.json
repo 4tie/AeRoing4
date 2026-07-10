@@ -1,0 +1,59 @@
+{
+  "schema_version": "assistant_chat_session_v1",
+  "session_id": "aa742422-c06a-4228-aea7-86f04ebed377",
+  "created_at": "2026-07-06T21:05:17.748709+00:00",
+  "updated_at": "2026-07-06T21:06:15.510699+00:00",
+  "model": "qwen3.5:9b",
+  "title": "AI Assistant Chat",
+  "messages": [
+    {
+      "id": "3f1b02ea-5be0-45f4-873a-8454d2e12abc",
+      "role": "user",
+      "content": "Analyze the selected backtest result using only the attached backend context.\n\nBacktest run id: 20260706T210502Z_AIStrategy_v001_bt052\n\nExplain:\n- why the result performed well or poorly\n- weak pairs or pair concentration risk\n- drawdown depth, duration, and recovery risk\n- exit reasons and whether exits look healthy\n- overfitting or curve-fit warning signs\n- what validation to run next\n\nFinish with draft-only next actions for OOS validation, walk-forward validation, and any stress testing that would be useful.\nDo not suggest direct overwrite, strategy file edits, live deployment, or dry-run deployment unless the app presents a separate explicit confirmation.\nIf a required metric is missing from context, say it is missing.",
+      "created_at": "2026-07-06T21:06:15.510699+00:00"
+    },
+    {
+      "id": "cf13506e-28ea-4db7-9450-21756adc87cc",
+      "role": "assistant",
+      "content": "Ollama returned an empty response.",
+      "created_at": "2026-07-06T21:06:15.510699+00:00"
+    }
+  ],
+  "last_context_summary": {
+    "active_tab": "backtest",
+    "active_panel": "backtest_result",
+    "strategy_name": "AIStrategy",
+    "optimizer_session_id": null,
+    "optimizer_trial_number": null,
+    "backtest_run_id": "20260706T210502Z_AIStrategy_v001_bt052",
+    "auto_quant_run_id": null,
+    "optimizer_phase": null,
+    "backtest_status": "completed",
+    "auto_quant_status": null,
+    "chips": [
+      {
+        "kind": "strategy",
+        "label": "AIStrategy"
+      },
+      {
+        "kind": "params",
+        "label": "strategy files"
+      },
+      {
+        "kind": "backtest",
+        "label": "20260706"
+      }
+    ],
+    "warnings": []
+  },
+  "last_context_overrides": {
+    "active_tab": "backtest",
+    "active_panel": "backtest_result",
+    "strategy_name": "AIStrategy",
+    "auto_quant_run_id": null,
+    "optimizer_session_id": null,
+    "optimizer_trial_number": null,
+    "backtest_run_id": "20260706T210502Z_AIStrategy_v001_bt052",
+    "api_session_id": null
+  }
+}

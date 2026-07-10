@@ -1,0 +1,46 @@
+{
+  "version_id": "v002",
+  "strategy_name": "MeanReversion_v1",
+  "parent_version_id": "v001",
+  "created_at": "2026-06-19T01:10:50.358875Z",
+  "change_type": "parameter",
+  "creation_source": "optimizer_trial",
+  "proposal_id": "069b3443-3752-48c2-8ae4-2051649a65a0_trial_12",
+  "source_run_id": "20260619T004943Z_MeanReversion_v1_opt_v001_t0012_32346b01_bt013",
+  "acceptance_status": "candidate",
+  "accepted_at": null,
+  "rejected_at": null,
+  "result_summary_run_id": null,
+  "quality_gate_results": [
+    {
+      "check_name": "ast_parse",
+      "status": "pass",
+      "error_detail": null
+    },
+    {
+      "check_name": "strategy_class_present",
+      "status": "pass",
+      "error_detail": null
+    },
+    {
+      "check_name": "required_methods",
+      "status": "pass",
+      "error_detail": null
+    },
+    {
+      "check_name": "missing_imports",
+      "status": "pass",
+      "error_detail": null
+    },
+    {
+      "check_name": "module_import",
+      "status": "pass",
+      "error_detail": null
+    },
+    {
+      "check_name": "params_schema",
+      "status": "pass",
+      "error_detail": null
+    }
+  ]
+}

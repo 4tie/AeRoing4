@@ -1,0 +1,27 @@
+{
+  "strategy_name": "MultiMeee",
+  "version_id": "opt_v001_t0020_94ff7f31",
+  "extracted_at": "2026-05-30T07:43:53.501603Z",
+  "pair_list": null,
+  "buy_params": {
+    "buy_ma_count": 9,
+    "buy_ma_gap": 51
+  },
+  "sell_params": {
+    "sell_ma_count": 2,
+    "sell_ma_gap": 26
+  },
+  "protection_params": {},
+  "roi_table": {
+    "0": 0.099,
+    "13": 0.034,
+    "38": 0.024,
+    "146": 0.0
+  },
+  "stoploss": -0.245,
+  "trailing_stop": true,
+  "trailing_stop_positive": 0.334,
+  "trailing_stop_positive_offset": 0.371,
+  "trailing_only_offset_is_reached": false,
+  "custom_params": {}
+}
