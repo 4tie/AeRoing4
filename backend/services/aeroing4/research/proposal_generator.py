@@ -256,6 +256,12 @@ class OllamaProposalAdapter:
                 )
         metrics = _extract_allowed_metrics_snapshot(request.champion_metrics)
 
+        # Add exclusion guidance if provided
+        exclusion_guidance = ""
+        if request.context_limits and "excluded_mutations" in request.context_limits:
+            excluded = request.context_limits["excluded_mutations"]
+            exclusion_guidance = f"\n\nALREADY-TESTED MUTATIONS (DO NOT REPEAT):\n{chr(10).join(f'- {m}' for m in excluded)}\n"
+        
         return (
             "You are a research proposal assistant for an automated strategy-validation system.\n"
             "Return only a strict JSON object with these fields:\n"
@@ -267,10 +273,17 @@ class OllamaProposalAdapter:
             f"Hypothesis: {request.hypothesis_text}\n"
             f"Allowed targets:\n{chr(10).join(allowed) if allowed else 'none'}\n"
             f"Champion metrics: {json.dumps(metrics, default=str)}\n"
+            f"{exclusion_guidance}"
             "Rules:\n"
             "- Do not propose executable code, shell commands, or file paths.\n"
             "- exact_change must be a JSON object with these EXACT fields: change_type (string), target (string), before_value (any), after_value (any).\n"
             "- exact_change must describe ONE parameter change only - do not return multiple parameters in one exact_change.\n"
+            "- DO NOT repeat already-tested mutations listed above.\n"
+            "- Propose a change that could improve edge quality for the diagnosis, not just increase trade count.\n"
+            "- success_criteria MUST be a single string (e.g., 'profit_factor > 1.0') - NOT a list.\n"
+            "- evidence_refs MUST be a list of strings (e.g., experiment IDs or references) - NOT a list of objects/dicts.\n"
+            "- confidence MUST be a numeric value between 0.0 and 1.0 (e.g., 0.65, 0.8, 0.3) - NOT a string like 'medium' or 'high'.\n"
+            "- risk can be a string (e.g., 'medium', 'high', 'low') but confidence must be numeric.\n"
             "- Do NOT include outcome, raw_payload, or rejection_reason - these are system-managed.\n"
         )
 

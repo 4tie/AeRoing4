@@ -35,6 +35,7 @@ from backend.services.aeroing4.research.confirmation import (
     ConfirmationExecutionStatus,
     ConfirmationResult,
 )
+from backend.services.aeroing4.research.experiments import ExperimentDecision
 from backend.services.aeroing4.research.confirmation import _RunShim as _ConfirmationRunShim
 from backend.services.aeroing4.research.delivery import DeliveryService
 from backend.services.aeroing4.research.factory import (
@@ -1294,23 +1295,52 @@ def test_real_research_loop_smoke(tmp_path):
     executor = _RealCandidateExecutor(runs_root, runner)
     zone_guard = DataZoneGuard(state_store, runs_root)
     
-    # Real AI proposal generator using Ollama - NO FALLBACK for Step A3 verification
+    # Real AI proposal generator using Ollama - NO FALLBACK for Step A4 verification
     from backend.services.aeroing4.research.proposal_generator import OllamaProposalAdapter, ProposalResult, ProposalOutcome
     from backend.services.aeroing4.research.experiments import ExactChange
     
-    proposal_adapter = OllamaProposalAdapter(base_url="http://localhost:11434", model="laguna-xs-2.1")
+    proposal_adapter = OllamaProposalAdapter(base_url="http://localhost:11434", model="ornith:9b")
     
-    # Real AI proposal only - NO FALLBACK for Step A3 verification
-    async def proposal_real_ai_only(request):
-        print(f"REAL RESEARCH LOOP: Step A3 - Using real AI proposal only (NO FALLBACK)")
+    # Already-tested mutations for dedup/exclusion
+    tested_mutations = {
+        ("buy_ma_count", 18, 15),  # Already tested in Step A2
+        ("stoploss", -0.336, -0.25),  # Already tested in Step A4
+    }
+    
+    # Real AI proposal only - NO FALLBACK for Step A5 verification with dedup
+    async def proposal_real_ai_with_dedup(request):
+        print(f"REAL RESEARCH LOOP: Step A5 - Using real AI proposal only (NO FALLBACK)")
+        
+        # Add exclusion info to request for prompt guidance
+        exclusion_list = [
+            f"{target}: {before} → {after}" 
+            for target, before, after in tested_mutations
+        ]
+        
+        # Update request context with exclusion info
+        request.context_limits = {"excluded_mutations": exclusion_list}
+        
         result = await proposal_adapter.generate(request)
+        
         if result.outcome == ProposalOutcome.ACCEPTED:
+            # Check for duplicate
+            mutation_key = (
+                result.exact_change.target,
+                result.exact_change.before_value,
+                result.exact_change.after_value
+            )
+            if mutation_key in tested_mutations:
+                print(f"REAL RESEARCH LOOP: AI proposal rejected as duplicate - {result.exact_change}")
+                raise RuntimeError(f"Duplicate mutation: {result.exact_change}")
+            
+            # Add to tested mutations
+            tested_mutations.add(mutation_key)
             print(f"REAL RESEARCH LOOP: AI proposal accepted - {result.exact_change}")
             return result
         else:
             print(f"REAL RESEARCH LOOP: AI proposal {result.outcome} - {result.rejection_reason}")
             # NO FALLBACK - fail if AI does not produce valid proposal
-            raise RuntimeError(f"Step A3 verification failed: AI proposal {result.outcome} - {result.rejection_reason}")
+            raise RuntimeError(f"Step A5 verification failed: AI proposal {result.outcome} - {result.rejection_reason}")
     
     # Diagnosis function based on Confirmation failure
     def diagnose_fn(champion):
@@ -1328,16 +1358,25 @@ def test_real_research_loop_smoke(tmp_path):
         executor=executor,
         zone_guard=zone_guard,
         diagnose_fn=diagnose_fn,
-        proposal_callable=proposal_real_ai_only,  # NO FALLBACK for Step A3
+        proposal_callable=proposal_real_ai_with_dedup,  # NO FALLBACK for Step A5 with dedup
         develop_timerange="20240101-20240630",  # 6-month develop timerange for sufficient sample
         pairs=["LTC/USDT", "XRP/USDT", "BNB/USDT", "LINK/USDT"],  # 4 pairs for sufficient sample
         timeframe="5m",
         min_sample_trades=30,
     )
     
-    # Run one iteration
+    # Run up to 2 iterations for Step A5 bounded research loop
     import asyncio
-    result = asyncio.run(coord.run_one_iteration(run_id="real-research-loop-smoke"))
+    max_iterations = 2
+    for i in range(max_iterations):
+        print(f"REAL RESEARCH LOOP: Step A5 - Attempt {i+1}/{max_iterations}")
+        result = asyncio.run(coord.run_one_iteration(run_id="real-research-loop-smoke"))
+        print(f"REAL RESEARCH LOOP: Attempt {i+1} - Decision={result.decision if hasattr(result, 'decision') else 'N/A'}")
+        
+        # Stop if KEEP occurs
+        if hasattr(result, 'decision') and result.decision == ExperimentDecision.KEEP:
+            print(f"REAL RESEARCH LOOP: Step A5 - KEEP achieved, stopping early")
+            break
     
     print(f"REAL RESEARCH LOOP: Outcome={result.outcome}")
     print(f"REAL RESEARCH LOOP: Stage reached={result.stage_reached}")

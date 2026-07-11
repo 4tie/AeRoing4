@@ -248,6 +248,24 @@ def test_semantic_validation_rejects_wider_stoploss_with_reduced_risk_claim():
     assert "widened" in result.rejection_reason
 
 
+def test_semantic_validation_rejects_wider_stoploss_with_tightening_claim():
+    """Test that stoploss widened (-0.336 → -0.45) with 'tightening' claim is rejected as semantic contradiction."""
+    adapter = OllamaProposalAdapter()
+    payload = {
+        "hypothesis_text": "Tighten stoploss to reduce losses",
+        "diagnosis_code": "low_profit_factor",
+        "exact_change": {"change_type": "parameter_tightening", "target": "stoploss", "before_value": -0.336, "after_value": -0.45},
+        "expected_effect": "Tighter stoploss reduces per-trade loss",
+        "success_criteria": "profit_factor > 1.0",
+        "risk": "higher whipsaw",
+        "confidence": 0.65,
+    }
+    result = adapter._parse_response(json.dumps(payload))
+    assert result.outcome == ProposalOutcome.AI_PROPOSAL_SKIPPED
+    assert "SEMANTIC_CONTRADICTION" in result.rejection_reason
+    assert "widened" in result.rejection_reason
+
+
 @pytest.mark.asyncio
 async def test_generate_unavailable_returns_unavailable():
     with patch(
