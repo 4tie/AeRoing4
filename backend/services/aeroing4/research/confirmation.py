@@ -332,8 +332,10 @@ class ConfirmationService:
             return existing
 
         # 4) DataZoneGuard.request_access(CONFIRMATION)
+        # Use passed run object if available (has research_protocol), otherwise use shim
+        run_for_access = run if run is not None else _RunShim(run_id)
         decision, _ = self.zone_guard.request_access(
-            _RunShim(run_id), ResearchStage.CONFIRMATION, ResearchZone.CONFIRMATION, experiment_id=None,
+            run_for_access, ResearchStage.CONFIRMATION, ResearchZone.CONFIRMATION, experiment_id=None,
         )
         access_ledger_entry_id = getattr(decision, "decision_code", None)
         if not decision.allowed:

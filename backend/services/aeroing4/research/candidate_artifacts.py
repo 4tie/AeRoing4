@@ -103,9 +103,8 @@ class CandidateArtifactService:
         else:
             # No sidecar on disk — seed an empty editable block so we can still
             # record the change without inventing one from nothing.
-            cand_sidecar_path.write_text(
-                json.dumps({"parameters": {}}, indent=2), encoding="utf-8"
-            )
+            with cand_sidecar_path.open("w", encoding="utf-8") as f:
+                json.dump({"parameters": {}}, f, indent=2)
 
         parameter_hash_before = _sha256_file(cand_sidecar_path)
         self._apply_sidecar_change(cand_sidecar_path, exact_change)
@@ -158,4 +157,5 @@ class CandidateArtifactService:
             # Flat parameter map: set the key directly.
             params[target] = change.after_value
 
-        sidecar_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        with sidecar_path.open("w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)

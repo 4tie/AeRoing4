@@ -305,6 +305,21 @@ class FocusedHyperoptService:
             )
 
         # §6: DecisionPolicy gate (final deterministic promotion gate).
+        # Skip if candidate metrics unavailable (e.g., smoke test with incomplete parsing)
+        if final.best_metrics is None:
+            return FocusedHyperoptResult(
+                status=FocusedHyperoptStatus.PARSE_FAILURE,
+                diagnosis_code=diagnosis_code,
+                objective=scope.objective.value if scope.objective else None,
+                best_params=best_values,
+                best_metrics=None,
+                decision=None,
+                promoted_champion_id=None,
+                metrics_availability_reason=final.metrics_availability_reason,
+                reason=f"candidate metrics unavailable: {final.reason}",
+                trials_run=trials,
+            )
+        
         decision_result = DecisionPolicy.decide(DecisionRequest(
             diagnosis_code=diagnosis_code,
             parent_metrics=champion.metrics,
@@ -403,7 +418,8 @@ class FocusedHyperoptService:
         if orig_sidecar.exists():
             shutil.copyfile(orig_sidecar, cand_sidecar_path)
         else:
-            cand_sidecar_path.write_text(json.dumps({"parameters": {}}, encoding="utf-8"))
+            with cand_sidecar_path.open("w", encoding="utf-8") as f:
+                json.dump({"parameters": {}}, f, indent=2)
 
         data = json.loads(cand_sidecar_path.read_text(encoding="utf-8"))
         params = data.setdefault("parameters", {})
@@ -413,7 +429,8 @@ class FocusedHyperoptService:
                 block["current"] = val
             else:
                 params[name] = val
-        cand_sidecar_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        with cand_sidecar_path.open("w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
         param_hash = _sha256_file(cand_sidecar_path)
 
         strategy_artifact = ArtifactReference(
