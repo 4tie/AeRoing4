@@ -1750,29 +1750,16 @@ def test_runtime_params_robust_gap_sensitivity_recheck_develop_only(tmp_path):
 
 
 def test_volatility_compression_breakout_template_real_smoke(tmp_path):
-    """B2: generated deterministic template executes through candidate strategy path."""
+    """B2.1: compare original B2 baseline with stricter v2 to identify overtrading root cause."""
     _require_data()
 
     from types import SimpleNamespace
     from backend.services.aeroing4.research.strategy_templates import (
         DEFAULT_VOLATILITY_COMPRESSION_PARAMS,
+        STRICT_VOLATILITY_COMPRESSION_PARAMS,
         VOLATILITY_COMPRESSION_FAMILY,
         write_strategy_from_spec,
     )
-
-    candidate_dir = tmp_path / "generated_volatility_compression_breakout"
-    artifact = write_strategy_from_spec(
-        {"family": VOLATILITY_COMPRESSION_FAMILY},
-        candidate_dir,
-    )
-    assert artifact.strategy_path.exists()
-    assert artifact.sidecar_path.exists()
-
-    sidecar = json.loads(artifact.sidecar_path.read_text(encoding="utf-8"))
-    assert sidecar["params"]["buy"] == DEFAULT_VOLATILITY_COMPRESSION_PARAMS
-    assert set(sidecar["params"]) == {"buy", "sell", "roi", "stoploss", "trailing"}
-    for name, value in DEFAULT_VOLATILITY_COMPRESSION_PARAMS.items():
-        assert sidecar["parameters"][name]["current"] == value
 
     runner = _RealRunner(tmp_path)
     request = SimpleNamespace(
@@ -1780,40 +1767,72 @@ def test_volatility_compression_breakout_template_real_smoke(tmp_path):
         pairs=REQUIRED_PAIRS,
         timeframe=SMOKE_TIMEFRAME,
     )
-    execution_id = runner.run_candidate_backtest(
-        artifact.strategy_name,
-        "b2_volatility_compression_breakout",
-        request,
-        candidate_dir=candidate_dir,
-    )
-    command = list(runner.last_command)
-    assert "--strategy-path" in command
-    assert str(candidate_dir) in command
 
-    import zipfile
-    result_zip = runner._result_zips[execution_id]
-    with zipfile.ZipFile(result_zip, "r") as zip_ref:
-        names = zip_ref.namelist()
-    assert any(name.endswith(f"_{artifact.strategy_name}.py") for name in names)
-    assert any(name.endswith(f"_{artifact.strategy_name}.json") for name in names)
+    results = {}
+    for variant, spec in [
+        ("original", {"family": VOLATILITY_COMPRESSION_FAMILY}),
+        ("strict_v2", {"family": VOLATILITY_COMPRESSION_FAMILY, "variant": "strict_v2"}),
+    ]:
+        candidate_dir = tmp_path / f"generated_volatility_compression_{variant}"
+        artifact = write_strategy_from_spec(spec, candidate_dir)
+        assert artifact.strategy_path.exists()
+        assert artifact.sidecar_path.exists()
 
-    run_dir = runner._run_dirs[execution_id]
-    metrics = json.loads((run_dir / "parsed_summary.json").read_text(encoding="utf-8"))
-    row = {
-        "strategy_name": artifact.strategy_name,
-        "candidate_strategy_dir": str(candidate_dir),
-        "candidate_py": str(artifact.strategy_path),
-        "candidate_json": str(artifact.sidecar_path),
-        "command": command,
-        "command_has_strategy_path": "--strategy-path" in command,
-        "zip_has_candidate_py": True,
-        "zip_has_candidate_json": True,
-        "total_trades": metrics["total_trades"]["value"],
-        "profit_factor": metrics["profit_factor"]["value"],
-        "expectancy": metrics["expectancy"]["value"],
-        "max_drawdown_pct": metrics["max_drawdown_pct"]["value"],
-    }
-    print(f"B2 TEMPLATE REAL SMOKE RESULT: {json.dumps(row, sort_keys=True)}")
+        sidecar = json.loads(artifact.sidecar_path.read_text(encoding="utf-8"))
+        expected_params = DEFAULT_VOLATILITY_COMPRESSION_PARAMS if variant == "original" else STRICT_VOLATILITY_COMPRESSION_PARAMS
+        assert sidecar["params"]["buy"] == expected_params
+        assert set(sidecar["params"]) == {"buy", "sell", "roi", "stoploss", "trailing"}
+        for name, value in expected_params.items():
+            assert sidecar["parameters"][name]["current"] == value
+
+        execution_id = runner.run_candidate_backtest(
+            artifact.strategy_name,
+            f"b2_volatility_compression_{variant}",
+            request,
+            candidate_dir=candidate_dir,
+        )
+        command = list(runner.last_command)
+        assert "--strategy-path" in command
+        assert str(candidate_dir) in command
+
+        import zipfile
+        result_zip = runner._result_zips[execution_id]
+        with zipfile.ZipFile(result_zip, "r") as zip_ref:
+            names = zip_ref.namelist()
+        assert any(name.endswith(f"_{artifact.strategy_name}.py") for name in names)
+        assert any(name.endswith(f"_{artifact.strategy_name}.json") for name in names)
+
+        run_dir = runner._run_dirs[execution_id]
+        metrics = json.loads((run_dir / "parsed_summary.json").read_text(encoding="utf-8"))
+        results[variant] = {
+            "strategy_name": artifact.strategy_name,
+            "candidate_strategy_dir": str(candidate_dir),
+            "candidate_py": str(artifact.strategy_path),
+            "candidate_json": str(artifact.sidecar_path),
+            "command": command,
+            "command_has_strategy_path": "--strategy-path" in command,
+            "zip_has_candidate_py": True,
+            "zip_has_candidate_json": True,
+            "total_trades": metrics["total_trades"]["value"],
+            "profit_factor": metrics["profit_factor"]["value"],
+            "expectancy": metrics["expectancy"]["value"],
+            "max_drawdown_pct": metrics["max_drawdown_pct"]["value"],
+            "win_rate_pct": metrics.get("win_rate_pct", {}).get("value", 0),
+        }
+        print(f"B2.1 {variant.upper()} RESULT: {json.dumps(results[variant], sort_keys=True)}")
+
+    # Compare results
+    original = results["original"]
+    v2 = results["strict_v2"]
+    trade_reduction = (original["total_trades"] - v2["total_trades"]) / original["total_trades"] * 100
+    pf_improvement = v2["profit_factor"] - original["profit_factor"]
+    dd_improvement = v2["max_drawdown_pct"] - original["max_drawdown_pct"]
+    
+    print(f"B2.1 COMPARISON: trade_count_reduction={trade_reduction:.1f}%, pf_delta={pf_improvement:.3f}, dd_delta={dd_improvement:.3f}")
+    
+    # Verify v2 reduces overtrading
+    assert v2["total_trades"] < original["total_trades"], "v2 must reduce trade count"
+    assert trade_reduction > 50, "v2 must reduce trade count by >50%"
 
 
 def test_two_candidates_produce_different_commands(tmp_path):
