@@ -1,0 +1,48 @@
+{
+  "run_id": "41be4a74-40f4-4e12-a171-189907d4efd6",
+  "strategy_name": "AIStrategy",
+  "timeframe": "5m",
+  "smoke_pairs": [
+    "BTC/USDT"
+  ],
+  "smoke_timerange": "20240101-20240107",
+  "status": "failed",
+  "current_step": "validation",
+  "steps": {
+    "validation": {
+      "step_name": "validation",
+      "status": "failed",
+      "started_at": "2026-07-11T00:49:25.188917Z",
+      "completed_at": "2026-07-11T00:49:25.193454Z",
+      "error": "Freqtrade validation unavailable: freqtrade not found at 'py -m freqtrade'.",
+      "data": {
+        "valid": false,
+        "errors": [
+          "Freqtrade validation unavailable"
+        ],
+        "warnings": [
+          "freqtrade not found at 'py -m freqtrade'."
+        ],
+        "output_summary": "✓ Python syntax OK\n⚠ freqtrade not found — skipping structural check."
+      }
+    }
+  },
+  "error": "Freqtrade validation unavailable: freqtrade not found at 'py -m freqtrade'.",
+  "created_at": "2026-07-11T00:49:25.179591Z",
+  "updated_at": "2026-07-11T00:49:25.193454Z",
+  "completed_at": "2026-07-11T00:49:25.193454Z",
+  "enable_pair_discovery": false,
+  "discovery_pairs": null,
+  "discovery_timerange": null,
+  "confirmation_timerange": null,
+  "final_unseen_timerange": null,
+  "research_protocol": null,
+  "pair_selection_mode": null,
+  "target_pair_count": 4,
+  "manually_selected_pairs": null,
+  "exchange": "binance",
+  "trading_mode": "spot",
+  "max_open_trades": 4,
+  "dry_run_wallet": 1000.0,
+  "config_file": "config.json"
+}

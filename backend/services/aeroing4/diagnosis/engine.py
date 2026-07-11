@@ -60,20 +60,20 @@ class DiagnosisEngine:
         """
         start_time = datetime.now(UTC)
 
-        # Calculate input hash for idempotency check
+        # Verify champion integrity BEFORE cached diagnosis reuse
+        integrity_error = self._verify_champion_integrity(input_data)
+        if integrity_error:
+            return self._create_integrity_error_result(input_data, integrity_error)
+
+        # Calculate input hash for idempotency check only after integrity passes
         input_hash = self._compute_input_hash(input_data)
 
         # Check for existing diagnosis with same input hash (idempotency)
         existing_diagnoses = self.store.list_by_champion(input_data.champion_id)
         for existing in existing_diagnoses:
             if existing.input_hash == input_hash:
-                # Reuse existing diagnosis
+                # Reuse existing diagnosis only when champion integrity is valid
                 return existing
-
-        # Verify champion integrity
-        integrity_error = self._verify_champion_integrity(input_data)
-        if integrity_error:
-            return self._create_integrity_error_result(input_data, integrity_error)
 
         # Initialize resolver
         resolver = EvidenceResolver(input_data.baseline_result)

@@ -45,12 +45,14 @@ class DiagnosisStore:
             existing[result.diagnosis_id] = result.model_dump(mode="json")
 
             # Write atomically
-            temp_file = self.diagnoses_file.with_suffix(".tmp")
-            with open(temp_file, "w", encoding="utf-8") as f:
-                json.dump(existing, f, indent=2, default=str)
+            self._write_atomic(existing)
 
-            # Atomic rename
-            temp_file.replace(self.diagnoses_file)
+    def _write_atomic(self, data: dict[str, dict]) -> None:
+        temp_file = self.diagnoses_file.with_suffix(".tmp")
+        with open(temp_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, default=str)
+
+        temp_file.replace(self.diagnoses_file)
 
     def load(self, diagnosis_id: str) -> Optional[DiagnosisResult]:
         """Load a specific diagnosis result by ID.
@@ -154,16 +156,12 @@ class DiagnosisStore:
         Returns:
             True if deleted, False if not found
         """
-        all_diagnoses = self.load_all()
-        if diagnosis_id not in all_diagnoses:
-            return False
+        lock = get_lock_for_path(self.diagnoses_file)
+        with lock:
+            all_diagnoses = self.load_all()
+            if diagnosis_id not in all_diagnoses:
+                return False
 
-        del all_diagnoses[diagnosis_id]
-
-        # Write atomically
-        temp_file = self.diagnoses_file.with_suffix(".tmp")
-        with open(temp_file, "w", encoding="utf-8") as f:
-            json.dump(all_diagnoses, f, indent=2, default=str)
-
-        temp_file.replace(self.diagnoses_file)
-        return True
+            del all_diagnoses[diagnosis_id]
+            self._write_atomic(all_diagnoses)
+            return True

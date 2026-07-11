@@ -610,16 +610,18 @@ class ExperimentStore:
                 json.dump(payload, fh, indent=2)
                 fh.flush()
                 os.fsync(fh.fileno())
-            # Retry replace on Windows to handle transient file locking
+            # Retry replace on Windows to handle transient file locking/tmp deletion
             max_retries = 10
             for attempt in range(max_retries):
                 try:
                     tmp.replace(f)
                     break
-                except PermissionError:
+                except (PermissionError, FileNotFoundError):
                     if attempt == max_retries - 1:
                         raise
                     import time
+
+                    tmp = f.with_suffix(".tmp")
                     time.sleep(0.05 * (attempt + 1))  # Linear backoff
         except Exception:
             tmp.unlink(missing_ok=True)
