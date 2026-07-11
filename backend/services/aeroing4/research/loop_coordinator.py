@@ -83,7 +83,7 @@ from .proposal_generator import (
     ProposalRequest,
     ProposalResult,
 )
-from .research_state import ResearchState, ResearchStateStore
+from .research_state import ResearchState, ResearchStateStore, ResearchStatus
 from .stages import ResearchStage
 
 
@@ -283,6 +283,23 @@ class ResearchLoopCoordinator:
 
         # 6. MUTATION POLICY (structural approval only; no budget yet)
         identity_hash = self._build_identity_hash(champion, exact_change)
+
+        # 6b. DUPLICATE pre-check BEFORE mutation policy + reserve → no budget
+        #     consumption on duplicate, and returns the existing reference.
+        existing = self.experiment_store.find_by_identity_hash(run_id, identity_hash)
+        if existing is not None:
+            self.hypothesis_store.associate_experiment(run_id, hypothesis_id, existing.experiment_id)
+            return LoopIterationResult(
+                run_id=run_id,
+                outcome=LoopOutcome.DUPLICATE,
+                stage_reached=LoopStage.RESERVE,
+                hypothesis_id=hypothesis_id,
+                experiment_id=existing.experiment_id,
+                duplicate_of_experiment_id=existing.experiment_id,
+                proposal=proposal,
+                details="Duplicate identity — returned existing experiment, no new execution",
+            )
+
         mutation = MutationPolicy(
             experiment_store=self.experiment_store,
             hypothesis_store=self.hypothesis_store,
@@ -414,6 +431,8 @@ class ResearchLoopCoordinator:
         self.experiment_store.record_decision(
             run_id, experiment_id, decision, result=decision_reason,
         )
+        # Valid status lifecycle: READY → RUNNING → COMPLETED.
+        self.experiment_store.transition_status(run_id, experiment_id, ExperimentStatus.RUNNING)
         self.experiment_store.transition_status(run_id, experiment_id, ExperimentStatus.COMPLETED)
 
         # 16. HYPOTHESIS UPDATE

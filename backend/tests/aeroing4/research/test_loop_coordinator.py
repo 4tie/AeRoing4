@@ -298,18 +298,21 @@ async def test_C_ai_unavailable_no_budget_consumption(tmp_run):
 @pytest.mark.asyncio
 async def test_D_duplicate_returns_existing_no_new_execution(tmp_run):
     champ = _seed_champion(tmp_run, metrics=_snap(expectancy=0.10))
-    cand_metrics = _snap(expectancy=0.14)
+    # Tiny change → INCONCLUSIVE (no promotion, champion unchanged). The same
+    # proposal repeated must then hit the duplicate-identity guard.
+    cand_metrics = _snap(expectancy=0.101)  # ~+0.1%, below materiality
     coord, exp, hyp, champ_store, state_store, executor = _make_coordinator(
-        tmp_run, champion=champ, proposal=_accepted_proposal(35), exec_result=_exec_result(cand_metrics),
+        tmp_run, champion=champ, proposal=_accepted_proposal(31), exec_result=_exec_result(cand_metrics),
     )
     first = await coord.run_one_iteration(run_id="run-1")
-    assert first.outcome == LoopOutcome.DECISION_KEEP
-    exec_calls_after_first = executor.last_request is not None
+    assert first.outcome == LoopOutcome.DECISION_INCONCLUSIVE
+    first_experiment_id = first.experiment_id
 
-    # Second iteration with the SAME proposal → duplicate identity.
+    # Second iteration with the SAME proposal → duplicate identity (no promotion
+    # happened, so parent + change are identical → same hash).
     second = await coord.run_one_iteration(run_id="run-1")
     assert second.outcome == LoopOutcome.DUPLICATE
-    assert second.duplicate_of_experiment_id == first.experiment_id
+    assert second.duplicate_of_experiment_id == first_experiment_id
     # No NEW experiment persisted beyond the first (budget not double-charged)
     assert len(exp.list_for_run("run-1")) == 1
 
@@ -327,25 +330,23 @@ async def test_E_restart_does_not_rerun(tmp_run):
     )
     res1 = await coord1.run_one_iteration(run_id="run-1")
     assert res1.outcome == LoopOutcome.DECISION_KEEP
-    first_exec_id = executor1.last_request["underlying_execution_id"]
+    first_experiment_id = res1.experiment_id
 
     # Simulate restart: NEW stores + coordinator on the SAME runs_root.
+    new_champ = champ_store1.get("run-1", res1.promoted_champion_id)
     coord2, exp2, _, champ_store2, state_store2, executor2 = _make_coordinator(
         tmp_run,
-        champion=champ_store1.get("run-1", res1.promoted_champion_id),
+        champion=new_champ,
         proposal=_accepted_proposal(35),
         exec_result=_exec_result(cand_metrics),
     )
-    res2 = await coord2.run_one_iteration(run_id="run-1")
-    # The new champion's metrics already reflect the improvement, so the same
-    # proposal now yields INCONCLUSIVE/DROP (no material improvement vs new),
-    # but crucially it must NOT silently re-run the earlier experiment: if it
-    # reserved a NEW experiment, count would grow. Here the identity differs
-    # (new parent champion), so a fresh reserve is legitimate — assert the
-    # persisted history is intact and no duplicate of the FIRST experiment id.
-    persisted = exp2.list_for_run("run-1")
-    assert all(e.experiment_id != first_exec_id or e.status == ExperimentStatus.COMPLETED
-               for e in persisted)
+    await coord2.run_one_iteration(run_id="run-1")
+    # The earlier experiment must NOT have been silently re-run: its status is
+    # still COMPLETED, and the persisted history is intact (no lost writes).
+    persisted_first = exp2.get("run-1", first_experiment_id)
+    assert persisted_first is not None
+    assert persisted_first.status == ExperimentStatus.COMPLETED
+    assert persisted_first.experiment_id == first_experiment_id
 
 
 # ── Scenario F: INCONCLUSIVE (missing candidate metrics) ───────────────────────
