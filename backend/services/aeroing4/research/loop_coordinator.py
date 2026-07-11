@@ -53,7 +53,7 @@ from ..metrics.models import CanonicalMetricsSnapshot
 from .access_guard import DataZoneGuard
 from .allowed_targets import AllowedMutationTarget, discover_allowed_mutation_targets
 from .candidate_artifacts import CandidateArtifactResult, CandidateArtifactService
-from .candidate_executor import CandidateExecutor
+from .candidate_executor import CandidateExecutor, CandidateExecutionStatus
 from .champions import (
     ArtifactReference,
     ChampionReference,
@@ -119,6 +119,7 @@ class LoopOutcome(str, Enum):
     ZONE_ACCESS_DENIED = "zone_access_denied"
     BUDGET_EXHAUSTED = "budget_exhausted"
     DUPLICATE = "duplicate"
+    RECONCILE_REQUIRED = "reconcile_required"
     EXECUTION_SYSTEM_FAILURE = "execution_system_failure"
     DECISION_KEEP = "decision_keep"
     DECISION_DROP = "decision_drop"
@@ -216,6 +217,19 @@ class ResearchLoopCoordinator:
                 details="Current champion reference missing",
             )
 
+        # §10/E: restart recovery guard. If an in-flight experiment was left in
+        # RUNNING on a previous (interrupted) run, the store transitions it to
+        # INTERRUPTED on reload and resume_safety_report flags reconciliation as
+        # required. We must NOT silently reserve a duplicate or re-execute — the
+        # operator must reconcile (mark COMPLETED/FAILED_SYSTEM) first.
+        report = self.experiment_store.resume_safety_report(run_id)
+        if report.must_reconcile_first:
+            return self._stop(
+                run_id, LoopOutcome.RECONCILE_REQUIRED, LoopStage.RESERVE,
+                experiment_id=report.active_experiment_id,
+                details=report.reason,
+            )
+
         # §7: mark research ACTIVE while the loop is producing work. A PAUSED
         # run may be resumed — re-activating it here continues from where it
         # stopped (no silent re-run).
@@ -242,6 +256,7 @@ class ResearchLoopCoordinator:
                 LoopOutcome.PROPOSAL_SKIPPED,
                 LoopOutcome.NO_SAFE_TARGET,
                 LoopOutcome.ZONE_ACCESS_DENIED,
+                LoopOutcome.RECONCILE_REQUIRED,
             ):
                 break
             # DROP/INCONCLUSIVE keep the same champion, so the loop naturally
@@ -371,12 +386,26 @@ class ResearchLoopCoordinator:
         experiment_id = saved.experiment_id
 
         # 9. DEVELOP ACCESS (only DEVELOP zone allowed for this stage)
-        access_ok = self._ensure_develop_access(run_id, experiment_id)
+        access_ok, access_decision = self._ensure_develop_access(run_id, experiment_id)
         if not access_ok:
+            # §1/§10: protocol denial is a typed failure classification
+            # (PROTOCOL_DENIED), NOT a performance DROP. The reserved experiment
+            # is invalidated with an auditable reason; the champion is unchanged;
+            # no candidate artifact was created and no executor was invoked.
+            self.experiment_store.record_decision(
+                run_id, experiment_id, ExperimentDecision.PENDING,
+                result=f"PROTOCOL_DENIED:{access_decision.decision_code.value}",
+            )
+            try:
+                self.experiment_store.transition_status(
+                    run_id, experiment_id, ExperimentStatus.INVALIDATED
+                )
+            except Exception:
+                pass
             return self._stop(run_id, LoopOutcome.ZONE_ACCESS_DENIED, LoopStage.DEVELOP_ACCESS,
                               hypothesis_id=hypothesis_id, experiment_id=experiment_id,
                               proposal=proposal, mutation_code=mutation.code.value,
-                              details="DEVELOP access denied by DataZoneGuard")
+                              details=f"DEVELOP access denied by DataZoneGuard: {access_decision.decision_code.value}")
 
         # 10. READY
         self.experiment_store.transition_status(run_id, experiment_id, ExperimentStatus.READY)
@@ -422,15 +451,57 @@ class ResearchLoopCoordinator:
         # 13. METRICS SSOT (executor already resolved canonical metrics)
         candidate_metrics = exec_result.metrics
         parent_metrics = champion.metrics
-        if candidate_metrics is not None:
+        exec_status = exec_result.status
+
+        # System / parse failures are explicit SYSTEM failures, NOT a research
+        # INCONCLUSIVE (§3). They must be classified distinctly so a metrics
+        # subsystem or parser failure is never silently downgraded into a
+        # "no edge" research verdict.
+        SYSTEM_FAILURE_STATUSES = (
+            CandidateExecutionStatus.EXECUTION_FAILURE,
+            CandidateExecutionStatus.PARSE_FAILURE,
+            CandidateExecutionStatus.SYSTEM_FAILURE,
+        )
+        if exec_status in SYSTEM_FAILURE_STATUSES:
             self.experiment_store.record_metrics(
-                run_id, experiment_id, metrics_after=candidate_metrics,
+                run_id, experiment_id,
+                metrics_after=None,
+                metrics_availability_reason=(
+                    f"system_failure:{exec_status.value}:"
+                    f"{exec_result.failure_classification or 'unknown'}"
+                ),
             )
+            self.experiment_store.transition_status(run_id, experiment_id, ExperimentStatus.RUNNING)
+            self.experiment_store.transition_status(run_id, experiment_id, ExperimentStatus.FAILED_SYSTEM)
+            self.experiment_store.record_decision(
+                run_id, experiment_id, ExperimentDecision.PENDING,
+                result=f"system_failure:{exec_status.value}:{exec_result.failure_classification or 'unknown'}",
+            )
+            return self._stop(run_id, LoopOutcome.EXECUTION_SYSTEM_FAILURE, LoopStage.CANDIDATE_EXECUTOR,
+                              hypothesis_id=hypothesis_id, experiment_id=experiment_id,
+                              proposal=proposal, mutation_code=mutation.code.value,
+                              details=f"Candidate execution/system failure ({exec_status.value}): "
+                                      f"{exec_result.failure_classification}")
+
+        # NO_TRADES: a real execution completed but produced zero trades →
+        # insufficient sample. This is a valid execution with insufficient
+        # evidence → INCONCLUSIVE (research), with a typed availability reason.
+        if exec_status == CandidateExecutionStatus.NO_TRADES:
+            candidate_metrics = None  # no trade-level metrics to compare
 
         # 14. DECISION POLICY (returns a verdict; does NOT promote)
         if candidate_metrics is None or parent_metrics is None:
             decision = ExperimentDecision.INCONCLUSIVE
-            decision_reason = "missing_critical_evidence: parent or candidate metrics unavailable"
+            decision_reason = (
+                "missing_critical_evidence: parent or candidate metrics unavailable"
+                if parent_metrics is None
+                else f"valid_execution_but_insufficient_comparison: {exec_status.value}"
+            )
+            availability_reason = (
+                "valid_execution_but_metrics_unavailable"
+                if parent_metrics is not None
+                else "parent_metrics_unavailable"
+            )
         else:
             dres = DecisionPolicy.decide(DecisionRequest(
                 diagnosis_code=diagnosis_code,
@@ -440,6 +511,15 @@ class ResearchLoopCoordinator:
             ))
             decision = dres.decision
             decision_reason = dres.reason
+            availability_reason = None
+
+        # Persist metrics (after) with a typed availability reason when absent
+        # (never a bare None — see ExperimentRecord.metrics_availability_reason).
+        self.experiment_store.record_metrics(
+            run_id, experiment_id,
+            metrics_after=candidate_metrics,
+            metrics_availability_reason=availability_reason,
+        )
 
         # 15. PERSIST DECISION
         self.experiment_store.record_decision(
@@ -646,7 +726,7 @@ class ResearchLoopCoordinator:
             # Non-fatal: association already recorded; status may be terminal.
             pass
 
-    def _ensure_develop_access(self, run_id, experiment_id) -> bool:
+    def _ensure_develop_access(self, run_id, experiment_id) -> "tuple[bool, object]":
         # The zone guard only reads `.research_protocol` off the run object.
         # If boundaries aren't initialized, can_access returns allowed=True
         # (legacy/uninitialized run). Either way, the Coordinator only ever
@@ -662,8 +742,8 @@ class ResearchLoopCoordinator:
                 access_ledger_entry_id=decision.decision_code.value,
                 concrete_timerange=self.develop_timerange,
             )
-            return True
-        return False
+            return True, decision
+        return False, decision
 
     def _promote(self, *, run_id, parent_champion, experiment_id, artifact, metrics) -> ChampionReference:
         new_champion = ChampionReference(

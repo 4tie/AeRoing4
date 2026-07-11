@@ -354,12 +354,14 @@ async def test_E_restart_does_not_rerun(tmp_run):
 @pytest.mark.asyncio
 async def test_F_inconclusive_missing_metrics_champion_unchanged(tmp_run):
     champ = _seed_champion(tmp_run, metrics=_snap(expectancy=0.10))
-    # Executor returns PARSE_FAILURE → metrics None.
+    # VALID execution (SUCCESS) but canonical metrics genuinely unavailable
+    # → INCONCLUSIVE (valid_execution_but_insufficient_comparison), NOT a
+    # system failure. (PARSE_FAILURE is tested separately as a system failure.)
     coord, exp, hyp, champ_store, state_store, executor = _make_coordinator(
         tmp_run,
         champion=champ,
         proposal=_accepted_proposal(35),
-        exec_result=_exec_result(None, status=CandidateExecutionStatus.PARSE_FAILURE),
+        exec_result=_exec_result(None, status=CandidateExecutionStatus.SUCCESS),
     )
     res = await coord.run_one_iteration(run_id="run-1")
     assert res.outcome == LoopOutcome.DECISION_INCONCLUSIVE

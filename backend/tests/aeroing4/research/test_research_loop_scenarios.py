@@ -452,17 +452,23 @@ async def test_10_E_restart_reconcile_no_silent_rerun(tmp_run):
 @pytest.mark.asyncio
 async def test_10_F_inconclusive_champion_unchanged(tmp_run):
     champ = _seed_champion(tmp_run, metrics=_snap(expectancy=0.10))
+    # VALID execution (SUCCESS) but canonical metrics genuinely unavailable
+    # → INCONCLUSIVE (valid_execution_but_insufficient_comparison), not a
+    # system failure. Distinct from PARSE_FAILURE (see test_3C below).
     coord, exp, hyp, champ_store, state_store, executor = _make_coordinator(
         tmp_run, champion=champ, proposal=_accepted_proposal(35),
-        exec_result=_exec_result(None, status=CandidateExecutionStatus.PARSE_FAILURE),
+        exec_result=_exec_result(None, status=CandidateExecutionStatus.SUCCESS),
     )
     res = await coord.run_one_iteration(run_id="run-1")
     assert res.outcome == LoopOutcome.DECISION_INCONCLUSIVE
     assert res.decision == ExperimentDecision.INCONCLUSIVE
     assert state_store.load("run-1").current_champion_id == champ.champion_id
     assert executor.last_request is not None
-    assert exp.get("run-1", res.experiment_id).status.value == "completed"
-    assert exp.get("run-1", res.experiment_id).metrics_after is None
+    rec = exp.get("run-1", res.experiment_id)
+    assert rec.status.value == "completed"
+    # metrics_after absent BUT a typed availability reason is recorded (no bare None)
+    assert rec.metrics_after is None
+    assert rec.metrics_availability_reason == "valid_execution_but_metrics_unavailable"
 
 
 # ── Critical ordering test ────────────────────────────────────────────────────
@@ -482,6 +488,19 @@ async def test_ordering_reserve_before_artifact_execution_after_develop(tmp_run)
         return real_reserve(record)
 
     exp.reserve = traced_reserve
+
+    real_transition = exp.transition_status
+
+    def traced_transition(run_id, experiment_id, new_status):
+        if str(new_status.value) == "ready":
+            order.append("ready")
+        if str(new_status.value) == "running":
+            order.append("running")
+        if str(new_status.value) == "completed":
+            order.append("decision")
+        return real_transition(run_id, experiment_id, new_status)
+
+    exp.transition_status = traced_transition
 
     real_artifact = coord.artifact_service.create
 
@@ -505,13 +524,63 @@ async def test_ordering_reserve_before_artifact_execution_after_develop(tmp_run)
 
     coord._ensure_develop_access = traced_access
 
-    await coord.run_one_iteration(run_id="run-1")
+    res = await coord.run_one_iteration(run_id="run-1")
 
-    assert "reserve" in order and "candidate_artifact" in order
-    assert "candidate_execution" in order and "develop_access" in order
-    assert order.index("reserve") < order.index("candidate_artifact")
-    assert order.index("develop_access") < order.index("candidate_execution")
-    assert order.index("candidate_execution") < len(order)
+    # Exact contract (Point 1):
+    #   reserve < develop_access < ready < candidate_artifact < candidate_execution < decision
+    assert order == [
+        "reserve", "develop_access", "ready", "candidate_artifact",
+        "candidate_execution", "running", "decision",
+    ], order
+    # The DEVELOP access ledger reference must be persisted on the experiment.
+    rec = exp.get("run-1", res.experiment_id)
+    assert rec.access_ledger_entry_id is not None
+    assert rec.status.value == "completed"
+
+
+@pytest.mark.asyncio
+async def test_ordering_protocol_denial_no_artifact_no_execution_keeps_champion(tmp_run):
+    """Point 1 + user requirement: protocol denial →
+
+    * no Candidate artifact created
+    * CandidateExecutor NOT invoked
+    * champion unchanged
+    * experiment failure classification = PROTOCOL_DENIED (NOT performance DROP)
+    """
+    champ = _seed_champion(tmp_run, metrics=_snap(expectancy=0.10))
+    coord, exp, hyp, champ_store, state_store, executor = _make_coordinator(
+        tmp_run, champion=champ, proposal=_accepted_proposal(35),
+        exec_result=_exec_result(_snap(0.14)),
+    )
+    # Force the zone guard to deny DEVELOP access.
+    class _Deny:
+        allowed = False
+        decision_code = type("D", (), {"value": "zone_not_allowed_for_stage"})()
+    coord.zone_guard.request_access = lambda *a, **k: (_Deny(), None)
+
+    created = []
+    real_artifact = coord.artifact_service.create
+
+    def traced_artifact(**kwargs):
+        created.append(1)
+        return real_artifact(**kwargs)
+
+    coord.artifact_service.create = traced_artifact
+    executor.execute = lambda **k: (_ for _ in ()).throw(
+        AssertionError("executor must NOT be invoked on protocol denial")
+    )
+
+    res = await coord.run_one_iteration(run_id="run-1")
+    assert res.outcome == LoopOutcome.ZONE_ACCESS_DENIED
+    # No artifact created, executor never invoked.
+    assert created == []
+    assert executor.last_request is None
+    # Champion unchanged.
+    assert state_store.load("run-1").current_champion_id == champ.champion_id
+    # Typed failure classification, not a performance DROP decision.
+    rec = exp.get("run-1", res.experiment_id)
+    assert rec.result.startswith("PROTOCOL_DENIED:")
+    assert rec.status.value == "invalidated"
 
 
 @pytest.mark.asyncio
@@ -577,4 +646,136 @@ async def test_11_real_ollama_proposal_guarded():
         pytest.fail(f"Ollama adapter raised instead of returning AI_UNAVAILABLE: {exc}")
 
     assert result.outcome.value in ("accepted", "ai_unavailable", "ai_proposal_skipped")
+
+
+# ── §10/E (Point 2): real RUNNING restart / recovery ───────────────────────────
+
+@pytest.mark.asyncio
+async def test_10_E_running_restart_interrupted_no_duplicate(tmp_run):
+    """Restart recovery: a RUNNING experiment on reload becomes INTERRUPTED and
+    the coordinator refuses to reserve/execute a duplicate until reconciled."""
+    from backend.services.aeroing4.research.experiments import (
+        ExperimentRecord,
+        ExperimentStatus,
+        OriginalStrategyProvenance,
+    )
+
+    champ = _seed_champion(tmp_run, metrics=_snap(expectancy=0.10))
+    coord, exp, hyp, champ_store, state_store, executor = _make_coordinator(
+        tmp_run, champion=champ, proposal=_accepted_proposal(35),
+        exec_result=_exec_result(_snap(0.14)),
+    )
+
+    record = ExperimentRecord(
+        run_id="run-1",
+        hypothesis_id="hyp-seed",
+        parent_champion_id=champ.champion_id,
+        original_strategy_provenance=OriginalStrategyProvenance(logical_name="AIStrategy"),
+        experiment_identity_hash="seed-hash",
+        metrics_before=champ.metrics,
+    )
+    saved, _ = exp.reserve(record)
+    exp.transition_status("run-1", saved.experiment_id, ExperimentStatus.READY)
+    exp.transition_status("run-1", saved.experiment_id, ExperimentStatus.RUNNING)
+    assert exp.get("run-1", saved.experiment_id).status == ExperimentStatus.RUNNING
+
+    reloaded = ExperimentStore(tmp_run)
+    reconciled = reloaded.reconcile_interrupted_experiments("run-1")
+    assert len(reconciled) == 1
+    after = reloaded.get("run-1", saved.experiment_id)
+    assert after.status == ExperimentStatus.INTERRUPTED
+
+    report = reloaded.resume_safety_report("run-1")
+    assert report.has_active_experiment is True
+    assert report.active_experiment_status == ExperimentStatus.INTERRUPTED
+    assert report.must_reconcile_first is True
+    assert report.new_experiment_allowed is False
+
+    coord2, exp2, hyp2, champ_store2, state_store2, executor2 = _make_coordinator(
+        tmp_run, champion=champ, proposal=_accepted_proposal(35),
+        exec_result=_exec_result(_snap(0.14)),
+    )
+    res = await coord2.run_one_iteration(run_id="run-1")
+    assert res.outcome == LoopOutcome.RECONCILE_REQUIRED
+    assert len(exp2.list_for_run("run-1")) == 1
+    assert executor2.last_request is None
+    assert exp2.get("run-1", saved.experiment_id).status == ExperimentStatus.INTERRUPTED
+
+
+# ── §10/F + Point 3: INCONCLUSIVE metrics availability semantics ────────────────
+
+async def _run_iteration(tmp_run, *, after_metrics, exec_status=CandidateExecutionStatus.SUCCESS,
+                         parent_metrics=None):
+    champ = _seed_champion(tmp_run, metrics=parent_metrics or _snap(expectancy=0.10))
+    coord, exp, hyp, champ_store, state_store, executor = _make_coordinator(
+        tmp_run, champion=champ, proposal=_accepted_proposal(35),
+        exec_result=_exec_result(after_metrics, status=exec_status),
+    )
+    res = await coord.run_one_iteration(run_id="run-1")
+    return res, exp.get("run-1", res.experiment_id), state_store
+
+
+@pytest.mark.asyncio
+async def test_3A_critical_metric_unavailable_inconclusive_preserves_snapshot(tmp_run):
+    """A) canonical snapshot exists but one critical metric unavailable → INCONCLUSIVE,
+    snapshot + availability preserved (no zero substitution)."""
+    from backend.services.aeroing4.metrics.models import MetricAvailability
+    snap = _snap(expectancy=0.14)
+    snap.expectancy = snap.expectancy.model_copy(update={"availability": MetricAvailability.UNAVAILABLE})
+    res, rec, state_store = await _run_iteration(
+        tmp_run, after_metrics=snap, parent_metrics=_snap(expectancy=0.10),
+    )
+    assert res.outcome == LoopOutcome.DECISION_INCONCLUSIVE
+    assert res.decision == ExperimentDecision.INCONCLUSIVE
+    assert rec.metrics_after is not None
+    assert rec.metrics_after.expectancy.availability == MetricAvailability.UNAVAILABLE
+    # value preserved (provenance) and NOT fabricated to 0
+    assert rec.metrics_after.expectancy.value != 0
+    assert rec.metrics_after.provenance is not None
+
+
+@pytest.mark.asyncio
+async def test_3B_insufficient_sample_inconclusive(tmp_run):
+    """B) insufficient sample (total_trades below minimum) → INCONCLUSIVE."""
+    snap = _snap(expectancy=0.14, total_trades=5)
+    res, rec, state_store = await _run_iteration(
+        tmp_run, after_metrics=snap, parent_metrics=_snap(expectancy=0.10),
+    )
+    assert res.outcome == LoopOutcome.DECISION_INCONCLUSIVE
+    assert res.decision == ExperimentDecision.INCONCLUSIVE
+    assert "insufficient_sample" in res.decision_reason
+
+
+@pytest.mark.asyncio
+async def test_3C_parse_or_system_failure_not_inconclusive(tmp_run):
+    """C) parser/system failure → explicit system failure classification, not INCONCLUSIVE."""
+    for status in (CandidateExecutionStatus.PARSE_FAILURE,
+                   CandidateExecutionStatus.SYSTEM_FAILURE,
+                   CandidateExecutionStatus.EXECUTION_FAILURE):
+        res, rec, state_store = await _run_iteration(
+            tmp_run, after_metrics=None, exec_status=status,
+            parent_metrics=_snap(expectancy=0.10),
+        )
+        assert res.outcome == LoopOutcome.EXECUTION_SYSTEM_FAILURE, (status, res.outcome)
+        assert res.decision != ExperimentDecision.INCONCLUSIVE, (status, res.decision)
+        assert rec.status.value == "failed_system"
+        assert rec.result.startswith("system_failure:")
+        assert rec.metrics_after is None
+        assert rec.metrics_availability_reason.startswith("system_failure:")
+
+
+@pytest.mark.asyncio
+async def test_3D_no_fake_zero_substitution(tmp_run):
+    """D) no fake-zero substitution: an UNAVAILABLE metric stays UNAVAILABLE, never 0."""
+    from backend.services.aeroing4.metrics.models import MetricAvailability
+    snap = _snap(expectancy=0.14, profit_factor=1.25, win_rate=55.0)
+    snap.profit_factor = snap.profit_factor.model_copy(update={"availability": MetricAvailability.UNAVAILABLE})
+    res, rec, state_store = await _run_iteration(
+        tmp_run, after_metrics=snap, parent_metrics=_snap(expectancy=0.10),
+    )
+    assert rec.metrics_after is not None
+    assert rec.metrics_after.profit_factor.availability == MetricAvailability.UNAVAILABLE
+    # value preserved (provenance) and NOT fabricated to 0
+    assert rec.metrics_after.profit_factor.value != 0
+    assert rec.metrics_after.expectancy.value == 0.14
 

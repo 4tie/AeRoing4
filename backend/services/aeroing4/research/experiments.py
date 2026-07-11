@@ -180,6 +180,7 @@ class ExperimentRecord(BaseModel):
     # Metrics (CanonicalMetricsSnapshot or None)
     metrics_before: Optional[CanonicalMetricsSnapshot] = None
     metrics_after: Optional[CanonicalMetricsSnapshot] = None
+    metrics_availability_reason: Optional[str] = None  # typed reason when metrics_after is None
     metrics_version: str = METRICS_VERSION
     protocol_version: str = RESEARCH_PROTOCOL_VERSION
 
@@ -433,8 +434,13 @@ class ExperimentStore:
         experiment_id: str,
         metrics_before: Optional[CanonicalMetricsSnapshot] = None,
         metrics_after: Optional[CanonicalMetricsSnapshot] = None,
+        metrics_availability_reason: Optional[str] = None,
     ) -> ExperimentRecord:
-        """Record metrics snapshots (before/after) for an experiment."""
+        """Record metrics snapshots (before/after) for an experiment.
+
+        When ``metrics_after`` is None, a typed ``metrics_availability_reason``
+        MUST be persisted (never a bare None) so the absence is auditable.
+        """
         lock = get_lock_for_path(self._experiment_file(run_id))
         with lock:
             records = self._load_locked(run_id)
@@ -445,6 +451,10 @@ class ExperimentStore:
                 target.metrics_before = metrics_before
             if metrics_after is not None:
                 target.metrics_after = metrics_after
+                target.metrics_availability_reason = None
+            else:
+                target.metrics_after = None
+                target.metrics_availability_reason = metrics_availability_reason
             target.updated_at = datetime.now(UTC)
             updated = [target if e.experiment_id == experiment_id else e for e in records]
             self._save_locked(run_id, updated)
