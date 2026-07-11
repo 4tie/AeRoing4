@@ -161,11 +161,17 @@ class BacktestRunner(IBacktestRunner):
         version_id: str,
         request: RunRequest,
         phase_callback: Callable[[str], None] | None = None,
+        params_override: ParamsSchema | None = None,
     ) -> str:
         """Run a backtest synchronously using the run_id for the full backtest session.
 
         This method blocks the calling thread until the entire backtest completes.
         Wrap in asyncio.to_thread or a worker thread when calling from async or UI code.
+
+        ``params_override`` is an INTERNAL execution-layer override (Research
+        Layer only): when provided, it replaces the params normally resolved
+        from VersionManager. It is NOT part of the public ``RunRequest`` contract.
+        When ``None`` behavior is identical to today.
         """
         return self._execute_run(
             strategy_name=strategy.strategy_name,
@@ -179,6 +185,31 @@ class BacktestRunner(IBacktestRunner):
             strategy_path=strategy.file_path,
             baseline_run_id=None,
             phase_callback=phase_callback,
+            params_override=params_override,
+        )
+
+    def run_candidate_backtest(
+        self,
+        strategy: StrategyRecord,
+        version_id: str,
+        request: RunRequest,
+        *,
+        params_override: ParamsSchema,
+        phase_callback: Callable[[str], None] | None = None,
+    ) -> str:
+        """Research-Layer entry point for candidate executions.
+
+        Forwards to ``run_backtest`` with an internal ``params_override`` so a
+        candidate's approved sidecar params run WITHOUT mutating the champion's
+        accepted version. The candidate .py copy is supplied via ``strategy_path``
+        (already accepted by ``run_backtest``).
+        """
+        return self.run_backtest(
+            strategy,
+            version_id,
+            request,
+            phase_callback=phase_callback,
+            params_override=params_override,
         )
 
     async def queue_strategy_backtest(
@@ -259,6 +290,7 @@ class BacktestRunner(IBacktestRunner):
         strategy_path: str | None = None,
         baseline_run_id: str | None,
         phase_callback: Callable[[str], None] | None = None,
+        params_override: ParamsSchema | None = None,
     ) -> str:
         with self._busy_lock:
             if self._running:
@@ -273,7 +305,11 @@ class BacktestRunner(IBacktestRunner):
 
         version = self.version_manager.resolve_version(strategy_name, version_id)
         resolved_version_id = version.version_id
-        params = self.version_manager.load_params(strategy_name, resolved_version_id)
+        # Internal Research-Layer override: use approved candidate params instead
+        # of the champion's accepted version params. None => today's behavior.
+        params = params_override or self.version_manager.load_params(
+            strategy_name, resolved_version_id
+        )
         strategy_source = self._materialize_strategy_source_for_run(
             strategy_name=strategy_name,
             resolved_version_id=resolved_version_id,

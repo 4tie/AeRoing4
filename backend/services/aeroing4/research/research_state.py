@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 import threading
+import uuid
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
@@ -190,23 +191,36 @@ class ResearchStateStore:
     def _save_locked(self, state: ResearchState) -> None:
         f = self._state_file(state.run_id)
         f.parent.mkdir(parents=True, exist_ok=True)
-        tmp = f.with_suffix(".tmp")
-        try:
-            with open(tmp, "w", encoding="utf-8") as fh:
-                fh.write(state.model_dump_json(indent=2))
-                fh.flush()
-                os.fsync(fh.fileno())
-            # Retry replace on Windows to handle transient file locking
-            max_retries = 10
-            for attempt in range(max_retries):
-                try:
-                    tmp.replace(f)
-                    break
-                except PermissionError:
-                    if attempt == max_retries - 1:
-                        raise
-                    import time
-                    time.sleep(0.05 * (attempt + 1))  # Linear backoff
-        except Exception:
-            tmp.unlink(missing_ok=True)
-            raise
+        # Unique temp name per attempt — mirrors ExperimentStore fix. Avoids
+        # shared "research_state.tmp" contention and recovers from a vanished temp.
+        max_retries = 10
+        last_tmp = None
+        for attempt in range(max_retries):
+            tmp = f.with_name(f"{f.stem}.{uuid.uuid4().hex}.tmp")
+            last_tmp = tmp
+            try:
+                with open(tmp, "w", encoding="utf-8") as fh:
+                    fh.write(state.model_dump_json(indent=2))
+                    fh.flush()
+                    os.fsync(fh.fileno())
+                tmp.replace(f)
+                return
+            except PermissionError:
+                if attempt == max_retries - 1:
+                    raise
+                import time
+
+                time.sleep(0.05 * (attempt + 1))
+            except FileNotFoundError:
+                if attempt == max_retries - 1:
+                    raise
+                import time
+
+                time.sleep(0.05 * (attempt + 1))
+        if last_tmp is not None:
+            last_tmp.unlink(missing_ok=True)
+        raise ResearchStateIntegrityError(
+            f"research_state.json for run '{state.run_id}' could not be persisted "
+            f"after {max_retries} attempts",
+            run_id=state.run_id,
+        )

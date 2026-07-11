@@ -603,29 +603,45 @@ class ExperimentStore:
     def _save_locked(self, run_id: str, records: list[ExperimentRecord]) -> None:
         f = self._experiment_file(run_id)
         f.parent.mkdir(parents=True, exist_ok=True)
-        tmp = f.with_suffix(".tmp")
         payload = [json.loads(r.model_dump_json()) for r in records]
-        try:
-            with open(tmp, "w", encoding="utf-8") as fh:
-                json.dump(payload, fh, indent=2)
-                fh.flush()
-                os.fsync(fh.fileno())
-            # Retry replace on Windows to handle transient file locking/tmp deletion
-            max_retries = 10
-            for attempt in range(max_retries):
-                try:
-                    tmp.replace(f)
-                    break
-                except (PermissionError, FileNotFoundError):
-                    if attempt == max_retries - 1:
-                        raise
-                    import time
+        # Unique temp name per attempt: avoids shared "experiments.tmp"
+        # contention across concurrent writers and makes a missing-temp-file
+        # race unrecoverable -> each attempt opens a fresh, uniquely named
+        # file and writes its content before the atomic swap.
+        max_retries = 10
+        last_tmp = None
+        for attempt in range(max_retries):
+            tmp = f.with_name(f"{f.stem}.{uuid.uuid4().hex}.tmp")
+            last_tmp = tmp
+            try:
+                with open(tmp, "w", encoding="utf-8") as fh:
+                    json.dump(payload, fh, indent=2)
+                    fh.flush()
+                    os.fsync(fh.fileno())
+                tmp.replace(f)  # atomic swap — only point that mutates the real file
+                return
+            except PermissionError:
+                # Transient lock held on the target (e.g. AV scan). Back off and retry.
+                if attempt == max_retries - 1:
+                    raise
+                import time
 
-                    tmp = f.with_suffix(".tmp")
-                    time.sleep(0.05 * (attempt + 1))  # Linear backoff
-        except Exception:
-            tmp.unlink(missing_ok=True)
-            raise
+                time.sleep(0.05 * (attempt + 1))  # Linear backoff
+            except FileNotFoundError:
+                # Temp file vanished before replace (rare). Retry rewrites fresh content.
+                if attempt == max_retries - 1:
+                    raise
+                import time
+
+                time.sleep(0.05 * (attempt + 1))
+        # Unreachable: loop returns on success or raises on last attempt.
+        if last_tmp is not None:
+            last_tmp.unlink(missing_ok=True)
+        raise ExperimentIntegrityError(
+            f"Failed to persist experiments.json for run '{run_id}' after "
+            f"{max_retries} attempts",
+            run_id=run_id,
+        )
 
     @staticmethod
     def _find_by_id_in(
