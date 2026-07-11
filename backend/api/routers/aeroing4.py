@@ -50,6 +50,9 @@ class AeRoing4RunRequest(BaseModel):
     # PROMPT 8: Controlled Research Loop (strict opt-in).
     enable_research_loop: bool = False
 
+    # PROMPT 9: Focused Hyperopt + Sensitivity (strict opt-in, after KEEP champion).
+    enable_focused_hyperopt: bool = False
+
 
 class AeRoing4RunResponse(BaseModel):
     """Response model for AeRoing4 run."""
@@ -98,6 +101,14 @@ class AeRoing4RunResponse(BaseModel):
     budget_used: int = 0
     budget_remaining: int = 0
 
+    # PROMPT 9: Focused Hyperopt + Sensitivity opt-in + Sensitivity progression gate.
+    enable_focused_hyperopt: bool = False
+    eligible_for_confirmation: bool | None = None
+    last_sensitivity_status: str | None = None
+    # PROMPT 10: Confirmation summary (source of truth is ConfirmationResult).
+    confirmation_status: str | None = None
+    latest_confirmation_result_id: str | None = None
+
 
 class StartRunResponse(BaseModel):
     """Response model for starting a run."""
@@ -137,6 +148,7 @@ def _run_to_response(run: AeRoing4Run, services) -> AeRoing4RunResponse:
         completed_at=run.completed_at.isoformat() if run.completed_at else None,
         enable_pair_discovery=run.enable_pair_discovery,
         discovery_pairs=run.discovery_pairs,
+        enable_focused_hyperopt=getattr(run, "enable_focused_hyperopt", False),
         discovery_timerange=run.discovery_timerange,
         confirmation_timerange=run.confirmation_timerange,
         final_unseen_timerange=run.final_unseen_timerange,
@@ -168,6 +180,10 @@ def _run_to_response(run: AeRoing4Run, services) -> AeRoing4RunResponse:
             resp.active_experiment_id = rs.active_experiment_id
             resp.budget_used = rs.total_experiments_reserved
             resp.budget_remaining = max(0, rs.max_total_experiments - rs.total_experiments_reserved)
+            resp.eligible_for_confirmation = rs.eligible_for_confirmation
+            resp.last_sensitivity_status = rs.last_sensitivity_status
+            resp.confirmation_status = rs.confirmation_status
+            resp.latest_confirmation_result_id = rs.latest_confirmation_result_id
     except Exception:
         # Research loop not initialized for this run — leave defaults.
         pass
@@ -213,6 +229,7 @@ async def start_run(
             dry_run_wallet=body.dry_run_wallet,
             config_file=body.config_file,
             enable_research_loop=body.enable_research_loop,
+            enable_focused_hyperopt=body.enable_focused_hyperopt,
         )
 
         # Start execution

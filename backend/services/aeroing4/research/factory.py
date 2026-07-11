@@ -17,11 +17,14 @@ from .access_guard import DataZoneGuard
 from .candidate_artifacts import CandidateArtifactService
 from .candidate_executor import CandidateExecutor
 from .champions import ChampionStore
+from .confirmation import ConfirmationService
 from .experiments import ExperimentStore
+from .focused_hyperopt import FocusedHyperoptService
 from .hypotheses import HypothesisStore
 from .loop_coordinator import ResearchLoopCoordinator
 from .proposal_generator import ProposalGenerator
 from .research_state import ResearchStateStore
+from .sensitivity import SensitivityService
 
 
 def build_research_loop_coordinator(
@@ -76,7 +79,74 @@ def build_research_loop_coordinator(
     )
 
 
-def _budget_service(services, runs_root):
+def build_focused_hyperopt_service(
+    services: "AppServices",
+    runs_root: Path,
+    *,
+    develop_timerange: str = "20240101-20240630",
+    pairs: list[str] | None = None,
+    timeframe: str = "5m",
+    min_sample_trades: int = 30,
+) -> FocusedHyperoptService:
+    """Assemble a FocusedHyperoptService reusing the EXISTING BacktestRunner
+    (no new subprocess/parser) and the same stores as the research loop."""
+    champion_store = ChampionStore(runs_root)
+    zone_guard = DataZoneGuard(ResearchStateStore(runs_root), runs_root)
+    return FocusedHyperoptService(
+        runs_root=runs_root,
+        backtest_runner=services.backtest_runner,
+        champion_store=champion_store,
+        zone_guard=zone_guard,
+        develop_timerange=develop_timerange,
+        pairs=pairs or ["BTC/USDT", "ETH/USDT", "BNB/USDT"],
+        timeframe=timeframe,
+    )
+
+
+def build_sensitivity_service(
+    services: "AppServices",
+    runs_root: Path,
+    *,
+    develop_timerange: str = "20240101-20240630",
+    pairs: list[str] | None = None,
+    timeframe: str = "5m",
+) -> SensitivityService:
+    """Assemble a SensitivityService reusing the EXISTING BacktestRunner."""
+    zone_guard = DataZoneGuard(ResearchStateStore(runs_root), runs_root)
+    return SensitivityService(
+        runs_root=runs_root,
+        backtest_runner=services.backtest_runner,
+        zone_guard=zone_guard,
+        develop_timerange=develop_timerange,
+        pairs=pairs or ["BTC/USDT", "ETH/USDT", "BNB/USDT"],
+        timeframe=timeframe,
+    )
+
+
+def build_confirmation_service(
+    services: "AppServices",
+    runs_root: Path,
+    *,
+    develop_timerange: str = "20240101-20240630",
+    confirmation_timerange: str = "20240701-20240731",
+    final_unseen_timerange: str = "20240801-20240831",
+    pairs: list[str] | None = None,
+    timeframe: str = "5m",
+) -> ConfirmationService:
+    """Assemble a ConfirmationService reusing the EXISTING BacktestRunner +
+    DataZoneGuard (CONFIRMATION zone) + ChampionStore (read-only)."""
+    zone_guard = DataZoneGuard(ResearchStateStore(runs_root), runs_root)
+    return ConfirmationService(
+        runs_root=runs_root,
+        backtest_runner=services.backtest_runner,
+        champion_store=ChampionStore(runs_root),
+        zone_guard=zone_guard,
+        develop_timerange=develop_timerange,
+        confirmation_timerange=confirmation_timerange,
+        final_unseen_timerange=final_unseen_timerange,
+        pairs=pairs or ["BTC/USDT", "ETH/USDT", "BNB/USDT"],
+        timeframe=timeframe,
+    )
     try:
         from .budgets import BudgetService
 

@@ -121,6 +121,9 @@ class AeRoing4RunRequest(BaseModel):
     # PROMPT 8: Controlled Research Loop (strict opt-in).
     enable_research_loop: bool = False
 
+    # PROMPT 9: Focused Hyperopt + Sensitivity (strict opt-in, after KEEP champion).
+    enable_focused_hyperopt: bool = False
+
 
 class StepResult(BaseModel):
     """Base result for any step."""
@@ -252,6 +255,9 @@ class AeRoing4Run(BaseModel):
 
     # PROMPT 8: Controlled Research Loop (strict opt-in).
     enable_research_loop: bool = False
+
+    # PROMPT 9: Focused Hyperopt + Sensitivity (strict opt-in, after KEEP champion).
+    enable_focused_hyperopt: bool = False
 
     def update_step(self, step_name: str, result: StepResult) -> None:
         """Update a step result and mark as current step."""

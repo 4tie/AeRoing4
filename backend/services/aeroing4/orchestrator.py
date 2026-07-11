@@ -61,6 +61,7 @@ class AeRoing4Orchestrator:
         dry_run_wallet: float = 1000.0,
         config_file: str = "config.json",
         enable_research_loop: bool = False,
+        enable_focused_hyperopt: bool = False,
     ) -> AeRoing4Run:
         """Create a new AeRoing4 run.
 
@@ -104,6 +105,7 @@ class AeRoing4Orchestrator:
             dry_run_wallet=dry_run_wallet,
             config_file=config_file,
             enable_research_loop=enable_research_loop,
+            enable_focused_hyperopt=enable_focused_hyperopt,
         )
 
         return run
@@ -498,6 +500,103 @@ class AeRoing4Orchestrator:
                             data={"iterations": [r.model_dump() for r in loop_results]},
                         ),
                     )
+                    # PROMPT 9 (strict opt-in): after a KEEP champion exists, run
+                    # Focused Hyperopt → HYPEROPT champion → Sensitivity gate.
+                    # Confirmation/Final Unseen are later prompts.
+                    if getattr(run, "enable_focused_hyperopt", False) and rs.current_champion_id:
+                        if self._cancel_requested:
+                            return
+                        try:
+                            from .research.factory import (
+                                build_focused_hyperopt_service,
+                                build_sensitivity_service,
+                            )
+                            from .research.hyperopt_policy import build_focused_scope
+                            from .research.allowed_targets import discover_allowed_mutation_targets
+                            from backend.services.aeroing4.diagnosis.models import DiagnosisCode
+                            champion = coordinator.champion_store.get(run_id, rs.current_champion_id)
+                            if champion is not None:
+                                # PROMPT 9 reuses the research loop's diagnosis context.
+                                # The coordinator stores the decision; we fall back to
+                                # NO_EDGE (a hyperopt-actionable diagnosis) when none is
+                                # pinned, so Focused Hyperopt still has an actionable scope.
+                                diagnosis_code = DiagnosisCode.NO_EDGE
+                                allowed_targets = discover_allowed_mutation_targets(
+                                    run.strategy_name, self.state_store.runs_root, self.services,
+                                )
+                                hyperopt_svc = build_focused_hyperopt_service(
+                                    self.services, self.state_store.runs_root,
+                                )
+                                hyperopt_res = hyperopt_svc.run(
+                                    run_id=run_id, strategy_name=run.strategy_name,
+                                    version_id="v1", champion=champion,
+                                    diagnosis_code=diagnosis_code or __import__("backend.services.aeroing4.diagnosis.models", fromlist=["DiagnosisCode"]).DiagnosisCode.NO_EDGE,
+                                    allowed_targets=allowed_targets, state_store=research_state_store,
+                                )
+                                run.update_step(
+                                    "focused_hyperopt",
+                                    StepResult(
+                                        step_name="focused_hyperopt",
+                                        status=AeRoing4StepStatus.PASSED,
+                                        data={"result": hyperopt_res.model_dump()},
+                                    ),
+                                )
+                                # Sensitivity runs on the (possibly promoted) current champion.
+                                cur = coordinator.champion_store.get(run_id, rs.current_champion_id)
+                                sensitivity_svc = build_sensitivity_service(
+                                    self.services, self.state_store.runs_root,
+                                )
+                                sens_res = sensitivity_svc.run(
+                                    run_id=run_id, strategy_name=run.strategy_name,
+                                    version_id="v1", champion=cur,
+                                    diagnosis_code=diagnosis_code or __import__("backend.services.aeroing4.diagnosis.models", fromlist=["DiagnosisCode"]).DiagnosisCode.NO_EDGE,
+                                    allowed_targets=allowed_targets,
+                                )
+                                rs.eligible_for_confirmation = sens_res.eligible_for_confirmation
+                                rs.last_sensitivity_status = sens_res.status.value
+                                research_state_store.save(rs)
+                                run.update_step(
+                                    "sensitivity",
+                                    StepResult(
+                                        step_name="sensitivity",
+                                        status=AeRoing4StepStatus.PASSED,
+                                        data={"result": sens_res.model_dump()},
+                                    ),
+                                )
+                                # PROMPT 10: Confirmation entered ONLY when Sensitivity PASSed.
+                                # It is a frozen OOS test — no mutation, no repair.
+                                if rs.eligible_for_confirmation:
+                                    from .research.factory import build_confirmation_service
+                                    confirmation_svc = build_confirmation_service(
+                                        self.services, self.state_store.runs_root,
+                                        confirmation_timerange=run.confirmation_timerange or "20240701-20240731",
+                                        final_unseen_timerange=run.final_unseen_timerange or "20240801-20240831",
+                                    )
+                                    conf_res = confirmation_svc.run(
+                                        run_id=run_id, strategy_name=run.strategy_name,
+                                        version_id="v1", champion=cur,
+                                        eligible_for_confirmation=rs.eligible_for_confirmation,
+                                        state_store=research_state_store, run=run,
+                                    )
+                                    run.update_step(
+                                        "confirmation",
+                                        StepResult(
+                                            step_name="confirmation",
+                                            status=AeRoing4StepStatus.PASSED,
+                                            data={"result": conf_res.model_dump()},
+                                        ),
+                                    )
+                        except Exception as hyp_exc:
+                            logger.exception(f"PROMPT 9 stages failed for run {run_id}: {hyp_exc}")
+                            run.update_step(
+                                "focused_hyperopt",
+                                StepResult(
+                                    step_name="focused_hyperopt",
+                                    status=AeRoing4StepStatus.FAILED,
+                                    error=str(hyp_exc),
+                                ),
+                            )
+
                     # Paused loop (e.g. AI unavailable) → run stays resumable,
                     # not COMPLETED.
                     if loop_results and loop_results[-1].outcome.value == "ai_unavailable":

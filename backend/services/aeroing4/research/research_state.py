@@ -98,6 +98,16 @@ class ResearchState(BaseModel):
     pause_reason: Optional[str] = None
     last_decision_id: Optional[str] = None
 
+    # §9 (PROMPT 9): Sensitivity progression gate — set by SensitivityService.
+    # Controls downstream Confirmation eligibility. Confirmation itself is a
+    # §9 (PROMPT 9): Sensitivity progression gate — eligible_for_confirmation.
+    eligible_for_confirmation: bool | None = None
+    last_sensitivity_status: str | None = None
+
+    # § PROMPT 10: Confirmation summary only (source of truth is ConfirmationResult).
+    confirmation_status: str | None = None
+    latest_confirmation_result_id: str | None = None
+
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
