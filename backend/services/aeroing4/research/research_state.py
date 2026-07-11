@@ -91,6 +91,13 @@ class ResearchState(BaseModel):
     # Overall research status
     research_status: ResearchStatus = ResearchStatus.NOT_STARTED
 
+    # §7 additive coordination fields (do NOT duplicate current_champion_id,
+    # current_hypothesis_id, active_experiment_id, budget counters, status).
+    current_iteration: int = 0
+    stop_reason: Optional[str] = None
+    pause_reason: Optional[str] = None
+    last_decision_id: Optional[str] = None
+
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 

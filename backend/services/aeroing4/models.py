@@ -118,6 +118,9 @@ class AeRoing4RunRequest(BaseModel):
     dry_run_wallet: float = 1000.0
     config_file: str = "config.json"
 
+    # PROMPT 8: Controlled Research Loop (strict opt-in).
+    enable_research_loop: bool = False
+
 
 class StepResult(BaseModel):
     """Base result for any step."""
@@ -246,6 +249,9 @@ class AeRoing4Run(BaseModel):
     max_open_trades: int = 4
     dry_run_wallet: float = 1000.0
     config_file: str = "config.json"
+
+    # PROMPT 8: Controlled Research Loop (strict opt-in).
+    enable_research_loop: bool = False
 
     def update_step(self, step_name: str, result: StepResult) -> None:
         """Update a step result and mark as current step."""

@@ -60,23 +60,15 @@ class AeRoing4Orchestrator:
         max_open_trades: int = 4,
         dry_run_wallet: float = 1000.0,
         config_file: str = "config.json",
+        enable_research_loop: bool = False,
     ) -> AeRoing4Run:
         """Create a new AeRoing4 run.
 
         Args:
-            strategy_name: Name of the strategy
-            timeframe: Candle timeframe
-            smoke_timerange: Date range for smoke testing
-            smoke_pairs: Optional list of smoke pairs
-            enable_pair_discovery: Whether to run pair discovery after PASS_ACTIVITY
-            discovery_pairs: Explicit discovery universe (optional)
-            discovery_timerange: Date range for discovery (optional, uses default)
-            confirmation_timerange: CONFIRMATION zone date range (optional). Providing
-                this together with final_unseen_timerange activates the Research
-                Protocol / Data Zone Guard for this run; omitting both preserves
-                today's behavior exactly (guard is not applicable).
-            final_unseen_timerange: FINAL_UNSEEN zone date range (optional). See
-                confirmation_timerange.
+            ...
+            enable_research_loop: PROMPT 8 opt-in. When True, the orchestrator
+                runs the Controlled Research Loop after Diagnosis instead of
+                marking the run COMPLETED immediately.
 
         Returns:
             Created AeRoing4Run
@@ -111,6 +103,7 @@ class AeRoing4Orchestrator:
             max_open_trades=max_open_trades,
             dry_run_wallet=dry_run_wallet,
             config_file=config_file,
+            enable_research_loop=enable_research_loop,
         )
 
         return run
@@ -474,6 +467,44 @@ class AeRoing4Orchestrator:
                     logger.warning(
                         f"Diagnosis step failed for run {run_id}: {diagnosis_result.error}"
                     )
+
+                # ── Step 9: Controlled Research Loop (PROMPT 8, strict opt-in) ──
+                if getattr(run, "enable_research_loop", False):
+                    if self._cancel_requested:
+                        return
+                    from .research.factory import build_research_loop_coordinator
+
+                    coordinator = build_research_loop_coordinator(
+                        self.services, self.state_store.runs_root,
+                    )
+                    # Initialize ResearchState for this run (idempotent).
+                    research_state_store = coordinator.state_store
+                    rs = research_state_store.load(run_id)
+                    if rs is None:
+                        rs = research_state_store.create(
+                            run_id, max_total_experiments=run.max_open_trades or 5,
+                        )
+                    rs.current_champion_id = champion_id
+                    research_state_store.save(rs)
+
+                    loop_results = await coordinator.run_loop(
+                        run_id=run_id, max_iterations=run.max_open_trades or 5,
+                    )
+                    run.update_step(
+                        "research_loop",
+                        StepResult(
+                            step_name="research_loop",
+                            status=AeRoing4StepStatus.PASSED,
+                            data={"iterations": [r.model_dump() for r in loop_results]},
+                        ),
+                    )
+                    # Paused loop (e.g. AI unavailable) → run stays resumable,
+                    # not COMPLETED.
+                    if loop_results and loop_results[-1].outcome.value == "ai_unavailable":
+                        run.status = AeRoing4RunStatus.RUNNING
+                        self.state_store.save_run(run)
+                        self.state_store.set_active_run(None)
+                        return
 
             # Both PASS_ACTIVITY and NO_SIGNAL_ACTIVITY complete the run
             # (NO_SIGNAL_ACTIVITY does NOT automatically trigger pair discovery)

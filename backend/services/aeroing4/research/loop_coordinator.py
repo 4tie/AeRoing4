@@ -71,6 +71,7 @@ from .experiments import (
     OriginalStrategyProvenance,
 )
 from .hypotheses import (
+    HypothesisEvidenceRef,
     HypothesisRecord,
     HypothesisSource,
     HypothesisStatus,
@@ -215,6 +216,16 @@ class ResearchLoopCoordinator:
                 details="Current champion reference missing",
             )
 
+        # §7: mark research ACTIVE while the loop is producing work. A PAUSED
+        # run may be resumed — re-activating it here continues from where it
+        # stopped (no silent re-run).
+        if state.research_status in (ResearchStatus.NOT_STARTED, ResearchStatus.READY, ResearchStatus.PAUSED):
+            try:
+                state.transition_status(ResearchStatus.ACTIVE)
+                self.state_store.save(state)
+            except ValueError:
+                pass
+
         return await self._iterate(run_id=run_id, state=state, champion=champion)
 
     async def run_loop(self, *, run_id: str, max_iterations: int = 10) -> list[LoopIterationResult]:
@@ -253,8 +264,11 @@ class ResearchLoopCoordinator:
         # 3. PROPOSAL GENERATOR (AI proposes ONLY — never decides)
         proposal = await self._generate_proposal(run_id, hypothesis_id, diagnosis_code, champion)
         if proposal.outcome == ProposalOutcome.AI_UNAVAILABLE:
-            return self._stop(run_id, LoopOutcome.AI_UNAVAILABLE, LoopStage.PROPOSAL,
-                              hypothesis_id=hypothesis_id, proposal=proposal)
+            return self._pause(
+                run_id, LoopOutcome.AI_UNAVAILABLE, LoopStage.PROPOSAL,
+                hypothesis_id=hypothesis_id, proposal=proposal,
+                pause_reason="proposal_generator_unavailable: ollama unreachable",
+            )
         if proposal.outcome == ProposalOutcome.AI_PROPOSAL_SKIPPED:
             return self._stop(run_id, LoopOutcome.PROPOSAL_SKIPPED, LoopStage.PROPOSAL,
                               hypothesis_id=hypothesis_id, proposal=proposal)
@@ -435,6 +449,9 @@ class ResearchLoopCoordinator:
         self.experiment_store.transition_status(run_id, experiment_id, ExperimentStatus.RUNNING)
         self.experiment_store.transition_status(run_id, experiment_id, ExperimentStatus.COMPLETED)
 
+        # §7: update ResearchState coordination fields.
+        self._record_decision_state(run_id, experiment_id=experiment_id, decision=decision)
+
         # 16. HYPOTHESIS UPDATE
         self._update_hypothesis_after_decision(run_id, hypothesis_id, decision, experiment_id)
 
@@ -477,6 +494,46 @@ class ResearchLoopCoordinator:
             hypothesis_id=hypothesis_id, experiment_id=experiment_id,
             proposal=proposal, mutation_code=mutation_code, details=details,
         )
+
+    def _pause(self, run_id, outcome, stage, *, hypothesis_id=None, experiment_id=None,
+               proposal=None, mutation_code=None, details="", pause_reason="") -> LoopIterationResult:
+        """§7: safe pause (e.g. AI unavailable) — NOT a failure. Research stays
+        pausable (ACTIVE → PAUSED) so it can be resumed, never FAILED."""
+        state = self.state_store.load(run_id)
+        if state is not None:
+            if state.research_status not in (ResearchStatus.ACTIVE,):
+                try:
+                    state.transition_status(ResearchStatus.ACTIVE)
+                except ValueError:
+                    pass
+            try:
+                state.transition_status(ResearchStatus.PAUSED)
+            except ValueError:
+                pass
+            state.pause_reason = pause_reason or (details or outcome.value)
+            self.state_store.save(state)
+        return LoopIterationResult(
+            run_id=run_id, outcome=outcome, stage_reached=stage,
+            hypothesis_id=hypothesis_id, experiment_id=experiment_id,
+            proposal=proposal, mutation_code=mutation_code,
+            details=details or pause_reason,
+        )
+
+    def _record_decision_state(self, run_id, *, experiment_id, decision) -> None:
+        """§7: bump iteration + record the latest decision id. Also ensure the
+        research status is ACTIVE while the loop is producing decisions."""
+        state = self.state_store.load(run_id)
+        if state is None:
+            return
+        if state.research_status != ResearchStatus.ACTIVE:
+            try:
+                state.transition_status(ResearchStatus.ACTIVE)
+            except ValueError:
+                pass
+        state.current_iteration += 1
+        state.last_decision_id = experiment_id
+        state.touch()
+        self.state_store.save(state)
 
     def _mutation_stop(self, run_id, hypothesis_id, proposal, mutation) -> LoopIterationResult:
         code = mutation.code
@@ -547,20 +604,34 @@ class ResearchLoopCoordinator:
         )
 
     def _reuse_or_create_hypothesis(self, run_id, diagnosis_code, champion) -> HypothesisRecord:
-        # Reuse an ACTIVE hypothesis for the same diagnosis if present (no silent re-create)
-        for h in self.hypothesis_store.list_for_run(run_id):
-            if h.diagnosis_code == diagnosis_code.value and h.status in (
-                HypothesisStatus.ACTIVE, HypothesisStatus.APPROVED, HypothesisStatus.PROPOSED,
-            ):
-                return h
+        # §6: deterministic compatible-hypothesis reuse (no embedding/AI match).
+        # Reuse an ACTIVE/APPROVED/PROPOSED hypothesis with the same diagnosis
+        # + target scope + overlapping evidence refs; never reuse terminal ones.
+        evidence_refs = self._evidence_refs(champion)
+        reused = self.hypothesis_store.select_compatible_hypothesis(
+            run_id,
+            diagnosis_code=diagnosis_code.value,
+            target_scope=getattr(self, "target_scope", None),
+            evidence_refs=evidence_refs,
+        )
+        if reused is not None:
+            return reused
         hyp = HypothesisRecord(
             run_id=run_id,
             diagnosis_code=diagnosis_code.value,
             hypothesis_text=f"Resolve {diagnosis_code.value} via parameter mutation",
+            target_scope=getattr(self, "target_scope", None),
+            evidence_refs=[HypothesisEvidenceRef(ref_path=r) for r in evidence_refs],
             source=HypothesisSource.DETERMINISTIC_DIAGNOSIS,
             status=HypothesisStatus.ACTIVE,
         )
         return self.hypothesis_store.create(hyp)
+
+    def _evidence_refs(self, champion=None) -> list[str]:
+        """Deterministic evidence-ref identity for reuse matching (v1)."""
+        if champion is None or champion.metrics is None:
+            return []
+        return ["champion.metrics"]
 
     def _update_hypothesis_after_decision(self, run_id, hypothesis_id, decision, experiment_id):
         self.hypothesis_store.associate_experiment(run_id, hypothesis_id, experiment_id)
@@ -629,8 +700,7 @@ class ResearchLoopCoordinator:
             state.current_champion_id = promoted.champion_id
             state.current_champion_strategy_hash = promoted.strategy_artifact.artifact_hash
             state.current_champion_parameter_hash = promoted.parameter_artifact.artifact_hash
-            if state.research_status.value == "not_started":
-                state.transition_status(ResearchStatus.READY)
+            # Research status is ACTIVE while the loop is running; keep it so.
             self.state_store.save(state)
         return promoted
 

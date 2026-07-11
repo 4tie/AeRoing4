@@ -42,6 +42,7 @@ class AeRoing4StateStore:
         max_open_trades: int = 4,
         dry_run_wallet: float = 1000.0,
         config_file: str = "config.json",
+        enable_research_loop: bool = False,
     ) -> AeRoing4Run:
         """Create a new AeRoing4 run with generated run_id."""
         run_id = str(uuid.uuid4())
@@ -67,6 +68,7 @@ class AeRoing4StateStore:
             max_open_trades=max_open_trades,
             dry_run_wallet=dry_run_wallet,
             config_file=config_file,
+            enable_research_loop=enable_research_loop,
         )
         self.save_run(run)
         return run

@@ -47,6 +47,9 @@ class AeRoing4RunRequest(BaseModel):
     dry_run_wallet: float = 1000.0
     config_file: str = "config.json"
 
+    # PROMPT 8: Controlled Research Loop (strict opt-in).
+    enable_research_loop: bool = False
+
 
 class AeRoing4RunResponse(BaseModel):
     """Response model for AeRoing4 run."""
@@ -82,6 +85,18 @@ class AeRoing4RunResponse(BaseModel):
 
     # Diagnosis summary (latest diagnosis only)
     diagnosis: dict | None = None
+
+    # PROMPT 8: Controlled Research Loop status (research_state.json).
+    research_status: str | None = None
+    current_iteration: int = 0
+    pause_reason: str | None = None
+    stop_reason: str | None = None
+    last_decision_id: str | None = None
+    current_champion_id: str | None = None
+    current_hypothesis_id: str | None = None
+    active_experiment_id: str | None = None
+    budget_used: int = 0
+    budget_remaining: int = 0
 
 
 class StartRunResponse(BaseModel):
@@ -136,6 +151,29 @@ def _run_to_response(run: AeRoing4Run, services) -> AeRoing4RunResponse:
         diagnosis=diagnosis_summary,
     )
 
+    # Populate Controlled Research Loop status from research_state.json when present.
+    try:
+        from ...services.aeroing4.research.research_state import ResearchStateStore
+
+        rs_store = ResearchStateStore(services.aeroing4_orchestrator.state_store.runs_root)
+        rs = rs_store.load(run.run_id)
+        if rs is not None:
+            resp.research_status = rs.research_status.value
+            resp.current_iteration = rs.current_iteration
+            resp.pause_reason = rs.pause_reason
+            resp.stop_reason = rs.stop_reason
+            resp.last_decision_id = rs.last_decision_id
+            resp.current_champion_id = rs.current_champion_id
+            resp.current_hypothesis_id = rs.current_hypothesis_id
+            resp.active_experiment_id = rs.active_experiment_id
+            resp.budget_used = rs.total_experiments_reserved
+            resp.budget_remaining = max(0, rs.max_total_experiments - rs.total_experiments_reserved)
+    except Exception:
+        # Research loop not initialized for this run — leave defaults.
+        pass
+
+    return resp
+
 
 @router.post(
     "/runs",
@@ -174,6 +212,7 @@ async def start_run(
             max_open_trades=body.max_open_trades,
             dry_run_wallet=body.dry_run_wallet,
             config_file=body.config_file,
+            enable_research_loop=body.enable_research_loop,
         )
 
         # Start execution

@@ -255,6 +255,47 @@ class HypothesisStore:
         h = self.get(run_id, hypothesis_id)
         return len(h.experiment_ids) if h else 0
 
+    def select_compatible_hypothesis(
+        self,
+        run_id: str,
+        *,
+        diagnosis_code: Optional[str],
+        target_scope: Optional[str] = None,
+        evidence_refs: Optional[list[str]] = None,
+    ) -> Optional["HypothesisRecord"]:
+        """Deterministic compatible-hypothesis reuse (PROMPT 8 §6).
+
+        Compatibility is structural only — no embedding/AI semantic matching:
+          * same run_id (implied by argument)
+          * same diagnosis_code
+          * same target research scope (if provided)
+          * overlapping evidence refs (if provided)
+          * non-terminal status (PROPOSED / APPROVED / ACTIVE)
+
+        Terminal hypotheses (SUPPORTED / REJECTED / EXHAUSTED) are never reused.
+        Deterministic: among candidates, the oldest by created_at is selected.
+        """
+        candidates = [
+            h for h in self.list_for_run(run_id)
+            if h.status in (
+                HypothesisStatus.PROPOSED,
+                HypothesisStatus.APPROVED,
+                HypothesisStatus.ACTIVE,
+            )
+            and h.diagnosis_code == diagnosis_code
+            and (target_scope is None or h.target_scope == target_scope)
+        ]
+        if evidence_refs:
+            wanted = set(evidence_refs)
+            candidates = [
+                h for h in candidates
+                if wanted & {r.ref_path for r in h.evidence_refs}
+            ]
+        if not candidates:
+            return None
+        candidates.sort(key=lambda h: h.created_at)
+        return candidates[0]
+
     # ── Private helpers ───────────────────────────────────────────────────
 
     def _hypothesis_file(self, run_id: str) -> Path:
