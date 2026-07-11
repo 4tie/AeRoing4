@@ -122,6 +122,87 @@ def _validate_proposal_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
+def _validate_semantic_consistency(payload: dict[str, Any]) -> None:
+    """Validate semantic consistency between numeric changes and textual descriptions.
+    
+    Rejects proposals where the expected_effect or risk text contradicts the numeric
+    direction of the change for known parameter types like stoploss.
+    """
+    change = payload.get("exact_change")
+    if not isinstance(change, dict):
+        return
+    
+    target = change.get("target")
+    before = change.get("before_value")
+    after = change.get("after_value")
+    expected_effect = payload.get("expected_effect", "").lower()
+    risk = payload.get("risk", "").lower()
+    
+    # Stoploss directionality validation
+    if target == "stoploss" and isinstance(before, (int, float)) and isinstance(after, (int, float)):
+        # Freqtrade-style negative stoploss values
+        # after > before means tighter (e.g., -0.25 > -0.336)
+        # after < before means wider (e.g., -0.5 < -0.25)
+        
+        is_tighter = after > before
+        is_wider = after < before
+        
+        # Keywords that imply wider stoploss / more room
+        wider_keywords = [
+            "more room", "allow more room", "breathe", "wider", "wider stop",
+            "looser", "looser stop", "more space", "give room", "allow to develop"
+        ]
+        
+        # Keywords that imply tighter stoploss / reduced loss
+        tighter_keywords = [
+            "tighter", "tighter stop", "reduce loss", "reduced loss", "smaller loss",
+            "faster exit", "quick exit", "reduce downside", "reduced downside",
+            "tighten", "cut losses", "stop loss sooner"
+        ]
+        
+        # Keywords that imply increased risk/drawdown
+        increased_risk_keywords = [
+            "higher drawdown", "increased drawdown", "more risk", "increased risk",
+            "larger loss", "higher risk", "drawdown risk"
+        ]
+        
+        # Keywords that imply reduced risk/drawdown
+        reduced_risk_keywords = [
+            "reduce risk", "reduced risk", "lower risk", "less risk",
+            "reduce drawdown", "lower drawdown", "smaller drawdown"
+        ]
+        
+        text_to_check = f"{expected_effect} {risk}"
+        
+        if is_tighter:
+            # Tighter stoploss should not claim wider/more room
+            if any(kw in text_to_check for kw in wider_keywords):
+                raise ProposalSchemaValidationError(
+                    "SEMANTIC_CONTRADICTION: stoploss tightened (after > before) but text claims wider/more room"
+                )
+            # Tighter stoploss should not claim reduced risk/drawdown (it actually increases risk)
+            if any(kw in text_to_check for kw in reduced_risk_keywords):
+                raise ProposalSchemaValidationError(
+                    "SEMANTIC_CONTRADICTION: tighter stoploss increases risk, but text claims reduced risk/drawdown"
+                )
+        
+        if is_wider:
+            # Wider stoploss should not claim tighter/reduced loss
+            if any(kw in text_to_check for kw in tighter_keywords):
+                raise ProposalSchemaValidationError(
+                    "SEMANTIC_CONTRADICTION: stoploss widened (after < before) but text claims tighter/reduced loss"
+                )
+            # Wider stoploss should not claim reduced risk/drawdown (it actually increases per-trade risk)
+            if any(kw in text_to_check for kw in reduced_risk_keywords):
+                raise ProposalSchemaValidationError(
+                    "SEMANTIC_CONTRADICTION: wider stoploss increases per-trade risk, but text claims reduced risk/drawdown"
+                )
+            # Wider stoploss should acknowledge increased drawdown risk
+            if not any(kw in text_to_check for kw in increased_risk_keywords) and "risk" in text_to_check:
+                # Only enforce if risk is mentioned - don't force it if risk isn't discussed
+                pass
+
+
 def _extract_allowed_metrics_snapshot(metrics: CanonicalMetricsSnapshot | None) -> dict[str, Any]:
     if metrics is None:
         return {}
@@ -178,14 +259,19 @@ class OllamaProposalAdapter:
         return (
             "You are a research proposal assistant for an automated strategy-validation system.\n"
             "Return only a strict JSON object with these fields:\n"
-            f"{json.dumps(list(ProposalRequest.model_fields.keys()), indent=2)}\n\n"
+            f"{json.dumps(list(ProposalResult.model_fields.keys()), indent=2)}\n\n"
+            "CRITICAL: Do NOT include the 'outcome' field - the system determines acceptance/rejection.\n"
+            "CRITICAL: Do NOT include request fields like run_id, hypothesis_id, allowed_targets, champion_metrics, or context_limits.\n"
+            "Output ONLY the content fields: hypothesis_text, diagnosis_code, evidence_refs, exact_change, expected_effect, success_criteria, risk, confidence.\n\n"
             f"Diagnosis: {request.diagnosis_code}\n"
             f"Hypothesis: {request.hypothesis_text}\n"
             f"Allowed targets:\n{chr(10).join(allowed) if allowed else 'none'}\n"
             f"Champion metrics: {json.dumps(metrics, default=str)}\n"
             "Rules:\n"
             "- Do not propose executable code, shell commands, or file paths.\n"
-            "- exact_change must be a JSON object with only allowed fields.\n"
+            "- exact_change must be a JSON object with these EXACT fields: change_type (string), target (string), before_value (any), after_value (any).\n"
+            "- exact_change must describe ONE parameter change only - do not return multiple parameters in one exact_change.\n"
+            "- Do NOT include outcome, raw_payload, or rejection_reason - these are system-managed.\n"
         )
 
     def _parse_response(self, content: str) -> ProposalResult:
@@ -198,6 +284,7 @@ class OllamaProposalAdapter:
                     raise ValueError("No JSON object found in response")
                 payload = json.loads(content[start : end + 1])
                 _validate_proposal_payload(payload)
+                _validate_semantic_consistency(payload)
                 break
             except Exception as exc:
                 if attempt == 0:

@@ -84,6 +84,40 @@ def test_validate_proposal_payload_rejects_unknown_fields():
         _validate_proposal_payload(payload)
 
 
+def test_validate_proposal_payload_rejects_request_fields():
+    """Test that request fields like run_id, hypothesis_id, allowed_targets are rejected."""
+    payload = {
+        "hypothesis_text": "h",
+        "diagnosis_code": "no_edge",
+        "exact_change": {"change_type": "parameter", "target": "stoploss", "before_value": -0.05, "after_value": -0.1},
+        "expected_effect": "less downside",
+        "success_criteria": "PF>1",
+        "risk": "whipsaw",
+        "confidence": 0.7,
+        "run_id": "run-1",  # Request field - should be rejected
+    }
+    with pytest.raises(ProposalSchemaValidationError):
+        _validate_proposal_payload(payload)
+
+
+def test_validate_proposal_payload_rejects_all_request_fields():
+    """Test that all request fields are rejected."""
+    request_fields = ["run_id", "hypothesis_id", "allowed_targets", "champion_metrics", "context_limits"]
+    for field in request_fields:
+        payload = {
+            "hypothesis_text": "h",
+            "diagnosis_code": "no_edge",
+            "exact_change": {"change_type": "parameter", "target": "stoploss", "before_value": -0.05, "after_value": -0.1},
+            "expected_effect": "less downside",
+            "success_criteria": "PF>1",
+            "risk": "whipsaw",
+            "confidence": 0.7,
+            field: "some_value",  # Request field - should be rejected
+        }
+        with pytest.raises(ProposalSchemaValidationError, match=f"Unknown proposal fields"):
+            _validate_proposal_payload(payload)
+
+
 def test_parse_response_accepted():
     adapter = OllamaProposalAdapter()
     payload = {
@@ -101,11 +135,117 @@ def test_parse_response_accepted():
     assert result.exact_change.target == "stoploss"
 
 
+def test_parse_response_accepts_minimal_valid():
+    """Test that minimal valid ProposalResult JSON is accepted."""
+    adapter = OllamaProposalAdapter()
+    payload = {
+        "hypothesis_text": "Reduce stoploss to improve profit factor",
+        "diagnosis_code": "low_profit_factor",
+        "exact_change": {"change_type": "parameter", "target": "stoploss", "before_value": -0.05, "after_value": -0.08},
+        "expected_effect": "Higher profit factor",
+        "success_criteria": "profit_factor > 1.1",
+        "risk": "medium",
+        "confidence": 0.65,
+    }
+    result = adapter._parse_response(json.dumps(payload))
+    assert result.outcome == ProposalOutcome.ACCEPTED
+    assert result.exact_change.target == "stoploss"
+    assert result.confidence == 0.65
+
+
 def test_parse_response_malformed_becomes_skipped():
     adapter = OllamaProposalAdapter()
     result = adapter._parse_response("not json at all")
     assert result.outcome == ProposalOutcome.AI_PROPOSAL_SKIPPED
     assert result.rejection_reason is not None
+
+
+def test_parse_response_with_request_fields_becomes_skipped():
+    """Test that AI response with request fields is rejected and becomes SKIPPED."""
+    adapter = OllamaProposalAdapter()
+    payload = {
+        "hypothesis_text": "h",
+        "diagnosis_code": "no_edge",
+        "exact_change": {"change_type": "parameter", "target": "stoploss", "before_value": -0.05, "after_value": -0.1},
+        "expected_effect": "less downside",
+        "success_criteria": "PF>1",
+        "risk": "whipsaw",
+        "confidence": 0.7,
+        "run_id": "run-1",  # Request field - should cause rejection
+        "hypothesis_id": "hyp-1",  # Request field - should cause rejection
+    }
+    result = adapter._parse_response(json.dumps(payload))
+    assert result.outcome == ProposalOutcome.AI_PROPOSAL_SKIPPED
+    assert "Unknown proposal fields" in result.rejection_reason
+
+
+def test_semantic_validation_rejects_tighter_stoploss_with_more_room_claim():
+    """Test that stoploss tightened with 'more room' claim is rejected as semantic contradiction."""
+    adapter = OllamaProposalAdapter()
+    payload = {
+        "hypothesis_text": "Adjust stoploss to improve profit factor",
+        "diagnosis_code": "low_profit_factor",
+        "exact_change": {"change_type": "adjustment", "target": "stoploss", "before_value": -0.336, "after_value": -0.25},
+        "expected_effect": "Allow more room for trades to develop before hitting stop-loss",
+        "success_criteria": "profit_factor > 1.0",
+        "risk": "low",
+        "confidence": 0.65,
+    }
+    result = adapter._parse_response(json.dumps(payload))
+    assert result.outcome == ProposalOutcome.AI_PROPOSAL_SKIPPED
+    assert "SEMANTIC_CONTRADICTION" in result.rejection_reason
+    assert "tightened" in result.rejection_reason
+    assert "more room" in result.rejection_reason
+
+
+def test_semantic_validation_accepts_tighter_stoploss_with_reduced_loss_claim():
+    """Test that stoploss tightened with 'reduced loss' claim is accepted as semantically consistent."""
+    adapter = OllamaProposalAdapter()
+    payload = {
+        "hypothesis_text": "Tighten stoploss to reduce per-trade losses",
+        "diagnosis_code": "low_profit_factor",
+        "exact_change": {"change_type": "adjustment", "target": "stoploss", "before_value": -0.336, "after_value": -0.25},
+        "expected_effect": "Faster exits will reduce individual trade losses",
+        "success_criteria": "profit_factor > 1.0",
+        "risk": "higher whipsaw risk",
+        "confidence": 0.65,
+    }
+    result = adapter._parse_response(json.dumps(payload))
+    assert result.outcome == ProposalOutcome.ACCEPTED
+
+
+def test_semantic_validation_accepts_wider_stoploss_with_more_room_claim():
+    """Test that stoploss widened with 'more room' claim is accepted as semantically consistent."""
+    adapter = OllamaProposalAdapter()
+    payload = {
+        "hypothesis_text": "Widen stoploss to allow trades more room to develop",
+        "diagnosis_code": "low_profit_factor",
+        "exact_change": {"change_type": "adjustment", "target": "stoploss", "before_value": -0.25, "after_value": -0.336},
+        "expected_effect": "Allow more room for trades to develop before hitting stop-loss",
+        "success_criteria": "profit_factor > 1.0",
+        "risk": "higher drawdown risk from wider stops",
+        "confidence": 0.65,
+    }
+    result = adapter._parse_response(json.dumps(payload))
+    assert result.outcome == ProposalOutcome.ACCEPTED
+
+
+def test_semantic_validation_rejects_wider_stoploss_with_reduced_risk_claim():
+    """Test that stoploss widened with 'reduced risk' claim is rejected as semantic contradiction."""
+    adapter = OllamaProposalAdapter()
+    payload = {
+        "hypothesis_text": "Widen stoploss to reduce downside risk",
+        "diagnosis_code": "low_profit_factor",
+        "exact_change": {"change_type": "adjustment", "target": "stoploss", "before_value": -0.25, "after_value": -0.336},
+        "expected_effect": "Reduce downside risk with wider stops",
+        "success_criteria": "profit_factor > 1.0",
+        "risk": "low",
+        "confidence": 0.65,
+    }
+    result = adapter._parse_response(json.dumps(payload))
+    assert result.outcome == ProposalOutcome.AI_PROPOSAL_SKIPPED
+    assert "SEMANTIC_CONTRADICTION" in result.rejection_reason
+    assert "widened" in result.rejection_reason
 
 
 @pytest.mark.asyncio

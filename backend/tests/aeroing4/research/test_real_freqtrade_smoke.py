@@ -1095,6 +1095,22 @@ def test_real_research_loop_smoke(tmp_path):
                 "min": 10,
                 "max": 50,
                 "risk_class": "low"
+            },
+            "stoploss": {
+                "type": "float",
+                "editable": True,
+                "current": sidecar_data.get("params", {}).get("stoploss", -0.10),
+                "min": -0.50,
+                "max": -0.01,
+                "risk_class": "medium"
+            },
+            "sell_ma_count": {
+                "type": "int",
+                "editable": True,
+                "current": sidecar_data.get("params", {}).get("sell", {}).get("sell_ma_count", 18),
+                "min": 10,
+                "max": 50,
+                "risk_class": "low"
             }
         }
         with sidecar_path.open("w", encoding="utf-8") as f:
@@ -1122,7 +1138,7 @@ def test_real_research_loop_smoke(tmp_path):
         sortino=MetricValue.unavailable(),
         calmar=MetricValue.unavailable(),
         max_drawdown_abs=MetricValue.unavailable(),
-        max_drawdown_pct=MetricValue.unavailable(),
+        max_drawdown_pct=MetricValue(value=-0.08, availability=MetricAvailability.AVAILABLE),  # Added for DecisionPolicy completeness
         average_trade_duration_minutes=MetricValue.unavailable(),
         bootstrap_sharpe_p5=MetricValue.unavailable(),
         provenance=MetricProvenance(
@@ -1278,39 +1294,23 @@ def test_real_research_loop_smoke(tmp_path):
     executor = _RealCandidateExecutor(runs_root, runner)
     zone_guard = DataZoneGuard(state_store, runs_root)
     
-    # Mock proposal for smoke test (simulate AI proposing a parameter change)
-    async def mock_proposal(request):
-        # Find an editable parameter from sidecar
-        if sidecar_path.exists():
-            import json
-            sidecar_data = json.loads(sidecar_path.read_text(encoding="utf-8"))
-            # Use the editable parameters section we added
-            params = sidecar_data.get("parameters", {})
-            
-            # For the smoke test, propose a change to buy_ma_count
-            if "buy_ma_count" in params:
-                target = "buy_ma_count"
-                current = params["buy_ma_count"].get("current", 18)
-                # Propose a small adjustment
-                after = current + 2
-                
-                return ProposalResult(
-                    outcome=ProposalOutcome.ACCEPTED,
-                    exact_change=ExactChange(
-                        change_type="parameter",
-                        target=target,
-                        before_value=current,
-                        after_value=after,
-                    ),
-                    rejection_reason=None,
-                )
-        
-        # Fallback: return skipped if no editable params
-        return ProposalResult(
-            outcome=ProposalOutcome.AI_PROPOSAL_SKIPPED,
-            exact_change=None,
-            rejection_reason="No editable parameters found",
-        )
+    # Real AI proposal generator using Ollama - NO FALLBACK for Step A3 verification
+    from backend.services.aeroing4.research.proposal_generator import OllamaProposalAdapter, ProposalResult, ProposalOutcome
+    from backend.services.aeroing4.research.experiments import ExactChange
+    
+    proposal_adapter = OllamaProposalAdapter(base_url="http://localhost:11434", model="laguna-xs-2.1")
+    
+    # Real AI proposal only - NO FALLBACK for Step A3 verification
+    async def proposal_real_ai_only(request):
+        print(f"REAL RESEARCH LOOP: Step A3 - Using real AI proposal only (NO FALLBACK)")
+        result = await proposal_adapter.generate(request)
+        if result.outcome == ProposalOutcome.ACCEPTED:
+            print(f"REAL RESEARCH LOOP: AI proposal accepted - {result.exact_change}")
+            return result
+        else:
+            print(f"REAL RESEARCH LOOP: AI proposal {result.outcome} - {result.rejection_reason}")
+            # NO FALLBACK - fail if AI does not produce valid proposal
+            raise RuntimeError(f"Step A3 verification failed: AI proposal {result.outcome} - {result.rejection_reason}")
     
     # Diagnosis function based on Confirmation failure
     def diagnose_fn(champion):
@@ -1328,9 +1328,9 @@ def test_real_research_loop_smoke(tmp_path):
         executor=executor,
         zone_guard=zone_guard,
         diagnose_fn=diagnose_fn,
-        proposal_callable=mock_proposal,
-        develop_timerange="20240101-20240131",  # Short develop timerange for smoke
-        pairs=["LTC/USDT"],  # Single pair for faster execution
+        proposal_callable=proposal_real_ai_only,  # NO FALLBACK for Step A3
+        develop_timerange="20240101-20240630",  # 6-month develop timerange for sufficient sample
+        pairs=["LTC/USDT", "XRP/USDT", "BNB/USDT", "LINK/USDT"],  # 4 pairs for sufficient sample
         timeframe="5m",
         min_sample_trades=30,
     )
