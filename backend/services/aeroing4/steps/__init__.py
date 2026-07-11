@@ -8,6 +8,7 @@ from .bias_check import BiasCheckStep
 from .pair_selection import PairSelectionStep
 from .portfolio_baseline import PortfolioBaselineStep
 from .initial_champion import InitialChampionStep
+from .diagnosis import DiagnosisStep
 
 __all__ = [
     "ValidationStep",
@@ -18,5 +19,6 @@ __all__ = [
     "PairSelectionStep",
     "PortfolioBaselineStep",
     "InitialChampionStep",
+    "DiagnosisStep",
 ]
 

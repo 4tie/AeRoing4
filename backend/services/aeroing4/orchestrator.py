@@ -15,7 +15,7 @@ from .models import (
     BiasCheckOutcome,
 )
 from .state_store import AeRoing4StateStore
-from .steps import ValidationStep, DataPreparationStep, SmokeBacktestStep, PairDiscoveryStep, BiasCheckStep, PairSelectionStep, PortfolioBaselineStep, InitialChampionStep
+from .steps import ValidationStep, DataPreparationStep, SmokeBacktestStep, PairDiscoveryStep, BiasCheckStep, PairSelectionStep, PortfolioBaselineStep, InitialChampionStep, DiagnosisStep
 from .research import DataZoneGuard, ResearchStage, ResearchZone, compute_strategy_hash
 
 if TYPE_CHECKING:
@@ -436,6 +436,34 @@ class AeRoing4Orchestrator:
                     self.state_store.save_run(run)
                     self.state_store.set_active_run(None)
                     return
+
+                # ── Step 8: Diagnosis ───────────────────────────────────────────
+                if self._cancel_requested:
+                    return
+
+                champion_id = champion_result.data.get("champion_id")
+                if not champion_id:
+                    run.mark_failed("Champion ID not found in initial champion result")
+                    self.state_store.save_run(run)
+                    self.state_store.set_active_run(None)
+                    return
+
+                diagnosis_step = DiagnosisStep(self.services, str(self.state_store.runs_root))
+                diagnosis_result = await diagnosis_step.execute(
+                    aeroing4_run_id=run_id,
+                    baseline_result=baseline_result.data,
+                    strategy_name=run.strategy_name,
+                    champion_id=champion_id,
+                )
+                run.update_step("diagnosis", diagnosis_result)
+                self.state_store.save_run(run)
+
+                # Diagnosis step failures are not fatal to the run
+                # They are informational only
+                if diagnosis_result.status == AeRoing4StepStatus.FAILED:
+                    logger.warning(
+                        f"Diagnosis step failed for run {run_id}: {diagnosis_result.error}"
+                    )
 
             # Both PASS_ACTIVITY and NO_SIGNAL_ACTIVITY complete the run
             # (NO_SIGNAL_ACTIVITY does NOT automatically trigger pair discovery)

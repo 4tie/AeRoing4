@@ -14,7 +14,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from ...core.errors import BackendError
-from ...services.aeroing4 import AeRoing4Orchestrator, AeRoing4Run
+from ...services.aeroing4 import AeRoing4Run
+from ...services.aeroing4.orchestrator import AeRoing4Orchestrator
 from ..dependencies import get_services
 
 router = APIRouter(prefix="/api/aeroing4", tags=["AeRoing4"])
@@ -65,6 +66,9 @@ class AeRoing4RunResponse(BaseModel):
     final_unseen_timerange: str | None
     research_protocol_active: bool
 
+    # Diagnosis summary (latest diagnosis only)
+    diagnosis: dict | None = None
+
 
 class StartRunResponse(BaseModel):
     """Response model for starting a run."""
@@ -73,8 +77,22 @@ class StartRunResponse(BaseModel):
     message: str
 
 
-def _run_to_response(run: AeRoing4Run) -> AeRoing4RunResponse:
+def _run_to_response(run: AeRoing4Run, services) -> AeRoing4RunResponse:
     """Convert AeRoing4Run to API response."""
+    # Get latest diagnosis summary if available
+    diagnosis_summary = None
+    diagnosis_step = run.steps.get("diagnosis")
+    if diagnosis_step and diagnosis_step.status == "completed":
+        diagnosis_data = diagnosis_step.data
+        if diagnosis_data:
+            diagnosis_summary = {
+                "status": diagnosis_data.get("outcome"),
+                "primary_code": diagnosis_data.get("primary_diagnosis", {}).get("diagnosis_code"),
+                "severity": diagnosis_data.get("primary_diagnosis", {}).get("severity"),
+                "confidence": diagnosis_data.get("primary_diagnosis", {}).get("confidence"),
+                "evidence_quality": diagnosis_data.get("evidence_quality"),
+            }
+
     return AeRoing4RunResponse(
         run_id=run.run_id,
         strategy_name=run.strategy_name,
@@ -96,6 +114,7 @@ def _run_to_response(run: AeRoing4Run) -> AeRoing4RunResponse:
         research_protocol_active=bool(
             run.confirmation_timerange and run.final_unseen_timerange
         ),
+        diagnosis=diagnosis_summary,
     )
 
 
@@ -180,7 +199,7 @@ async def get_run(
     if not run:
         raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
 
-    return _run_to_response(run)
+    return _run_to_response(run, services)
 
 
 @router.get(
@@ -195,7 +214,7 @@ async def list_runs(
     """List all AeRoing4 runs."""
     orchestrator = services.aeroing4_orchestrator
     runs = orchestrator.list_runs()
-    return [_run_to_response(run) for run in runs]
+    return [_run_to_response(run, services) for run in runs]
 
 
 @router.post(
@@ -217,9 +236,39 @@ async def cancel_run(
         if not run:
             raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
 
-        return _run_to_response(run)
+        return _run_to_response(run, services)
 
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to cancel run: {str(exc)}")
+
+
+@router.get(
+    "/runs/{run_id}/diagnoses",
+    summary="Get diagnosis history for a run",
+    description=(
+        "Returns the full diagnosis history for an AeRoing4 run. "
+        "This endpoint provides detailed diagnosis results including all findings, "
+        "evidence quality, and rule evaluation metadata. Multiple diagnoses may exist "
+        "for a single run if the champion changes during the research process."
+    ),
+)
+async def get_diagnoses(
+    run_id: str,
+    services=Depends(get_services),
+) -> list[dict]:
+    """Get diagnosis history for a run."""
+    from ...services.aeroing4.diagnosis.persistence import DiagnosisStore
+
+    orchestrator = services.aeroing4_orchestrator
+    run = orchestrator.get_run(run_id)
+
+    if not run:
+        raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
+
+    # Load diagnosis history
+    store = DiagnosisStore(str(orchestrator.state_store.runs_root))
+    diagnoses = store.list_by_run(run_id)
+
+    return [d.model_dump(mode="json") for d in diagnoses]

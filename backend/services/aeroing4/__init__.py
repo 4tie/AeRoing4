@@ -20,7 +20,9 @@ from .models import (
     PairDiscoveryResult,
 )
 from .state_store import AeRoing4StateStore
-from .orchestrator import AeRoing4Orchestrator
+
+# Note: AeRoing4Orchestrator is not imported at package level to avoid circular imports
+# Import it directly from backend.services.aeroing4.orchestrator when needed
 
 __all__ = [
     "AeRoing4Run",
@@ -36,5 +38,4 @@ __all__ = [
     "PairEvaluationRecord",
     "PairDiscoveryResult",
     "AeRoing4StateStore",
-    "AeRoing4Orchestrator",
 ]
