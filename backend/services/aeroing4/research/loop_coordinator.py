@@ -77,6 +77,11 @@ from .hypotheses import (
     HypothesisStatus,
     HypothesisStore,
 )
+from .identity import (
+    compute_mutation_identity_hash,
+    format_mutation_identity,
+    mutation_identity_from_exact_change,
+)
 from .mutation_policy import MutationPolicy, MutationPolicyCode
 from .proposal_generator import (
     ProposalGenerator,
@@ -119,6 +124,7 @@ class LoopOutcome(str, Enum):
     ZONE_ACCESS_DENIED = "zone_access_denied"
     BUDGET_EXHAUSTED = "budget_exhausted"
     DUPLICATE = "duplicate"
+    DUPLICATE_MUTATION = "duplicate_mutation"
     RECONCILE_REQUIRED = "reconcile_required"
     EXECUTION_SYSTEM_FAILURE = "execution_system_failure"
     DECISION_KEEP = "decision_keep"
@@ -256,6 +262,7 @@ class ResearchLoopCoordinator:
                 LoopOutcome.PROPOSAL_SKIPPED,
                 LoopOutcome.NO_SAFE_TARGET,
                 LoopOutcome.ZONE_ACCESS_DENIED,
+                LoopOutcome.DUPLICATE_MUTATION,
                 LoopOutcome.RECONCILE_REQUIRED,
             ):
                 break
@@ -276,42 +283,78 @@ class ResearchLoopCoordinator:
         hyp = self._reuse_or_create_hypothesis(run_id, diagnosis_code, champion)
         hypothesis_id = hyp.hypothesis_id
 
-        # 3. PROPOSAL GENERATOR (AI proposes ONLY — never decides)
-        proposal = await self._generate_proposal(run_id, hypothesis_id, diagnosis_code, champion)
-        if proposal.outcome == ProposalOutcome.AI_UNAVAILABLE:
-            return self._pause(
-                run_id, LoopOutcome.AI_UNAVAILABLE, LoopStage.PROPOSAL,
-                hypothesis_id=hypothesis_id, proposal=proposal,
-                pause_reason="proposal_generator_unavailable: ollama unreachable",
-            )
-        if proposal.outcome == ProposalOutcome.AI_PROPOSAL_SKIPPED:
-            return self._stop(run_id, LoopOutcome.PROPOSAL_SKIPPED, LoopStage.PROPOSAL,
-                              hypothesis_id=hypothesis_id, proposal=proposal)
-        if proposal.outcome != ProposalOutcome.ACCEPTED or proposal.exact_change is None:
-            return self._stop(run_id, LoopOutcome.PROPOSAL_INVALID, LoopStage.PROPOSAL,
-                              hypothesis_id=hypothesis_id, proposal=proposal,
-                              details=proposal.rejection_reason or "Proposal not accepted")
-
-        exact_change = proposal.exact_change
-
-        # 4. SCHEMA + EVIDENCE VALIDATION (exact_change shape)
-        if not self._exact_change_valid(exact_change):
-            return self._stop(run_id, LoopOutcome.PROPOSAL_INVALID, LoopStage.VALIDATION,
-                              hypothesis_id=hypothesis_id, proposal=proposal,
-                              details="exact_change failed schema validation")
-
-        # 5. ALLOWED TARGET VALIDATION
         strategy_name = self._strategy_name(champion)
-        allowed_targets = discover_allowed_mutation_targets(
-            strategy_name, runs_root=self.runs_root,
-            services=getattr(self, "services", None),
-        )
-        if not allowed_targets:
-            return self._stop(run_id, LoopOutcome.NO_SAFE_TARGET, LoopStage.VALIDATION,
-                              hypothesis_id=hypothesis_id, proposal=proposal)
+        proposal = None
+        exact_change = None
+        allowed_targets = None
+        duplicate_match = None
+        duplicate_identity = None
+        duplicate_hash = None
+
+        for attempt in range(2):
+            context_limits = None
+            if attempt == 1:
+                context_limits = {
+                    "excluded_mutations": self._mutation_exclusion_list(run_id, champion)
+                }
+
+            # 3. PROPOSAL GENERATOR (AI proposes ONLY — never decides)
+            proposal = await self._generate_proposal(
+                run_id,
+                hypothesis_id,
+                diagnosis_code,
+                champion,
+                context_limits=context_limits,
+            )
+            if proposal.outcome == ProposalOutcome.AI_UNAVAILABLE:
+                return self._pause(
+                    run_id, LoopOutcome.AI_UNAVAILABLE, LoopStage.PROPOSAL,
+                    hypothesis_id=hypothesis_id, proposal=proposal,
+                    pause_reason="proposal_generator_unavailable: ollama unreachable",
+                )
+            if proposal.outcome == ProposalOutcome.AI_PROPOSAL_SKIPPED:
+                return self._stop(run_id, LoopOutcome.PROPOSAL_SKIPPED, LoopStage.PROPOSAL,
+                                  hypothesis_id=hypothesis_id, proposal=proposal)
+            if proposal.outcome != ProposalOutcome.ACCEPTED or proposal.exact_change is None:
+                return self._stop(run_id, LoopOutcome.PROPOSAL_INVALID, LoopStage.PROPOSAL,
+                                  hypothesis_id=hypothesis_id, proposal=proposal,
+                                  details=proposal.rejection_reason or "Proposal not accepted")
+
+            exact_change = proposal.exact_change
+
+            # 4. SCHEMA + EVIDENCE VALIDATION (exact_change shape)
+            if not self._exact_change_valid(exact_change):
+                return self._stop(run_id, LoopOutcome.PROPOSAL_INVALID, LoopStage.VALIDATION,
+                                  hypothesis_id=hypothesis_id, proposal=proposal,
+                                  details="exact_change failed schema validation")
+
+            # 5. ALLOWED TARGET VALIDATION
+            allowed_targets = discover_allowed_mutation_targets(
+                strategy_name, runs_root=self.runs_root,
+                services=getattr(self, "services", None),
+            )
+            if not allowed_targets:
+                return self._stop(run_id, LoopOutcome.NO_SAFE_TARGET, LoopStage.VALIDATION,
+                                  hypothesis_id=hypothesis_id, proposal=proposal)
+
+            duplicate_match, duplicate_identity, duplicate_hash = self._find_duplicate_mutation(
+                run_id, champion, exact_change
+            )
+            if duplicate_match is None:
+                break
+
+        if duplicate_match is not None:
+            return self._duplicate_mutation_stop(
+                run_id=run_id,
+                hypothesis_id=hypothesis_id,
+                proposal=proposal,
+                existing=duplicate_match,
+                identity=duplicate_identity,
+                identity_hash=duplicate_hash,
+            )
 
         # 6. MUTATION POLICY (structural approval only; no budget yet)
-        identity_hash = self._build_identity_hash(champion, exact_change)
+        identity_hash = self._build_identity_hash(run_id, champion, exact_change)
 
         # 6b. DUPLICATE pre-check BEFORE mutation policy + reserve → no budget
         #     consumption on duplicate, and returns the existing reference.
@@ -633,6 +676,29 @@ class ResearchLoopCoordinator:
             mutation_code=code.value, details=mutation.reason,
         )
 
+    def _duplicate_mutation_stop(
+        self, *, run_id, hypothesis_id, proposal, existing, identity, identity_hash
+    ) -> LoopIterationResult:
+        existing_id = existing.experiment_id if existing is not None else None
+        details = (
+            "DUPLICATE_MUTATION: exact mutation already tested for parent lineage; "
+            f"identity={identity}; mutation_identity_hash={identity_hash}"
+        )
+        if existing_id:
+            self.hypothesis_store.associate_experiment(run_id, hypothesis_id, existing_id)
+            details += f"; duplicate_of_experiment_id={existing_id}"
+        return LoopIterationResult(
+            run_id=run_id,
+            outcome=LoopOutcome.DUPLICATE_MUTATION,
+            stage_reached=LoopStage.VALIDATION,
+            hypothesis_id=hypothesis_id,
+            experiment_id=existing_id,
+            duplicate_of_experiment_id=existing_id,
+            proposal=proposal,
+            mutation_code="DUPLICATE_MUTATION",
+            details=details,
+        )
+
     def _strategy_name(self, champion: ChampionReference) -> str:
         # The strategy name is encoded in the artifact's original_source_path filename.
         path = champion.strategy_artifact.original_source_path if champion.strategy_artifact else ""
@@ -651,16 +717,65 @@ class ResearchLoopCoordinator:
         target = getattr(exact_change, "target", None)
         return bool(target)
 
-    def _build_identity_hash(self, champion, exact_change) -> str:
-        import hashlib
-        basis = (
-            f"{champion.champion_id}|"
-            f"{getattr(exact_change, 'change_type', '')}|"
-            f"{getattr(exact_change, 'target', '')}|"
-            f"{getattr(exact_change, 'before_value', '')}|"
-            f"{getattr(exact_change, 'after_value', '')}"
+    def _build_identity_hash(self, run_id, champion, exact_change) -> str:
+        lineage_id = self._parent_lineage_id(run_id, champion.champion_id)
+        identity = mutation_identity_from_exact_change(
+            parent_lineage_id=lineage_id,
+            exact_change=exact_change,
         )
-        return hashlib.sha256(basis.encode("utf-8")).hexdigest()
+        return compute_mutation_identity_hash(identity)
+
+    def _find_duplicate_mutation(self, run_id, champion, exact_change):
+        lineage_id = self._parent_lineage_id(run_id, champion.champion_id)
+        identity = mutation_identity_from_exact_change(
+            parent_lineage_id=lineage_id,
+            exact_change=exact_change,
+        )
+        identity_hash = compute_mutation_identity_hash(identity)
+        for experiment in self.experiment_store.list_for_run(run_id):
+            if experiment.exact_change is None:
+                continue
+            parent_id = experiment.parent_champion_id or ""
+            experiment_lineage_id = self._parent_lineage_id(run_id, parent_id)
+            existing_identity = mutation_identity_from_exact_change(
+                parent_lineage_id=experiment_lineage_id,
+                exact_change=experiment.exact_change,
+            )
+            if compute_mutation_identity_hash(existing_identity) == identity_hash:
+                return experiment, identity, identity_hash
+        return None, identity, identity_hash
+
+    def _mutation_exclusion_list(self, run_id, champion) -> list[str]:
+        lineage_id = self._parent_lineage_id(run_id, champion.champion_id)
+        exclusions = []
+        seen = set()
+        for experiment in self.experiment_store.list_for_run(run_id):
+            if experiment.exact_change is None:
+                continue
+            parent_id = experiment.parent_champion_id or ""
+            if self._parent_lineage_id(run_id, parent_id) != lineage_id:
+                continue
+            identity = mutation_identity_from_exact_change(
+                parent_lineage_id=lineage_id,
+                exact_change=experiment.exact_change,
+            )
+            identity_hash = compute_mutation_identity_hash(identity)
+            if identity_hash in seen:
+                continue
+            seen.add(identity_hash)
+            exclusions.append(format_mutation_identity(identity))
+        return exclusions
+
+    def _parent_lineage_id(self, run_id, champion_id: str | None) -> str:
+        current_id = champion_id or ""
+        seen = set()
+        while current_id and current_id not in seen:
+            seen.add(current_id)
+            champion = self.champion_store.get(run_id, current_id)
+            if champion is None or not champion.parent_champion_id:
+                return current_id
+            current_id = champion.parent_champion_id
+        return current_id or ""
 
     def _build_experiment_record(self, *, run_id, hypothesis_id, champion, exact_change, identity_hash) -> ExperimentRecord:
         strategy_artifact = champion.strategy_artifact
@@ -784,7 +899,9 @@ class ResearchLoopCoordinator:
             self.state_store.save(state)
         return promoted
 
-    async def _generate_proposal(self, run_id, hypothesis_id, diagnosis_code, champion) -> ProposalResult:
+    async def _generate_proposal(
+        self, run_id, hypothesis_id, diagnosis_code, champion, *, context_limits=None
+    ) -> ProposalResult:
         allowed_targets = discover_allowed_mutation_targets(
             self._strategy_name(champion), runs_root=self.runs_root,
         )
@@ -794,6 +911,7 @@ class ResearchLoopCoordinator:
             diagnosis_code=diagnosis_code.value,
             champion_metrics=champion.metrics,
             allowed_targets=allowed_targets,
+            context_limits=context_limits,
         )
         result = self.proposal_callable(request)
         if hasattr(result, "__await__"):

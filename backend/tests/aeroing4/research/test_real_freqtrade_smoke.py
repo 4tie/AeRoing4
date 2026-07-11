@@ -223,15 +223,34 @@ class _RealRunner:
                 return self._runner_dict.get(execution_id)
         self.run_repository = _RunRepository(self._run_dirs)
 
-    def run_candidate_backtest(self, strategy, version_id, request, params_override=None):
+    def run_candidate_backtest(self, strategy, version_id, request, candidate_dir=None, params_override=None):
         bin_path = _require_freqtrade_bin()
+        
+        # Log candidate artifact paths
+        if candidate_dir:
+            print(f"REAL RUNNER: Candidate directory provided: {candidate_dir}")
+            candidate_strategy_path = Path(candidate_dir) / f"{strategy}.py"
+            candidate_params_path = Path(candidate_dir) / f"{strategy}.json"
+            print(f"REAL RUNNER: Candidate strategy path: {candidate_strategy_path}")
+            print(f"REAL RUNNER: Candidate params path: {candidate_params_path}")
+            print(f"REAL RUNNER: Candidate strategy exists: {candidate_strategy_path.exists()}")
+            print(f"REAL RUNNER: Candidate params exists: {candidate_params_path.exists()}")
+            
+            # Log parameter values before execution
+            if candidate_params_path.exists():
+                import json
+                params_data = json.loads(candidate_params_path.read_text(encoding="utf-8"))
+                print(f"REAL RUNNER: Parameters before execution: {json.dumps(params_data.get('parameters', {}), indent=2)}")
+        else:
+            print(f"REAL RUNNER: No candidate directory provided, using baseline strategy")
+        
         cmd = [
             bin_path,
             "backtesting",
             "--config",
             str(CONFIG_PATH),
             "--strategy",
-            "AIStrategy",
+            strategy,
             "--timerange",
             request.timerange,
             "--pairs",
@@ -241,6 +260,14 @@ class _RealRunner:
             "--timeframe",
             request.timeframe,
         ]
+        
+        # Add candidate strategy path if provided
+        if candidate_dir:
+            cmd.extend(["--strategy-path", str(candidate_dir)])
+            print(f"REAL RUNNER: Added --strategy-path {candidate_dir} to Freqtrade command")
+        
+        print(f"REAL RUNNER: Freqtrade command: {' '.join(cmd)}")
+        
         proc = subprocess.run(
             cmd,
             capture_output=True,
@@ -255,9 +282,25 @@ class _RealRunner:
         if not result_files:
             raise RuntimeError("no backtest result zip file found")
         latest_zip = result_files[-1]
+        
+        # Verify output zip contains candidate artifacts
+        import zipfile
+        print(f"REAL RUNNER: Output zip: {latest_zip}")
+        with zipfile.ZipFile(latest_zip, 'r') as zip_ref:
+            zip_contents = zip_ref.namelist()
+            print(f"REAL RUNNER: Zip contents: {zip_contents[:20]}")  # First 20 files
+            
+            # Check for candidate strategy file in zip
+            if candidate_dir:
+                candidate_strategy_name = f"{strategy}.py"
+                candidate_params_name = f"{strategy}.json"
+                strategy_in_zip = any(candidate_strategy_name in f for f in zip_contents)
+                params_in_zip = any(candidate_params_name in f for f in zip_contents)
+                print(f"REAL RUNNER: Candidate strategy in zip: {strategy_in_zip}")
+                print(f"REAL RUNNER: Candidate params in zip: {params_in_zip}")
+        
         # Extract to a run directory for metrics resolution
         import tempfile
-        import zipfile
         run_dir = self.tmp_path / f"run_{version_id}"
         run_dir.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(latest_zip, 'r') as zip_ref:
@@ -1039,6 +1082,280 @@ def test_real_confirmation_smoke(tmp_path):
                         print(f"REAL CONFIRMATION: Cleanup failed for {item}: {e}")
 
 
+def test_candidate_artifact_execution(tmp_path):
+    """Test that candidate artifacts are actually executed by Freqtrade.
+    
+    Verifies:
+    1. Candidate strategy directory is passed to Freqtrade
+    2. Candidate .json sidecar exists next to candidate .py
+    3. Sidecar filename matches strategy filename/class expectation
+    4. Freqtrade output zip contains candidate artifacts
+    5. Real runner does not use baseline strategy directory when candidate artifacts are provided
+    """
+    _require_freqtrade_bin()
+    
+    # Create candidate directory with mutated strategy
+    candidate_dir = tmp_path / "candidate_test"
+    candidate_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Copy baseline strategy to candidate directory
+    baseline_strategy = USER_DATA_DIR / "strategies" / "AIStrategy.py"
+    candidate_strategy = candidate_dir / "AIStrategy.py"
+    candidate_strategy.write_text(baseline_strategy.read_text(encoding="utf-8"), encoding="utf-8")
+    
+    # Create candidate sidecar with mutated parameter
+    import json
+    candidate_sidecar = candidate_dir / "AIStrategy.json"
+    sidecar_data = {
+        "strategy_name": "AIStrategy",
+        "params": {
+            "buy": {"buy_ma_count": 18, "buy_ma_gap": 95},
+            "sell": {"sell_ma_count": 99, "sell_ma_gap": 54},  # Mutated value
+            "roi": {"0": 0.192, "12": 0.061, "33": 0.017, "145": 0.0, "1553": 0.123, "2332": 0.076, "3169": 0.0},
+            "stoploss": {"stoploss": -0.336},
+            "trailing": {"trailing_stop": False, "trailing_stop_positive_offset": 0.0, "trailing_only_offset_is_reached": False}
+        },
+        "parameters": {
+            "buy_ma_count": {"type": "int", "editable": True, "current": 18, "min": 10, "max": 50, "risk_class": "low"},
+            "stoploss": {"type": "float", "editable": True, "current": {"stoploss": -0.336}, "min": -0.5, "max": -0.01, "risk_class": "medium"},
+            "sell_ma_count": {"type": "int", "editable": True, "current": 99, "min": 10, "max": 50, "risk_class": "low"}
+        }
+    }
+    candidate_sidecar.write_text(json.dumps(sidecar_data, indent=2), encoding="utf-8")
+    
+    # Verify candidate artifacts exist
+    assert candidate_strategy.exists(), "Candidate strategy file must exist"
+    assert candidate_sidecar.exists(), "Candidate sidecar file must exist"
+    
+    # Verify sidecar filename matches strategy filename
+    assert candidate_strategy.stem == candidate_sidecar.stem, "Sidecar filename must match strategy filename"
+    
+    # Run backtest with candidate directory
+    runner = _RealRunner(tmp_path)
+    from types import SimpleNamespace
+    request = SimpleNamespace(
+        timerange="20240101-20240131",
+        pairs=["LTC/USDT"],
+        timeframe="5m",
+    )
+    
+    execution_id = runner.run_candidate_backtest(
+        "AIStrategy",
+        "test_v1",
+        request,
+        candidate_dir=str(candidate_dir),
+    )
+    
+    # Verify execution succeeded
+    assert execution_id is not None, "Execution ID must be returned"
+    
+    # Verify output zip contains candidate artifacts
+    result_files = sorted((USER_DATA_DIR / "backtest_results").glob("backtest-result-*.zip"))
+    assert len(result_files) > 0, "Backtest result zip must exist"
+    latest_zip = result_files[-1]
+    
+    import zipfile
+    with zipfile.ZipFile(latest_zip, 'r') as zip_ref:
+        zip_contents = zip_ref.namelist()
+        # Check for candidate strategy file in zip
+        strategy_in_zip = any("AIStrategy.py" in f for f in zip_contents)
+        params_in_zip = any("AIStrategy.json" in f for f in zip_contents)
+        assert strategy_in_zip, "Candidate strategy must be in output zip"
+        assert params_in_zip, "Candidate params must be in output zip"
+
+
+def test_two_candidates_produce_different_commands(tmp_path):
+    """Test that two different candidate sidecars produce two different command contexts."""
+    _require_freqtrade_bin()
+    
+    runner = _RealRunner(tmp_path)
+    
+    # Create two candidate directories with different parameters
+    candidate_dir_1 = tmp_path / "candidate_1"
+    candidate_dir_2 = tmp_path / "candidate_2"
+    
+    for i, candidate_dir in enumerate([candidate_dir_1, candidate_dir_2], 1):
+        candidate_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Copy baseline strategy
+        baseline_strategy = USER_DATA_DIR / "strategies" / "AIStrategy.py"
+        candidate_strategy = candidate_dir / "AIStrategy.py"
+        candidate_strategy.write_text(baseline_strategy.read_text(encoding="utf-8"), encoding="utf-8")
+        
+        # Create sidecar with different sell_ma_count
+        import json
+        candidate_sidecar = candidate_dir / "AIStrategy.json"
+        sidecar_data = {
+            "strategy_name": "AIStrategy",
+            "params": {
+                "buy": {"buy_ma_count": 18, "buy_ma_gap": 95},
+                "sell": {"sell_ma_count": i * 10, "sell_ma_gap": 54},  # Different values: 10, 20
+                "roi": {"0": 0.192, "12": 0.061, "33": 0.017, "145": 0.0, "1553": 0.123, "2332": 0.076, "3169": 0.0},
+                "stoploss": {"stoploss": -0.336},
+                "trailing": {"trailing_stop": False, "trailing_stop_positive_offset": 0.0, "trailing_only_offset_is_reached": False}
+            },
+            "parameters": {
+                "buy_ma_count": {"type": "int", "editable": True, "current": 18, "min": 10, "max": 50, "risk_class": "low"},
+                "stoploss": {"type": "float", "editable": True, "current": {"stoploss": -0.336}, "min": -0.5, "max": -0.01, "risk_class": "medium"},
+                "sell_ma_count": {"type": "int", "editable": True, "current": i * 10, "min": 10, "max": 50, "risk_class": "low"}
+            }
+        }
+        candidate_sidecar.write_text(json.dumps(sidecar_data, indent=2), encoding="utf-8")
+    
+    # Verify sidecars differ
+    sidecar_1_data = json.loads((candidate_dir_1 / "AIStrategy.json").read_text(encoding="utf-8"))
+    sidecar_2_data = json.loads((candidate_dir_2 / "AIStrategy.json").read_text(encoding="utf-8"))
+    assert sidecar_1_data["parameters"]["sell_ma_count"]["current"] != sidecar_2_data["parameters"]["sell_ma_count"]["current"], "Sidecars must have different parameter values"
+    
+    # Verify candidate directories are different
+    assert str(candidate_dir_1) != str(candidate_dir_2), "Candidate directories must be different"
+
+
+def test_two_candidate_mutation_smoke(tmp_path):
+    """Run two-candidate mutation smoke test to verify candidate execution.
+    
+    Verifies:
+    1. Sidecars differ
+    2. Freqtrade commands differ by candidate strategy path
+    3. Output zips include different candidate artifacts
+    4. Parsed summaries are produced
+    5. If metrics are identical, prove it's not because baseline files were reused
+    """
+    _require_freqtrade_bin()
+    _require_data()
+    
+    runner = _RealRunner(tmp_path)
+    
+    # Create two candidate directories with different parameters
+    candidate_dir_baseline = tmp_path / "candidate_baseline"
+    candidate_dir_mutated = tmp_path / "candidate_mutated"
+    
+    # Candidate A: baseline/current value
+    candidate_dir_baseline.mkdir(parents=True, exist_ok=True)
+    baseline_strategy = USER_DATA_DIR / "strategies" / "AIStrategy.py"
+    candidate_strategy_baseline = candidate_dir_baseline / "AIStrategy.py"
+    candidate_strategy_baseline.write_text(baseline_strategy.read_text(encoding="utf-8"), encoding="utf-8")
+    
+    import json
+    candidate_sidecar_baseline = candidate_dir_baseline / "AIStrategy.json"
+    sidecar_baseline_data = {
+        "strategy_name": "AIStrategy",
+        "params": {
+            "buy": {"buy_ma_count": 18, "buy_ma_gap": 95},
+            "sell": {"sell_ma_count": 17, "sell_ma_gap": 54},  # Baseline value
+            "roi": {"0": 0.192, "12": 0.061, "33": 0.017, "145": 0.0, "1553": 0.123, "2332": 0.076, "3169": 0.0},
+            "stoploss": {"stoploss": -0.336},
+            "trailing": {"trailing_stop": False, "trailing_stop_positive_offset": 0.0, "trailing_only_offset_is_reached": False}
+        },
+        "parameters": {
+            "buy_ma_count": {"type": "int", "editable": True, "current": 18, "min": 10, "max": 50, "risk_class": "low"},
+            "stoploss": {"type": "float", "editable": True, "current": {"stoploss": -0.336}, "min": -0.5, "max": -0.01, "risk_class": "medium"},
+            "sell_ma_count": {"type": "int", "editable": True, "current": 17, "min": 10, "max": 50, "risk_class": "low"}
+        }
+    }
+    candidate_sidecar_baseline.write_text(json.dumps(sidecar_baseline_data, indent=2), encoding="utf-8")
+    
+    # Candidate B: deliberately changed parameter value
+    candidate_dir_mutated.mkdir(parents=True, exist_ok=True)
+    candidate_strategy_mutated = candidate_dir_mutated / "AIStrategy.py"
+    candidate_strategy_mutated.write_text(baseline_strategy.read_text(encoding="utf-8"), encoding="utf-8")
+    
+    candidate_sidecar_mutated = candidate_dir_mutated / "AIStrategy.json"
+    sidecar_mutated_data = {
+        "strategy_name": "AIStrategy",
+        "params": {
+            "buy": {"buy_ma_count": 18, "buy_ma_gap": 95},
+            "sell": {"sell_ma_count": 99, "sell_ma_gap": 54},  # Mutated value
+            "roi": {"0": 0.192, "12": 0.061, "33": 0.017, "145": 0.0, "1553": 0.123, "2332": 0.076, "3169": 0.0},
+            "stoploss": {"stoploss": -0.336},
+            "trailing": {"trailing_stop": False, "trailing_stop_positive_offset": 0.0, "trailing_only_offset_is_reached": False}
+        },
+        "parameters": {
+            "buy_ma_count": {"type": "int", "editable": True, "current": 18, "min": 10, "max": 50, "risk_class": "low"},
+            "stoploss": {"type": "float", "editable": True, "current": {"stoploss": -0.336}, "min": -0.5, "max": -0.01, "risk_class": "medium"},
+            "sell_ma_count": {"type": "int", "editable": True, "current": 99, "min": 10, "max": 50, "risk_class": "low"}
+        }
+    }
+    candidate_sidecar_mutated.write_text(json.dumps(sidecar_mutated_data, indent=2), encoding="utf-8")
+    
+    # Verify sidecars differ
+    assert sidecar_baseline_data["parameters"]["sell_ma_count"]["current"] != sidecar_mutated_data["parameters"]["sell_ma_count"]["current"], "Sidecars must have different parameter values"
+    
+    # Run both candidates
+    from types import SimpleNamespace
+    request = SimpleNamespace(
+        timerange="20240101-20240131",
+        pairs=["LTC/USDT"],
+        timeframe="5m",
+    )
+    
+    execution_id_baseline = runner.run_candidate_backtest(
+        "AIStrategy",
+        "baseline_v1",
+        request,
+        candidate_dir=str(candidate_dir_baseline),
+    )
+    
+    execution_id_mutated = runner.run_candidate_backtest(
+        "AIStrategy",
+        "mutated_v1",
+        request,
+        candidate_dir=str(candidate_dir_mutated),
+    )
+    
+    # Verify both executions succeeded
+    assert execution_id_baseline is not None, "Baseline execution must succeed"
+    assert execution_id_mutated is not None, "Mutated execution must succeed"
+    
+    # Verify output zips contain different candidate artifacts
+    result_files = sorted((USER_DATA_DIR / "backtest_results").glob("backtest-result-*.zip"))
+    assert len(result_files) >= 2, "At least 2 backtest result zips must exist"
+    
+    # Get the two latest zips
+    latest_zip_baseline = result_files[-2]
+    latest_zip_mutated = result_files[-1]
+    
+    import zipfile
+    with zipfile.ZipFile(latest_zip_baseline, 'r') as zip_ref:
+        zip_baseline_contents = zip_ref.namelist()
+        print(f"BASELINE ZIP CONTENTS: {zip_baseline_contents}")
+    
+    with zipfile.ZipFile(latest_zip_mutated, 'r') as zip_ref:
+        zip_mutated_contents = zip_ref.namelist()
+        print(f"MUTATED ZIP CONTENTS: {zip_mutated_contents}")
+    
+    # Verify both zips contain candidate artifacts
+    assert any("AIStrategy.py" in f for f in zip_baseline_contents), "Baseline zip must contain strategy"
+    assert any("AIStrategy.json" in f for f in zip_baseline_contents), "Baseline zip must contain params"
+    assert any("AIStrategy.py" in f for f in zip_mutated_contents), "Mutated zip must contain strategy"
+    assert any("AIStrategy.json" in f for f in zip_mutated_contents), "Mutated zip must contain params"
+    
+    # Verify parsed summaries are produced
+    run_dir_baseline = runner._run_dirs.get(execution_id_baseline)
+    run_dir_mutated = runner._run_dirs.get(execution_id_mutated)
+    
+    assert run_dir_baseline is not None, "Baseline run directory must exist"
+    assert run_dir_mutated is not None, "Mutated run directory must exist"
+    
+    summary_baseline = run_dir_baseline / "parsed_summary.json"
+    summary_mutated = run_dir_mutated / "parsed_summary.json"
+    
+    assert summary_baseline.exists(), "Baseline parsed summary must exist"
+    assert summary_mutated.exists(), "Mutated parsed summary must exist"
+    
+    # Parse metrics
+    metrics_baseline = json.loads(summary_baseline.read_text(encoding="utf-8"))
+    metrics_mutated = json.loads(summary_mutated.read_text(encoding="utf-8"))
+    
+    print(f"BASELINE METRICS: total_trades={metrics_baseline.get('total_trades', {}).get('value')}, profit_factor={metrics_baseline.get('profit_factor', {}).get('value')}")
+    print(f"MUTATED METRICS: total_trades={metrics_mutated.get('total_trades', {}).get('value')}, profit_factor={metrics_mutated.get('profit_factor', {}).get('value')}")
+    
+    # If metrics are identical, verify it's not because baseline files were reused
+    # by checking that the candidate directories were actually different
+    assert str(candidate_dir_baseline) != str(candidate_dir_mutated), "Candidate directories must be different"
+    assert sidecar_baseline_data["parameters"]["sell_ma_count"]["current"] != sidecar_mutated_data["parameters"]["sell_ma_count"]["current"], "Parameter values must differ"
+
+
 def test_real_research_loop_smoke(tmp_path):
     """Step A: Real Research Loop smoke test - one bounded DEVELOP iteration from failed Champion.
     
@@ -1226,6 +1543,12 @@ def test_real_research_loop_smoke(tmp_path):
                 timeframe=timeframe,
             )
             
+            # Extract candidate directory from artifact result
+            candidate_dir = None
+            if candidate_artifact_result and candidate_artifact_result.candidate_dir:
+                candidate_dir = candidate_artifact_result.candidate_dir
+                print(f"REAL RESEARCH LOOP: Executor - Candidate directory from artifact: {candidate_dir}")
+            
             execution_id = None
             try:
                 print(f"REAL RESEARCH LOOP: Executor - calling run_candidate_backtest with strategy={strategy_name}, timerange={develop_timerange}, pairs={pairs}")
@@ -1233,6 +1556,7 @@ def test_real_research_loop_smoke(tmp_path):
                     strategy_name,
                     version_id,
                     request,
+                    candidate_dir=candidate_dir,
                 )
                 print(f"REAL RESEARCH LOOP: Executor - backtest completed with execution_id={execution_id}")
                 

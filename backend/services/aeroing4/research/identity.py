@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 # Re-export pair set hash from hashing module for convenience
@@ -79,6 +80,108 @@ def compute_change_hash(proposed_change: dict | str | None) -> str:
     else:
         canonical = str(proposed_change)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _canonical_mutation_value(value: Any) -> Any:
+    """Normalize mutation values so exact-value duplicate checks are stable."""
+    if isinstance(value, bool) or value is None:
+        return value
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        return _canonical_decimal(str(value))
+    if isinstance(value, Decimal):
+        return _canonical_decimal(str(value))
+    if isinstance(value, str):
+        stripped = value.strip()
+        try:
+            return _canonical_decimal(stripped)
+        except ValueError:
+            return stripped
+    if isinstance(value, list):
+        return [_canonical_mutation_value(item) for item in value]
+    if isinstance(value, tuple):
+        return [_canonical_mutation_value(item) for item in value]
+    if isinstance(value, dict):
+        return {
+            str(key).strip(): _canonical_mutation_value(val)
+            for key, val in sorted(value.items(), key=lambda item: str(item[0]))
+        }
+    return str(value)
+
+
+def _canonical_decimal(value: str) -> str:
+    try:
+        decimal_value = Decimal(value)
+    except (InvalidOperation, ValueError) as exc:
+        raise ValueError(value) from exc
+    if not decimal_value.is_finite():
+        raise ValueError(value)
+    normalized = decimal_value.normalize()
+    if normalized == 0:
+        normalized = Decimal("0")
+    return format(normalized, "f")
+
+
+def canonical_mutation_identity(
+    *,
+    parent_lineage_id: str,
+    change_type: Any,
+    target: Any,
+    before_value: Any,
+    after_value: Any,
+) -> dict[str, Any]:
+    """Canonical identity for exact mutation duplicate checks.
+
+    This intentionally excludes experiment id, hypothesis id, execution
+    context, and metrics: it answers only "has this exact mutation already
+    been tested in this parent lineage?"
+    """
+    return {
+        "parent_lineage_id": str(parent_lineage_id or "").strip(),
+        "change_type": str(change_type or "").strip().lower(),
+        "target": str(target or "").strip(),
+        "before_value": _canonical_mutation_value(before_value),
+        "after_value": _canonical_mutation_value(after_value),
+    }
+
+
+def mutation_identity_from_exact_change(
+    *,
+    parent_lineage_id: str,
+    exact_change: Any,
+) -> dict[str, Any]:
+    """Build a canonical mutation identity from an ExactChange-like object."""
+    if isinstance(exact_change, dict):
+        change_type = exact_change.get("change_type")
+        target = exact_change.get("target")
+        before_value = exact_change.get("before_value")
+        after_value = exact_change.get("after_value")
+    else:
+        change_type = getattr(exact_change, "change_type", None)
+        target = getattr(exact_change, "target", None)
+        before_value = getattr(exact_change, "before_value", None)
+        after_value = getattr(exact_change, "after_value", None)
+    return canonical_mutation_identity(
+        parent_lineage_id=parent_lineage_id,
+        change_type=change_type,
+        target=target,
+        before_value=before_value,
+        after_value=after_value,
+    )
+
+
+def compute_mutation_identity_hash(identity: dict[str, Any]) -> str:
+    """Hash the canonical mutation identity for compact comparisons/logging."""
+    return hashlib.sha256(_canonical_json(identity).encode("utf-8")).hexdigest()
+
+
+def format_mutation_identity(identity: dict[str, Any]) -> str:
+    """Human-readable exact mutation identity for prompts and reports."""
+    return (
+        f"{identity.get('target')}: {identity.get('before_value')} -> "
+        f"{identity.get('after_value')}"
+    )
 
 
 def compute_experiment_identity_hash(

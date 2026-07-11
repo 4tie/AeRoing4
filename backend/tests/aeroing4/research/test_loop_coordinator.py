@@ -45,10 +45,12 @@ from backend.services.aeroing4.research.champions import (
 )
 from backend.services.aeroing4.research.decision_policy import DecisionRequest
 from backend.services.aeroing4.research.experiments import (
+    ExactChange,
     ExperimentDecision,
     ExperimentRecord,
     ExperimentStatus,
     ExperimentStore,
+    OriginalStrategyProvenance,
 )
 from backend.services.aeroing4.research.hypotheses import HypothesisStore
 from backend.services.aeroing4.research.loop_coordinator import (
@@ -104,8 +106,12 @@ def _seed_champion(runs_root: Path, parent_id=None, metrics=None):
     py.write_text("class AIStrategy:\n    pass\n", encoding="utf-8")
     sc = sd / "AIStrategy.json"
     sc.write_text(
-        '{"parameters": {"rsi_threshold": {"type": "int", "editable": true, '
-        '"current": 30, "min": 10, "max": 50}}}',
+        '{"parameters": {'
+        '"rsi_threshold": {"type": "int", "editable": true, "current": 30, "min": 10, "max": 50},'
+        '"buy_ma_count": {"type": "int", "editable": true, "current": 18, "min": 10, "max": 50},'
+        '"sell_ma_count": {"type": "int", "editable": true, "current": 17, "min": 10, "max": 50},'
+        '"stoploss": {"type": "float", "editable": true, "current": -0.336, "min": -0.5, "max": -0.01}'
+        '}}',
         encoding="utf-8",
     )
     champ = ChampionReference(
@@ -142,6 +148,25 @@ class _FakeExecutor(CandidateExecutor):
         return self._result
 
 
+class _CountingExperimentStore(ExperimentStore):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.reserve_calls = 0
+
+    def reserve(self, experiment):
+        self.reserve_calls += 1
+        return super().reserve(experiment)
+
+
+class _CountingArtifactService:
+    def __init__(self):
+        self.create_calls = 0
+
+    def create(self, **kwargs):
+        self.create_calls += 1
+        raise AssertionError("candidate artifact must not be created for duplicate mutations")
+
+
 def _make_coordinator(
     runs_root: Path,
     *,
@@ -150,8 +175,11 @@ def _make_coordinator(
     exec_result: CandidateExecutionResult,
     diagnose_code: DiagnosisCode = DiagnosisCode.NO_EDGE,
     budget_total: int = 5,
+    experiment_store_cls=ExperimentStore,
+    artifact_service=None,
+    proposal_callable=None,
 ):
-    exp_store = ExperimentStore(runs_root, budget_service=None)
+    exp_store = experiment_store_cls(runs_root, budget_service=None)
     # Use a real BudgetService with a generous total for the scenario.
     from backend.services.aeroing4.research.budgets import BudgetService
     exp_store.budget_service = BudgetService(max_total_experiments=budget_total)
@@ -167,14 +195,18 @@ def _make_coordinator(
     state.current_champion_parameter_hash = champion.parameter_artifact.artifact_hash
     state_store.save(state)
 
-    from backend.services.aeroing4.research.candidate_artifacts import CandidateArtifactService
-    artifact_svc = CandidateArtifactService(runs_root)
+    if artifact_service is None:
+        from backend.services.aeroing4.research.candidate_artifacts import CandidateArtifactService
+        artifact_svc = CandidateArtifactService(runs_root)
+    else:
+        artifact_svc = artifact_service
     executor = _FakeExecutor(runs_root, exec_result)
 
     guard = DataZoneGuard(state_store, runs_root)
 
-    async def proposal_callable(request: ProposalRequest) -> ProposalResult:
-        return proposal
+    if proposal_callable is None:
+        async def proposal_callable(request: ProposalRequest) -> ProposalResult:
+            return proposal
 
     coord = ResearchLoopCoordinator(
         runs_root=runs_root,
@@ -209,6 +241,20 @@ def _accepted_proposal(after_value=35):
     )
 
 
+def _proposal_for(target, before, after):
+    return ProposalResult(
+        outcome=ProposalOutcome.ACCEPTED,
+        hypothesis_text=f"mutate {target}",
+        diagnosis_code="NO_EDGE",
+        exact_change={
+            "change_type": "parameter",
+            "target": target,
+            "before_value": before,
+            "after_value": after,
+        },
+    )
+
+
 def _exec_result(metrics, status=CandidateExecutionStatus.SUCCESS):
     return CandidateExecutionResult(
         underlying_execution_id="exec-1",
@@ -218,6 +264,36 @@ def _exec_result(metrics, status=CandidateExecutionStatus.SUCCESS):
         metrics=metrics,
         failure_classification=None,
     )
+
+
+def _seed_completed_experiment(exp_store, run_id, champion, target, before, after, *, identity_suffix=""):
+    change = ExactChange(
+        change_type="parameter",
+        target=target,
+        before_value=before,
+        after_value=after,
+    )
+    record = ExperimentRecord(
+        run_id=run_id,
+        hypothesis_id=f"seed-hyp-{target}-{after}{identity_suffix}",
+        parent_champion_id=champion.champion_id,
+        original_strategy_provenance=OriginalStrategyProvenance(
+            logical_name="AIStrategy",
+            path_reference=champion.strategy_artifact.original_source_path,
+            path_hash=champion.strategy_artifact.artifact_hash,
+            source_hash=champion.strategy_artifact.original_source_hash,
+            version_id="v1",
+        ),
+        experiment_identity_hash=f"seed-{target}-{after}{identity_suffix}",
+        exact_change=change,
+        metrics_before=champion.metrics,
+    )
+    saved, dup = exp_store.reserve(record)
+    assert dup is None
+    exp_store.transition_status(run_id, saved.experiment_id, ExperimentStatus.READY)
+    exp_store.transition_status(run_id, saved.experiment_id, ExperimentStatus.RUNNING)
+    exp_store.transition_status(run_id, saved.experiment_id, ExperimentStatus.COMPLETED)
+    return saved
 
 
 import pytest
@@ -311,10 +387,130 @@ async def test_D_duplicate_returns_existing_no_new_execution(tmp_run):
     # Second iteration with the SAME proposal → duplicate identity (no promotion
     # happened, so parent + change are identical → same hash).
     second = await coord.run_one_iteration(run_id="run-1")
-    assert second.outcome == LoopOutcome.DUPLICATE
+    assert second.outcome == LoopOutcome.DUPLICATE_MUTATION
     assert second.duplicate_of_experiment_id == first_experiment_id
     # No NEW experiment persisted beyond the first (budget not double-charged)
     assert len(exp.list_for_run("run-1")) == 1
+
+
+@pytest.mark.asyncio
+async def test_duplicate_mutation_buy_ma_count_rejected_before_reservation(tmp_run):
+    champ = _seed_champion(tmp_run, metrics=_snap(expectancy=0.10))
+    artifact_svc = _CountingArtifactService()
+    coord, exp, hyp, champ_store, state_store, executor = _make_coordinator(
+        tmp_run,
+        champion=champ,
+        proposal=_proposal_for("buy_ma_count", 18, 15),
+        exec_result=_exec_result(_snap(expectancy=0.101)),
+        experiment_store_cls=_CountingExperimentStore,
+        artifact_service=artifact_svc,
+    )
+    seeded = _seed_completed_experiment(exp, "run-1", champ, "buy_ma_count", 18, 15)
+    calls_before = exp.reserve_calls
+
+    res = await coord.run_one_iteration(run_id="run-1")
+
+    assert res.outcome == LoopOutcome.DUPLICATE_MUTATION
+    assert res.duplicate_of_experiment_id == seeded.experiment_id
+    assert "DUPLICATE_MUTATION" in res.details
+    assert exp.reserve_calls == calls_before
+    assert artifact_svc.create_calls == 0
+    assert executor.last_request is None
+    assert len(exp.list_for_run("run-1")) == 1
+
+
+@pytest.mark.asyncio
+async def test_duplicate_mutation_stoploss_widen_to_045_rejected(tmp_run):
+    champ = _seed_champion(tmp_run, metrics=_snap(expectancy=0.10))
+    artifact_svc = _CountingArtifactService()
+    coord, exp, hyp, champ_store, state_store, executor = _make_coordinator(
+        tmp_run,
+        champion=champ,
+        proposal=_proposal_for("stoploss", -0.336, -0.45),
+        exec_result=_exec_result(_snap(expectancy=0.101)),
+        experiment_store_cls=_CountingExperimentStore,
+        artifact_service=artifact_svc,
+    )
+    seeded = _seed_completed_experiment(exp, "run-1", champ, "stoploss", -0.336, -0.45)
+    calls_before = exp.reserve_calls
+
+    res = await coord.run_one_iteration(run_id="run-1")
+
+    assert res.outcome == LoopOutcome.DUPLICATE_MUTATION
+    assert res.duplicate_of_experiment_id == seeded.experiment_id
+    assert exp.reserve_calls == calls_before
+    assert artifact_svc.create_calls == 0
+    assert executor.last_request is None
+
+
+@pytest.mark.asyncio
+async def test_duplicate_mutation_seeded_known_failed_list_blocks_exact_matches(tmp_run):
+    champ = _seed_champion(tmp_run, metrics=_snap(expectancy=0.10))
+    coord, exp, hyp, champ_store, state_store, executor = _make_coordinator(
+        tmp_run,
+        champion=champ,
+        proposal=_proposal_for("sell_ma_count", 17, 25),
+        exec_result=_exec_result(_snap(expectancy=0.101)),
+        experiment_store_cls=_CountingExperimentStore,
+        artifact_service=_CountingArtifactService(),
+    )
+    _seed_completed_experiment(exp, "run-1", champ, "buy_ma_count", 18, 15, identity_suffix="-a")
+    _seed_completed_experiment(exp, "run-1", champ, "stoploss", -0.336, -0.25, identity_suffix="-b")
+    seeded_sell = _seed_completed_experiment(
+        exp, "run-1", champ, "sell_ma_count", 17, 25, identity_suffix="-c"
+    )
+    _seed_completed_experiment(exp, "run-1", champ, "stoploss", -0.336, -0.45, identity_suffix="-d")
+    calls_before = exp.reserve_calls
+
+    res = await coord.run_one_iteration(run_id="run-1")
+
+    assert res.outcome == LoopOutcome.DUPLICATE_MUTATION
+    assert res.duplicate_of_experiment_id == seeded_sell.experiment_id
+    assert exp.reserve_calls == calls_before
+    assert len(exp.list_for_run("run-1")) == 4
+
+
+@pytest.mark.asyncio
+async def test_duplicate_mutation_float_normalization_rejects_equivalent_values(tmp_run):
+    champ = _seed_champion(tmp_run, metrics=_snap(expectancy=0.10))
+    coord, exp, hyp, champ_store, state_store, executor = _make_coordinator(
+        tmp_run,
+        champion=champ,
+        proposal=_proposal_for("stoploss", "-0.3360", "-0.450"),
+        exec_result=_exec_result(_snap(expectancy=0.101)),
+        experiment_store_cls=_CountingExperimentStore,
+        artifact_service=_CountingArtifactService(),
+    )
+    seeded = _seed_completed_experiment(exp, "run-1", champ, "stoploss", -0.336, -0.45)
+    calls_before = exp.reserve_calls
+
+    res = await coord.run_one_iteration(run_id="run-1")
+
+    assert res.outcome == LoopOutcome.DUPLICATE_MUTATION
+    assert res.duplicate_of_experiment_id == seeded.experiment_id
+    assert exp.reserve_calls == calls_before
+    assert executor.last_request is None
+
+
+@pytest.mark.asyncio
+async def test_non_duplicate_valid_mutation_is_allowed(tmp_run):
+    champ = _seed_champion(tmp_run, metrics=_snap(expectancy=0.10))
+    coord, exp, hyp, champ_store, state_store, executor = _make_coordinator(
+        tmp_run,
+        champion=champ,
+        proposal=_proposal_for("buy_ma_count", 18, 16),
+        exec_result=_exec_result(_snap(expectancy=0.101)),
+        experiment_store_cls=_CountingExperimentStore,
+    )
+    _seed_completed_experiment(exp, "run-1", champ, "buy_ma_count", 18, 15)
+    calls_before = exp.reserve_calls
+
+    res = await coord.run_one_iteration(run_id="run-1")
+
+    assert res.outcome == LoopOutcome.DECISION_INCONCLUSIVE
+    assert exp.reserve_calls == calls_before + 1
+    assert executor.last_request is not None
+    assert len(exp.list_for_run("run-1")) == 2
 
 
 # ── Scenario E: Restart (reserved experiment reloaded from disk) ───────────────
