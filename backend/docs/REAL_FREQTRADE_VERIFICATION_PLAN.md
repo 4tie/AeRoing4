@@ -27,7 +27,302 @@
 
 ---
 
-## 1. Environment Setup
+## REAL STAGE VERIFICATION PLAN (Updated 2026-07-11)
+
+**Goal:** Verify the remaining stages with real Freqtrade, step by step, without turning this into a long expensive full pipeline run.
+
+**Environment:** 4t virtual environment at `L:\M4tie\Documents\AeRoing4\4t`
+
+**Freqtrade Binary:** `L:\M4tie\Documents\AeRoing4\4t\Scripts\freqtrade.exe`
+
+**Config:** `L:\M4tie\Documents\AeRoing4\user_data\config.json`
+
+**User Data:** `L:\M4tie\Documents\AeRoing4\user_data`
+
+---
+
+### Stage 1: Real Focused Hyperopt Smoke
+
+**Exact Inputs:**
+- Strategy: `AIStrategy` (from `user_data/strategies/AIStrategy.py`)
+- Timerange: `20240101-20240131` (short 1-month window)
+- Pairs: `BTC/USDT` only (single pair for speed)
+- Timeframe: `5m`
+- Config: `user_data/config.json` (dry_run: true enforced)
+- Params override: `{"rsi_threshold": 35}` (simple single-parameter mutation)
+
+**Exact Command/Test Target:**
+```powershell
+L:\M4tie\Documents\AeRoing4\4t\Scripts\python.exe -m pytest backend/tests/aeroing4/research/test_real_freqtrade_smoke.py::test_real_focused_hyperopt_smoke -v
+```
+(Note: This test does not yet exist and must be created as part of implementation)
+
+**Expected Artifact:**
+- `user_data/backtest_results/backtest-result-*.zip` containing backtest output
+- `parsed_summary.json` with valid `CanonicalMetricsSnapshot`
+- `FocusedHyperoptResult` with real `execution_id` and real metrics
+
+**Pass/Fail/Skip/Block Criteria:**
+- **PASS:** Real backtest executes with params_override, `parsed_summary.json` produced, metrics parsed successfully, `FocusedHyperoptService` returns result with real `execution_id`, no fallback to fake metrics
+- **FAIL:** Backtest runs but metrics indicate no edge (PF < 1.0, or 0 trades)
+- **SKIP:** `freqtrade` binary not detected → `SKIPPED: REAL_FREQTRADE_UNAVAILABLE`
+- **BLOCKED:** Config missing, config `dry_run=false`, strategy file missing, or params_override invalid
+- **SYSTEM_FAILURE:** Freqtrade process crashes, parser fails, or `parsed_summary.json` malformed/absent
+
+**Verification Flag Updated:**
+- `real_hyperopt_verified = true` (only on PASS)
+
+**Estimated Runtime Risk:** Low (1-2 minutes for single pair, 1-month timerange)
+
+**Cleanup Rules:**
+- Delete temporary backtest results: `Remove-Item -Recurse -Force user_data/backtest_results/backtest-result-*`
+- Do not delete original strategy files
+- Do not modify `user_data/strategies/`
+
+---
+
+### Stage 2: Real Confirmation Smoke
+
+**Exact Inputs:**
+- Frozen Champion: `AIStrategy` with parameters from Stage 1 (or baseline if Stage 1 skipped)
+- Timerange: `20240201-20240229` (different 1-month window for OOS)
+- Pairs: `BTC/USDT` only
+- Timeframe: `5m`
+- Config: `user_data/config.json` (dry_run: true enforced)
+- Zone: `CONFIRMATION` (access guard check required)
+
+**Exact Command/Test Target:**
+```powershell
+L:\M4tie\Documents\AeRoing4\4t\Scripts\python.exe -m pytest backend/tests/aeroing4/research/test_real_freqtrade_smoke.py::test_real_confirmation_smoke -v
+```
+(Note: This test does not yet exist and must be created as part of implementation)
+
+**Expected Artifact:**
+- `user_data/backtest_results/backtest-result-*.zip` containing confirmation backtest
+- `parsed_summary.json` with valid `CanonicalMetricsSnapshot`
+- `ConfirmationResult` with real `execution_id`, real metrics, and decision (PASS/FAIL/INCONCLUSIVE)
+- `ResearchProtocolState.confirmation_passed = true` (if decision is PASS)
+
+**Pass/Fail/Skip/Block Criteria:**
+- **PASS:** Frozen Champion executes on CONFIRMATION timerange, metrics parsed, `ConfirmationPolicy` returns PASS, `ConfirmationResult` persisted with real `execution_id`, protocol state updated
+- **FAIL:** Frozen Champion executes, metrics parsed, `ConfirmationPolicy` returns FAIL (PF below threshold or expectancy negative)
+- **SKIP:** Freqtrade unavailable → `SKIPPED: REAL_FREQTRADE_UNAVAILABLE`
+- **BLOCKED:** `CONFIRMATION` zone access denied by `DataZoneGuard`, protocol gate false, or Champion hash mismatch
+- **SYSTEM_FAILURE:** Freqtrade process failure, parser failure, or metrics resolution failure (never converted to INCONCLUSIVE)
+
+**Verification Flag Updated:**
+- `real_confirmation_verified = true` (only on PASS)
+
+**Estimated Runtime Risk:** Low (1-2 minutes for single pair, 1-month timerange)
+
+**Cleanup Rules:**
+- Delete temporary backtest results: `Remove-Item -Recurse -Force user_data/backtest_results/backtest-result-*`
+- Do not delete frozen Champion artifacts
+- Do not modify strategy or parameter files
+
+---
+
+### Stage 3: Real Final Unseen Smoke
+
+**Exact Inputs:**
+- Frozen Champion: Same frozen Champion from Stage 2 (must have PASS decision)
+- Timerange: `20240301-20240331` (third 1-month window, completely unseen)
+- Pairs: `BTC/USDT` only
+- Timeframe: `5m`
+- Config: `user_data/config.json` (dry_run: true enforced)
+- Zone: `FINAL_UNSEEN` (access guard check required)
+- Preflight: Strategy file exists, parameter file exists, config exists, Freqtrade binary available
+
+**Exact Command/Test Target:**
+```powershell
+L:\M4tie\Documents\AeRoing4\4t\Scripts\python.exe -m pytest backend/tests/aeroing4/research/test_real_freqtrade_smoke.py::test_real_final_unseen_smoke -v
+```
+(Note: This test does not yet exist and must be created as part of implementation)
+
+**Expected Artifact:**
+- `user_data/backtest_results/backtest-result-*.zip` containing final unseen backtest
+- `parsed_summary.json` with valid `CanonicalMetricsSnapshot`
+- `FinalUnseenResult` with real `execution_id`, real metrics, decision (PASS/FAIL/INCONCLUSIVE), and `delivery_eligible` flag
+- One-shot execution only (no reruns allowed)
+
+**Pass/Fail/Skip/Block Criteria:**
+- **PASS:** Preflight passes, `FINAL_UNSEEN` access granted, one-shot execution succeeds, `FinalUnseenPolicy` returns PASS, `FinalUnseenResult` persisted with `delivery_eligible=true`
+- **FAIL:** Preflight passes, execution succeeds, `FinalUnseenPolicy` returns FAIL (PF below threshold, etc.)
+- **INCONCLUSIVE:** Execution succeeds but insufficient trades (< 30) or critical metric unavailable
+- **SKIP:** Freqtrade unavailable → `BLOCKED: REAL_FREQTRADE_UNAVAILABLE` (not SKIP, run does not enter stage)
+- **BLOCKED:** Preflight fails, Confirmation did not PASS, protocol gate false, Champion hash mismatch, or `FINAL_UNSEEN` access denied
+- **SYSTEM_FAILURE:** Freqtrade process failure, parser failure, or metrics resolution failure after execution started (never converted to INCONCLUSIVE)
+
+**Verification Flag Updated:**
+- `real_final_unseen_verified = true` (only on PASS)
+
+**Estimated Runtime Risk:** Low (1-2 minutes for single pair, 1-month timerange)
+
+**Cleanup Rules:**
+- Delete temporary backtest results: `Remove-Item -Recurse -Force user_data/backtest_results/backtest-result-*`
+- Do not delete frozen Champion artifacts
+- Do not modify strategy or parameter files
+- No rerun allowed (one-shot execution only)
+
+---
+
+### Stage 4: Real Delivery Package from Real Passed Final Unseen
+
+**Exact Inputs:**
+- Passed `FinalUnseenResult` from Stage 3 (must have `decision = PASS` and `delivery_eligible = true`)
+- Frozen Champion artifacts (strategy + parameters)
+- Export profile: `run_local` (default, under `runs_root/{run_id}/delivery/`)
+- Versioning: Auto-generated unique filename with timestamp
+
+**Exact Command/Test Target:**
+```powershell
+L:\M4tie\Documents\AeRoing4\4t\Scripts\python.exe -m pytest backend/tests/aeroing4/research/test_real_freqtrade_smoke.py::test_real_delivery_package -v
+```
+(Note: This test does not yet exist and must be created as part of implementation)
+
+**Expected Artifact:**
+- Package directory: `runs_root/{run_id}/delivery/{timestamp}/`
+- Contents:
+  - `AIStrategy.py` (frozen strategy)
+  - `AIStrategy.json` (frozen parameters)
+  - `delivery_manifest.json` (with verification_flags reflecting real verifications)
+  - `warnings.json` (warnings for any `real_* = false`)
+  - `audit_provenance.json` (execution history)
+- Hash verification: All artifact hashes match in manifest
+
+**Pass/Fail/Skip/Block Criteria:**
+- **DELIVERED:** Real passed `FinalUnseenResult` exists, eligibility passes, package built atomically, hashes verified, manifest written
+- **REUSED:** Same delivery identity already exists; metadata reused, no rewrite
+- **EXPORT_FAILED:** Partial write (disk failure during package build), package not marked DELIVERED
+- **BLOCKED:** Final Unseen missing, decision != PASS, `delivery_eligible=false`, Champion hash mismatch, paused state, or reconciliation required
+
+**Verification Flag Updated:**
+- `real_delivery_verified = true` (only on DELIVERED)
+
+**Estimated Runtime Risk:** Very Low (file copy and hash computation, < 10 seconds)
+
+**Cleanup Rules:**
+- Keep delivery package for inspection
+- Do not delete original strategy files
+- Do not overwrite existing delivery packages without explicit approval
+- Clean up only if test fails and user requests cleanup
+
+---
+
+### Stage 5: Optional Final Guarded Full E2E Test
+
+**Exact Inputs:**
+- Complete run from Baseline through Delivery
+- All stages must use real Freqtrade (no fake runners)
+- Same run identity throughout
+- Short timeranges and single pair set for speed
+
+**Exact Command/Test Target:**
+```powershell
+L:\M4tie\Documents\AeRoing4\4t\Scripts\python.exe -m pytest backend/tests/aeroing4/research/test_real_freqtrade_smoke.py::test_real_full_e2e -v
+```
+(Note: This test does not yet exist and must be created as part of implementation)
+
+**Expected Artifact:**
+- Complete `ResearchProtocolState` with all stages completed
+- Valid `DeliveryPackage` from real passed Final Unseen
+- All `real_*` flags set to `true` in manifest
+- No fake runner invocations
+
+**Pass/Fail/Skip/Block Criteria:**
+- **PASS:** All five real stages (Baseline, Hyperopt, Confirmation, Final Unseen, Delivery) succeed in sequence on the same run, producing a real delivered package
+- **FAIL:** Any real stage fails or produces non-PASS decision
+- **SKIP:** Freqtrade unavailable → `SKIPPED: REAL_FREQTRADE_UNAVAILABLE`
+- **BLOCKED:** Any stage blocked by access guard, protocol gate, or preflight failure
+
+**Verification Flag Updated:**
+- `full_e2e_verified = true` (only on PASS)
+
+**Estimated Runtime Risk:** Medium (5-10 minutes for complete pipeline with short timeranges)
+
+**Cleanup Rules:**
+- Delete entire run directory: `Remove-Item -Recurse -Force user_data/aeroing4/runs/{run_id}`
+- Do not delete original strategy files
+- Do not modify user_data structure
+
+---
+
+## Cross-Stage Rules
+
+**No Production Trading:**
+- All commands enforce `dry_run: true` in config
+- No live orders, no real funds, no exchange state modification
+
+**No Pipeline Rewrite:**
+- Real verification is additive test layer only
+- No changes to main pipeline logic (`focused_hyperopt.py`, `confirmation.py`, `final_unseen.py`, `delivery.py`)
+- Fake unit tests remain intact
+
+**No Mutation After Confirmation:**
+- Champion frozen from Confirmation PASS
+- No parameter changes, no AI, no Hyperopt, no sensitivity after Confirmation
+- Final Unseen inherits exact frozen parameters
+
+**No Rerun/Tuning on Final Unseen:**
+- One-shot execution only
+- No retry based on performance
+- Reuse allowed only for exact same identity
+
+**Short Timeranges and Small Pair Set:**
+- All verification uses 1-month timeranges (20240101-20240131, 20240201-20240229, 20240301-20240331)
+- Single pair (BTC/USDT) for speed
+- 5m timeframe for balance between speed and realism
+
+**Dedicated Working Freqtrade Environment:**
+- Use 4t virtual environment at `L:\M4tie\Documents\AeRoing4\4t`
+- Freqtrade binary: `L:\M4tie\Documents\AeRoing4\4t\Scripts\freqtrade.exe`
+- Config: `L:\M4tie\Documents\AeRoing4\user_data\config.json`
+
+**Keep All Tests Guarded:**
+- Each test checks `shutil.which("freqtrade")` → skip if missing
+- Each test validates config `dry_run: true` → block if false
+- Each test validates required files exist → block if missing
+- Access guard checks for zone-specific stages (Confirmation, Final Unseen)
+
+**Keep Fake Unit Tests Intact:**
+- Existing unit tests (`test_focused_hyperopt.py`, `test_confirmation.py`, etc.) use fake runners
+- Real verification tests are separate and additive
+- No modification to existing fake test infrastructure
+
+**Do Not Mark Real Flag True Unless Real Stage Ran:**
+- `real_hyperopt_verified = true` only if real Focused Hyperopt executed and produced result
+- `real_confirmation_verified = true` only if real Confirmation executed and produced PASS
+- `real_final_unseen_verified = true` only if real Final Unseen executed and produced PASS
+- `real_delivery_verified = true` only if real Delivery produced package from real Final Unseen
+- `full_e2e_verified = true` only if all real stages passed in sequence on same run
+
+---
+
+## Implementation Notes
+
+**Test File Location:**
+- New tests added to `backend/tests/aeroing4/research/test_real_freqtrade_smoke.py`
+- Each test follows the pattern: guard → execute → verify → update flag
+
+**Test Dependencies:**
+- Stage 2 (Confirmation) depends on Stage 1 (Hyperopt) for frozen Champion, or uses baseline if Stage 1 skipped
+- Stage 3 (Final Unseen) depends on Stage 2 (Confirmation) PASS
+- Stage 4 (Delivery) depends on Stage 3 (Final Unseen) PASS
+- Stage 5 (Full E2E) depends on all previous stages
+
+**Sequential Execution:**
+- Tests can be run individually for isolated stage verification
+- Full E2E test runs complete sequence
+- Failed stage stops sequence (no cascade to next stage)
+
+**Cleanup Automation:**
+- Each test cleans up its own temporary artifacts on completion
+- Failed tests may leave artifacts for inspection
+- Manual cleanup command provided in each stage section
+
+---
+
+*Plan only. No code changes. No implementation until explicitly approved.*
 
 ### 1.1 Detect Freqtrade Binary
 On Windows, verify the `freqtrade` executable is on PATH or provide an absolute path.
@@ -416,3 +711,20 @@ FULL E2E VERIFIED: <true/false>
 
 ---
 
+## 9. Implementation Guard (for future use)
+
+When this plan is approved for implementation:
+
+1. Add a `tests/aeroing4/research/test_real_freqtrade_smoke.py` file with guarded real tests.
+2. Each real test:
+   - Checks `shutil.which("freqtrade")` → skip if missing.
+   - Validates config `dry_run: true` → block if false.
+   - Invokes real `freqtrade backtesting` via `subprocess` or `BacktestRunner`.
+   - Parses real `parsed_summary.json` via `CanonicalMetricsSnapshot.model_validate_json`.
+   - Flips the corresponding `real_*` flag to `true` only on success.
+3. No code in the main pipeline (`focused_hyperopt.py`, `confirmation.py`, `final_unseen.py`, `delivery.py`) is modified. Real verification is an **additive test layer** only.
+4. Default behavior of the pipeline remains unchanged: without real Freqtrade, it uses fake runners and skips real tests.
+
+---
+
+*Plan only. No code changes. No implementation until explicitly approved.*
