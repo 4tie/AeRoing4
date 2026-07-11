@@ -108,6 +108,7 @@ def create_baseline_result(
         canonical_metrics=metrics.model_dump(mode="json"),
         timeframe="5m",
         develop_timerange="20240101-20240630",
+        input_hash="test-baseline-hash-123",  # For idempotency
     )
 
 
@@ -133,6 +134,24 @@ def create_champion_reference():
     )
 
 
+def create_diagnosis_input(baseline, champion_ref, run_id="test-run", champion_id="test-champion"):
+    """Helper to create a DiagnosisInput with required fields."""
+    return DiagnosisInput(
+        run_id=run_id,
+        champion_id=champion_id,
+        champion_strategy_hash="abc123",
+        champion_parameter_hash="def456",
+        baseline_result_id="baseline-123",
+        baseline_result=baseline,
+        baseline_input_hash="test-baseline-hash-123",
+        canonical_metrics_hash="test-metrics-hash-123",
+        timeframe="5m",
+        develop_timerange="20240101-20240630",
+        champion_reference=champion_ref,
+        metrics_version="1.0.0",
+    )
+
+
 def test_diagnosis_engine_initialization():
     """Test DiagnosisEngine initialization."""
     engine = DiagnosisEngine("/tmp/test_runs")
@@ -147,17 +166,7 @@ def test_diagnosis_engine_successful_diagnosis():
     baseline = create_baseline_result()
     champion_ref = create_champion_reference()
 
-    input_data = DiagnosisInput(
-        run_id="test-run",
-        champion_id="test-champion",
-        champion_strategy_hash="abc123",
-        champion_parameter_hash="def456",
-        baseline_result_id="baseline-123",
-        baseline_result=baseline,
-        timeframe="5m",
-        develop_timerange="20240101-20240630",
-        champion_reference=champion_ref,
-    )
+    input_data = create_diagnosis_input(baseline, champion_ref)
 
     result = engine.diagnose(input_data)
 
@@ -182,17 +191,7 @@ def test_diagnosis_engine_insufficient_evidence():
     baseline = create_baseline_result(total_trades=5)
     champion_ref = create_champion_reference()
 
-    input_data = DiagnosisInput(
-        run_id="test-run",
-        champion_id="test-champion",
-        champion_strategy_hash="abc123",
-        champion_parameter_hash="def456",
-        baseline_result_id="baseline-123",
-        baseline_result=baseline,
-        timeframe="5m",
-        develop_timerange="20240101-20240630",
-        champion_reference=champion_ref,
-    )
+    input_data = create_diagnosis_input(baseline, champion_ref)
 
     result = engine.diagnose(input_data)
 
@@ -211,17 +210,7 @@ def test_diagnosis_engine_integrity_error():
     # Mismatch champion ID
     champion_ref.champion_id = "wrong-champion"
 
-    input_data = DiagnosisInput(
-        run_id="test-run",
-        champion_id="test-champion",
-        champion_strategy_hash="abc123",
-        champion_parameter_hash="def456",
-        baseline_result_id="baseline-123",
-        baseline_result=baseline,
-        timeframe="5m",
-        develop_timerange="20240101-20240630",
-        champion_reference=champion_ref,
-    )
+    input_data = create_diagnosis_input(baseline, champion_ref)
 
     result = engine.diagnose(input_data)
 
@@ -244,9 +233,12 @@ def test_diagnosis_engine_no_champion_reference():
         champion_parameter_hash="def456",
         baseline_result_id="baseline-123",
         baseline_result=baseline,
+        baseline_input_hash="test-baseline-hash-123",
+        canonical_metrics_hash="test-metrics-hash-123",
         timeframe="5m",
         develop_timerange="20240101-20240630",
         champion_reference=None,  # No reference
+        metrics_version="1.0.0",
     )
 
     result = engine.diagnose(input_data)
@@ -264,17 +256,7 @@ def test_diagnosis_engine_triggers_no_edge():
     baseline = create_baseline_result(profit_factor=0.8, expectancy=-0.01)
     champion_ref = create_champion_reference()
 
-    input_data = DiagnosisInput(
-        run_id="test-run",
-        champion_id="test-champion",
-        champion_strategy_hash="abc123",
-        champion_parameter_hash="def456",
-        baseline_result_id="baseline-123",
-        baseline_result=baseline,
-        timeframe="5m",
-        develop_timerange="20240101-20240630",
-        champion_reference=champion_ref,
-    )
+    input_data = create_diagnosis_input(baseline, champion_ref)
 
     result = engine.diagnose(input_data)
 
@@ -313,17 +295,7 @@ def test_diagnosis_engine_triggers_insufficient_sample():
     )
     champion_ref = create_champion_reference()
 
-    input_data = DiagnosisInput(
-        run_id="test-run",
-        champion_id="test-champion",
-        champion_strategy_hash="abc123",
-        champion_parameter_hash="def456",
-        baseline_result_id="baseline-123",
-        baseline_result=baseline,
-        timeframe="5m",
-        develop_timerange="20240101-20240630",
-        champion_reference=champion_ref,
-    )
+    input_data = create_diagnosis_input(baseline, champion_ref)
 
     result = engine.diagnose(input_data)
 
@@ -341,17 +313,7 @@ def test_diagnosis_engine_excludes_parameter_research_from_primary():
     baseline = create_baseline_result()
     champion_ref = create_champion_reference()
 
-    input_data = DiagnosisInput(
-        run_id="test-run",
-        champion_id="test-champion",
-        champion_strategy_hash="abc123",
-        champion_parameter_hash="def456",
-        baseline_result_id="baseline-123",
-        baseline_result=baseline,
-        timeframe="5m",
-        develop_timerange="20240101-20240630",
-        champion_reference=champion_ref,
-    )
+    input_data = create_diagnosis_input(baseline, champion_ref)
 
     result = engine.diagnose(input_data)
 
@@ -369,17 +331,7 @@ def test_diagnosis_engine_generates_derived_findings():
     baseline = create_baseline_result(profit_factor=0.8, expectancy=-0.01)
     champion_ref = create_champion_reference()
 
-    input_data = DiagnosisInput(
-        run_id="test-run",
-        champion_id="test-champion",
-        champion_strategy_hash="abc123",
-        champion_parameter_hash="def456",
-        baseline_result_id="baseline-123",
-        baseline_result=baseline,
-        timeframe="5m",
-        develop_timerange="20240101-20240630",
-        champion_reference=champion_ref,
-    )
+    input_data = create_diagnosis_input(baseline, champion_ref)
 
     result = engine.diagnose(input_data)
 
@@ -403,17 +355,7 @@ def test_diagnosis_engine_input_hash():
     baseline = create_baseline_result()
     champion_ref = create_champion_reference()
 
-    input_data = DiagnosisInput(
-        run_id="test-run",
-        champion_id="test-champion",
-        champion_strategy_hash="abc123",
-        champion_parameter_hash="def456",
-        baseline_result_id="baseline-123",
-        baseline_result=baseline,
-        timeframe="5m",
-        develop_timerange="20240101-20240630",
-        champion_reference=champion_ref,
-    )
+    input_data = create_diagnosis_input(baseline, champion_ref)
 
     result = engine.diagnose(input_data)
 
@@ -429,17 +371,7 @@ def test_diagnosis_engine_duration():
     baseline = create_baseline_result()
     champion_ref = create_champion_reference()
 
-    input_data = DiagnosisInput(
-        run_id="test-run",
-        champion_id="test-champion",
-        champion_strategy_hash="abc123",
-        champion_parameter_hash="def456",
-        baseline_result_id="baseline-123",
-        baseline_result=baseline,
-        timeframe="5m",
-        develop_timerange="20240101-20240630",
-        champion_reference=champion_ref,
-    )
+    input_data = create_diagnosis_input(baseline, champion_ref)
 
     result = engine.diagnose(input_data)
 

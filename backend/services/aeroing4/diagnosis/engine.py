@@ -29,6 +29,7 @@ from .resolver import EvidenceResolver
 from .rules.base import BaseRule, RuleEvaluationContext
 from .thresholds import classify_evidence_quality
 from .models import DIAGNOSIS_POLICY_VERSION
+from .persistence import DiagnosisStore
 
 
 class DiagnosisEngine:
@@ -46,6 +47,7 @@ class DiagnosisEngine:
         """
         self.runs_root = runs_root
         self.registry = RuleRegistry()
+        self.store = DiagnosisStore(runs_root)
 
     def diagnose(self, input_data: DiagnosisInput) -> DiagnosisResult:
         """Run diagnosis on the provided input.
@@ -57,6 +59,16 @@ class DiagnosisEngine:
             DiagnosisResult with findings and metadata
         """
         start_time = datetime.now(UTC)
+
+        # Calculate input hash for idempotency check
+        input_hash = self._compute_input_hash(input_data)
+
+        # Check for existing diagnosis with same input hash (idempotency)
+        existing_diagnoses = self.store.list_by_champion(input_data.champion_id)
+        for existing in existing_diagnoses:
+            if existing.input_hash == input_hash:
+                # Reuse existing diagnosis
+                return existing
 
         # Verify champion integrity
         integrity_error = self._verify_champion_integrity(input_data)
@@ -357,7 +369,7 @@ class DiagnosisEngine:
         Returns:
             Rule priority (higher = more important)
         """
-        rule = self.registry.get_rule(code.value.replace("_", "_"))
+        rule = self.registry.get_rule_by_diagnosis_code(code.value)
         return rule.priority if rule else 0
 
     def _categorize_findings(
@@ -486,9 +498,11 @@ class DiagnosisEngine:
             "champion_id": input_data.champion_id,
             "champion_strategy_hash": input_data.champion_strategy_hash,
             "champion_parameter_hash": input_data.champion_parameter_hash,
-            "baseline_result_id": input_data.baseline_result_id,
+            "baseline_input_hash": input_data.baseline_input_hash,
+            "canonical_metrics_hash": input_data.canonical_metrics_hash,
             "timeframe": input_data.timeframe,
             "develop_timerange": input_data.develop_timerange,
+            "metrics_version": input_data.metrics_version,
             "policy_version": DIAGNOSIS_POLICY_VERSION,
         }
 

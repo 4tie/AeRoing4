@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 from typing import Optional
 
+from ..research.file_lock_registry import get_lock_for_path
 from .models import DiagnosisResult
 
 
@@ -30,22 +31,26 @@ class DiagnosisStore:
         Args:
             result: DiagnosisResult to save
         """
-        # Ensure directory exists
-        self.diagnoses_file.parent.mkdir(parents=True, exist_ok=True)
+        # Get process-wide lock for this file
+        lock = get_lock_for_path(self.diagnoses_file)
+        
+        with lock:
+            # Ensure directory exists
+            self.diagnoses_file.parent.mkdir(parents=True, exist_ok=True)
 
-        # Load existing diagnoses
-        existing = self.load_all()
+            # Load existing diagnoses
+            existing = self.load_all()
 
-        # Add or update the diagnosis
-        existing[result.diagnosis_id] = result.model_dump(mode="json")
+            # Add or update the diagnosis
+            existing[result.diagnosis_id] = result.model_dump(mode="json")
 
-        # Write atomically
-        temp_file = self.diagnoses_file.with_suffix(".tmp")
-        with open(temp_file, "w", encoding="utf-8") as f:
-            json.dump(existing, f, indent=2, default=str)
+            # Write atomically
+            temp_file = self.diagnoses_file.with_suffix(".tmp")
+            with open(temp_file, "w", encoding="utf-8") as f:
+                json.dump(existing, f, indent=2, default=str)
 
-        # Atomic rename
-        temp_file.replace(self.diagnoses_file)
+            # Atomic rename
+            temp_file.replace(self.diagnoses_file)
 
     def load(self, diagnosis_id: str) -> Optional[DiagnosisResult]:
         """Load a specific diagnosis result by ID.

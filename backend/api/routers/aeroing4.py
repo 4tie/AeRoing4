@@ -40,6 +40,13 @@ class AeRoing4RunRequest(BaseModel):
     confirmation_timerange: str | None = None
     final_unseen_timerange: str | None = None
 
+    # Milestone 7.5: Portfolio Baseline execution configuration
+    exchange: str = "binance"
+    trading_mode: str = "spot"
+    max_open_trades: int = 4
+    dry_run_wallet: float = 1000.0
+    config_file: str = "config.json"
+
 
 class AeRoing4RunResponse(BaseModel):
     """Response model for AeRoing4 run."""
@@ -65,6 +72,13 @@ class AeRoing4RunResponse(BaseModel):
     confirmation_timerange: str | None
     final_unseen_timerange: str | None
     research_protocol_active: bool
+
+    # Milestone 7.5: Portfolio Baseline execution configuration
+    exchange: str
+    trading_mode: str
+    max_open_trades: int
+    dry_run_wallet: float
+    config_file: str
 
     # Diagnosis summary (latest diagnosis only)
     diagnosis: dict | None = None
@@ -114,6 +128,11 @@ def _run_to_response(run: AeRoing4Run, services) -> AeRoing4RunResponse:
         research_protocol_active=bool(
             run.confirmation_timerange and run.final_unseen_timerange
         ),
+        exchange=run.exchange,
+        trading_mode=run.trading_mode,
+        max_open_trades=run.max_open_trades,
+        dry_run_wallet=run.dry_run_wallet,
+        config_file=run.config_file,
         diagnosis=diagnosis_summary,
     )
 
@@ -150,6 +169,11 @@ async def start_run(
             discovery_timerange=body.discovery_timerange,
             confirmation_timerange=body.confirmation_timerange,
             final_unseen_timerange=body.final_unseen_timerange,
+            exchange=body.exchange,
+            trading_mode=body.trading_mode,
+            max_open_trades=body.max_open_trades,
+            dry_run_wallet=body.dry_run_wallet,
+            config_file=body.config_file,
         )
 
         # Start execution

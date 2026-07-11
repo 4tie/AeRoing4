@@ -111,6 +111,13 @@ class AeRoing4RunRequest(BaseModel):
     confirmation_timerange: str | None = None
     final_unseen_timerange: str | None = None
 
+    # Milestone 7.5: Portfolio Baseline execution configuration
+    exchange: str = "binance"
+    trading_mode: str = "spot"
+    max_open_trades: int = 4
+    dry_run_wallet: float = 1000.0
+    config_file: str = "config.json"
+
 
 class StepResult(BaseModel):
     """Base result for any step."""
@@ -232,6 +239,13 @@ class AeRoing4Run(BaseModel):
     pair_selection_mode: str | None = None  # "auto_best_n" or "manual"
     target_pair_count: int = 4
     manually_selected_pairs: list[str] | None = None
+
+    # Milestone 7.5: Portfolio Baseline execution configuration
+    exchange: str = "binance"
+    trading_mode: str = "spot"
+    max_open_trades: int = 4
+    dry_run_wallet: float = 1000.0
+    config_file: str = "config.json"
 
     def update_step(self, step_name: str, result: StepResult) -> None:
         """Update a step result and mark as current step."""

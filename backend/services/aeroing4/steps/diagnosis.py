@@ -5,11 +5,14 @@ Deterministic diagnosis of the Initial Champion using measured evidence.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 from typing import TYPE_CHECKING
 
 from ..diagnosis import DiagnosisEngine, DiagnosisInput, DiagnosisOutcome
 from ..diagnosis.persistence import DiagnosisStore
+from ..metrics import METRICS_VERSION
 from ..models import AeRoing4StepStatus, StepResult
 from ..portfolio_baseline.models import PortfolioBaselineResult
 from ..research.champions import ChampionStore
@@ -67,6 +70,14 @@ class DiagnosisStep:
                     error=f"Champion not found: {champion_id}",
                 )
 
+            # Compute baseline input hash for idempotency
+            baseline_input_hash = baseline.input_hash if baseline.input_hash else self._compute_baseline_input_hash(baseline)
+
+            # Compute canonical metrics hash for idempotency
+            canonical_metrics_hash = ""
+            if baseline.canonical_metrics:
+                canonical_metrics_hash = self._compute_metrics_hash(baseline.canonical_metrics)
+
             # Create diagnosis input
             diagnosis_input = DiagnosisInput(
                 run_id=aeroing4_run_id,
@@ -79,6 +90,8 @@ class DiagnosisStep:
                 else "",
                 baseline_result_id=baseline_result.get("baseline_id", ""),
                 baseline_result=baseline,
+                baseline_input_hash=baseline_input_hash,
+                canonical_metrics_hash=canonical_metrics_hash,
                 pair_discovery_result_id=baseline_result.get("pair_discovery_id"),
                 pair_discovery_valid_candidates_count=baseline_result.get(
                     "valid_candidates_count"
@@ -86,6 +99,7 @@ class DiagnosisStep:
                 timeframe=baseline.timeframe,
                 develop_timerange=baseline.develop_timerange,
                 champion_reference=champion_reference,
+                metrics_version=METRICS_VERSION,
             )
 
             # Run diagnosis
@@ -139,3 +153,48 @@ class DiagnosisStep:
                 status=AeRoing4StepStatus.FAILED,
                 error=f"Diagnosis step failed: {str(exc)}",
             )
+
+    def _compute_baseline_input_hash(self, baseline: PortfolioBaselineResult) -> str:
+        """Compute hash of baseline input for idempotency.
+
+        Args:
+            baseline: Portfolio baseline result
+
+        Returns:
+            SHA-256 hash of baseline input
+        """
+        input_dict = {
+            "selected_pairs": sorted(baseline.selected_pairs),
+            "strategy_name": baseline.strategy_name,
+            "strategy_hash": baseline.strategy_hash,
+            "parameter_hash": baseline.parameter_hash,
+            "timeframe": baseline.timeframe,
+            "develop_timerange": baseline.develop_timerange,
+            "max_open_trades": baseline.max_open_trades,
+            "exchange": baseline.exchange,
+            "trading_mode": baseline.trading_mode,
+        }
+        input_json = json.dumps(input_dict, sort_keys=True)
+        return hashlib.sha256(input_json.encode()).hexdigest()
+
+    def _compute_metrics_hash(self, canonical_metrics: dict) -> str:
+        """Compute hash of canonical metrics for idempotency.
+
+        Args:
+            canonical_metrics: Canonical metrics snapshot dict
+
+        Returns:
+            SHA-256 hash of metrics
+        """
+        # Extract key metrics for identity
+        metrics_dict = {
+            "total_trades": canonical_metrics.get("total_trades"),
+            "profit_factor": canonical_metrics.get("profit_factor"),
+            "expectancy": canonical_metrics.get("expectancy"),
+            "max_drawdown_pct": canonical_metrics.get("max_drawdown_pct"),
+            "win_rate": canonical_metrics.get("win_rate"),
+            "calmar": canonical_metrics.get("calmar"),
+            "sortino": canonical_metrics.get("sortino"),
+        }
+        metrics_json = json.dumps(metrics_dict, sort_keys=True)
+        return hashlib.sha256(metrics_json.encode()).hexdigest()

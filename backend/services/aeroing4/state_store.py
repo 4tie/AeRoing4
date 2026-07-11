@@ -37,6 +37,11 @@ class AeRoing4StateStore:
         pair_selection_mode: str | None = None,
         target_pair_count: int = 4,
         manually_selected_pairs: list[str] | None = None,
+        exchange: str = "binance",
+        trading_mode: str = "spot",
+        max_open_trades: int = 4,
+        dry_run_wallet: float = 1000.0,
+        config_file: str = "config.json",
     ) -> AeRoing4Run:
         """Create a new AeRoing4 run with generated run_id."""
         run_id = str(uuid.uuid4())
@@ -57,6 +62,11 @@ class AeRoing4StateStore:
             pair_selection_mode=pair_selection_mode,
             target_pair_count=target_pair_count,
             manually_selected_pairs=manually_selected_pairs,
+            exchange=exchange,
+            trading_mode=trading_mode,
+            max_open_trades=max_open_trades,
+            dry_run_wallet=dry_run_wallet,
+            config_file=config_file,
         )
         self.save_run(run)
         return run

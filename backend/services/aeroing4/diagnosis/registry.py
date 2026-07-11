@@ -89,3 +89,17 @@ class RuleRegistry:
             rule for rule in self._rules.values()
             if not rule.is_derived
         ]
+
+    def get_rule_by_diagnosis_code(self, diagnosis_code: str) -> BaseRule | None:
+        """Get a rule by its diagnosis code.
+
+        Args:
+            diagnosis_code: The diagnosis code value (e.g., "NEGATIVE_EXPECTANCY")
+
+        Returns:
+            The rule if found, None otherwise
+        """
+        for rule in self._rules.values():
+            if rule.diagnosis_code.value == diagnosis_code:
+                return rule
+        return None

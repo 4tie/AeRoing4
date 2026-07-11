@@ -55,6 +55,11 @@ class AeRoing4Orchestrator:
         discovery_timerange: str | None = None,
         confirmation_timerange: str | None = None,
         final_unseen_timerange: str | None = None,
+        exchange: str = "binance",
+        trading_mode: str = "spot",
+        max_open_trades: int = 4,
+        dry_run_wallet: float = 1000.0,
+        config_file: str = "config.json",
     ) -> AeRoing4Run:
         """Create a new AeRoing4 run.
 
@@ -101,6 +106,11 @@ class AeRoing4Orchestrator:
             discovery_timerange=discovery_timerange,
             confirmation_timerange=confirmation_timerange,
             final_unseen_timerange=final_unseen_timerange,
+            exchange=exchange,
+            trading_mode=trading_mode,
+            max_open_trades=max_open_trades,
+            dry_run_wallet=dry_run_wallet,
+            config_file=config_file,
         )
 
         return run
@@ -400,11 +410,11 @@ class AeRoing4Orchestrator:
                     selection_result=selection_result.data,
                     develop_timerange=discovery_timerange,
                     timeframe=run.timeframe,
-                    config_file=config_file,
-                    max_open_trades=4,
-                    dry_run_wallet=1000.0,
-                    exchange="binance",
-                    trading_mode="spot",
+                    config_file=run.config_file,
+                    max_open_trades=run.max_open_trades,
+                    dry_run_wallet=run.dry_run_wallet,
+                    exchange=run.exchange,
+                    trading_mode=run.trading_mode,
                     aeroing4_run_id=run_id,
                     guard=self.guard if protocol_active else None,
                 )

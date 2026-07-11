@@ -43,18 +43,23 @@ class NegativeExpectancyRule(BaseRule):
 
         resolver = context.resolver
         expectancy = resolver.get_expectancy()
+        profit_factor = resolver.get_profit_factor()
 
         if expectancy is None or expectancy >= EXPECTANCY_NEGATIVE_THRESHOLD:
             return None
 
-        # Confidence based on magnitude of negativity
-        if expectancy < -0.01:
+        # Use scale-independent evidence for severity determination
+        # Negative expectancy with poor profit factor is more severe
+        if profit_factor is not None and profit_factor < 1.0:
+            # Both expectancy negative AND profit factor below 1.0 - very serious
             confidence = 0.95
             severity = Severity.CRITICAL
-        elif expectancy < -0.005:
+        elif profit_factor is not None and profit_factor < PF_WEAK_MAX:
+            # Negative expectancy with weak profit factor (1.0-1.10)
             confidence = 0.90
             severity = Severity.HIGH
         else:
+            # Negative expectancy alone or with better profit factor - conservative severity
             confidence = 0.85
             severity = Severity.MEDIUM
 

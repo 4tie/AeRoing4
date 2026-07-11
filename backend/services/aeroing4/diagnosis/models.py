@@ -117,6 +117,10 @@ class DiagnosisInput(BaseModel):
     # Portfolio baseline evidence
     baseline_result_id: str
     baseline_result: PortfolioBaselineResult
+    baseline_input_hash: str  # Identity of baseline input for idempotency
+
+    # Canonical metrics identity
+    canonical_metrics_hash: str  # Identity of canonical metrics snapshot
 
     # Pair discovery evidence (optional, for context)
     pair_discovery_result_id: str | None = None
@@ -128,6 +132,9 @@ class DiagnosisInput(BaseModel):
 
     # Champion reference (for integrity verification)
     champion_reference: ChampionReference | None = None
+
+    # Version semantics for idempotency
+    metrics_version: str = "1.0.0"
 
 
 class DiagnosisFinding(BaseModel):
