@@ -108,6 +108,12 @@ class AeRoing4RunResponse(BaseModel):
     # PROMPT 10: Confirmation summary (source of truth is ConfirmationResult).
     confirmation_status: str | None = None
     latest_confirmation_result_id: str | None = None
+    # PROMPT 11: Final Unseen summary (source of truth is FinalUnseenResult).
+    final_unseen_status: str | None = None
+    latest_final_unseen_result_id: str | None = None
+    delivery_eligible: bool | None = None
+    # PROMPT 12: Delivery summary (source of truth is DeliveryPackage manifest).
+    delivery_status: str | None = None
 
 
 class StartRunResponse(BaseModel):
@@ -184,6 +190,10 @@ def _run_to_response(run: AeRoing4Run, services) -> AeRoing4RunResponse:
             resp.last_sensitivity_status = rs.last_sensitivity_status
             resp.confirmation_status = rs.confirmation_status
             resp.latest_confirmation_result_id = rs.latest_confirmation_result_id
+            resp.final_unseen_status = rs.final_unseen_status
+            resp.latest_final_unseen_result_id = rs.latest_final_unseen_result_id
+            resp.delivery_eligible = rs.delivery_eligible
+            resp.delivery_status = rs.delivery_status
     except Exception:
         # Research loop not initialized for this run — leave defaults.
         pass

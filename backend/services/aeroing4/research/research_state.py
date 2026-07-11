@@ -108,6 +108,13 @@ class ResearchState(BaseModel):
     confirmation_status: str | None = None
     latest_confirmation_result_id: str | None = None
 
+    # § PROMPT 11: Final Unseen summary only (source of truth is FinalUnseenResult).
+    final_unseen_status: str | None = None
+    latest_final_unseen_result_id: str | None = None
+    delivery_eligible: bool | None = None
+    # § PROMPT 12: Delivery summary only (source of truth is DeliveryPackage manifest).
+    delivery_status: str | None = None
+
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 

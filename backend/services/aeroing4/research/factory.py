@@ -147,10 +147,52 @@ def build_confirmation_service(
         pairs=pairs or ["BTC/USDT", "ETH/USDT", "BNB/USDT"],
         timeframe=timeframe,
     )
-    try:
-        from .budgets import BudgetService
 
-        # Default budget; the orchestrator may pass a per-run budget later.
-        return BudgetService(max_total_experiments=5)
-    except Exception:
-        return None
+
+def build_final_unseen_service(
+    services: "AppServices",
+    runs_root: Path,
+    *,
+    develop_timerange: str = "20240101-20240630",
+    confirmation_timerange: str = "20240701-20240731",
+    final_unseen_timerange: str = "20240801-20240831",
+    pairs: list[str] | None = None,
+    timeframe: str = "5m",
+) -> "FinalUnseenService":
+    """Assemble a FinalUnseenService reusing the EXISTING BacktestRunner +
+    DataZoneGuard (FINAL_UNSEEN zone) + ChampionStore (read-only)."""
+    zone_guard = DataZoneGuard(ResearchStateStore(runs_root), runs_root)
+    from .final_unseen import FinalUnseenService
+    return FinalUnseenService(
+        runs_root=runs_root,
+        backtest_runner=services.backtest_runner,
+        champion_store=ChampionStore(runs_root),
+        zone_guard=zone_guard,
+        develop_timerange=develop_timerange,
+        confirmation_timerange=confirmation_timerange,
+        final_unseen_timerange=final_unseen_timerange,
+        pairs=pairs or ["BTC/USDT", "ETH/USDT", "BNB/USDT"],
+        timeframe=timeframe,
+    )
+
+
+def build_delivery_service(
+    services: "AppServices",
+    runs_root: Path,
+    *,
+    export_profile: str = "run_local",
+    force_overwrite: bool = False,
+) -> "DeliveryService":
+    """Assemble a DeliveryService (packaging only, safe-by-default run-local)."""
+    from .delivery import DeliveryService
+    return DeliveryService(
+        runs_root=runs_root,
+        champion_store=ChampionStore(runs_root),
+        export_profile=export_profile,
+        force_overwrite=force_overwrite,
+    )
+
+
+def build_research_loop_coordinator_legacy_note():
+    # Reserved hook for future BudgetService wiring; intentionally inert.
+    return None

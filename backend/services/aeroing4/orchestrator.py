@@ -586,6 +586,58 @@ class AeRoing4Orchestrator:
                                             data={"result": conf_res.model_dump()},
                                         ),
                                     )
+                                    # PROMPT 11: Final Unseen entered ONLY when Confirmation PASSed.
+                                    # Terminal evidence — no mutation, no repair. gated by protocol flag.
+                                    if getattr(conf_res.decision, "value", conf_res.decision) == "pass":
+                                        from .research.factory import build_final_unseen_service
+                                        from .research.confirmation import ConfirmationResult
+                                        protocol_passed = bool(
+                                            getattr(run.research_protocol, "confirmation_passed", False)
+                                        )
+                                        fu_svc = build_final_unseen_service(
+                                            self.services, self.state_store.runs_root,
+                                            final_unseen_timerange=run.final_unseen_timerange or "20240801-20240831",
+                                        )
+                                        fu_res = fu_svc.run(
+                                            run_id=run_id, strategy_name=run.strategy_name,
+                                            version_id="v1", champion=cur,
+                                            confirmation_result=conf_res,
+                                            protocol_confirmation_passed=protocol_passed,
+                                            eligible_for_confirmation=rs.eligible_for_confirmation,
+                                            state_store=research_state_store,
+                                        )
+                                        run.update_step(
+                                            "final_unseen",
+                                            StepResult(
+                                                step_name="final_unseen",
+                                                status=AeRoing4StepStatus.PASSED,
+                                                data={"result": fu_res.model_dump()},
+                                            ),
+                                        )
+                                        # PROMPT 12: Delivery (packaging) entered ONLY when Final Unseen
+                                        # produced delivery_eligible=true. Safe run-local export; no truth change.
+                                        if getattr(fu_res, "delivery_eligible", False):
+                                            from .research.factory import build_delivery_service
+                                            delivery_svc = build_delivery_service(
+                                                self.services, self.state_store.runs_root,
+                                            )
+                                            del_res = delivery_svc.run(
+                                                run_id=run_id, champion=cur,
+                                                final_unseen_result=fu_res,
+                                                confirmation_result=conf_res,
+                                                delivery_eligible_state=bool(
+                                                    getattr(rs, "delivery_eligible", False)
+                                                ),
+                                                research_state=rs,
+                                            )
+                                            run.update_step(
+                                                "delivery",
+                                                StepResult(
+                                                    step_name="delivery",
+                                                    status=AeRoing4StepStatus.PASSED,
+                                                    data={"result": del_res.model_dump()},
+                                                ),
+                                            )
                         except Exception as hyp_exc:
                             logger.exception(f"PROMPT 9 stages failed for run {run_id}: {hyp_exc}")
                             run.update_step(
