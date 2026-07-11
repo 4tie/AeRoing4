@@ -17,7 +17,10 @@ import shutil
 import subprocess
 import sys
 import uuid
+import threading
+from contextlib import contextmanager
 from datetime import datetime, UTC
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import pytest
@@ -74,6 +77,9 @@ CONFIG_PATH = Path(r"L:\M4tie\Documents\AeRoing4\user_data\config.json")
 USER_DATA_DIR = Path(r"L:\M4tie\Documents\AeRoing4\user_data")
 DATA_DIR = USER_DATA_DIR / "data" / "binance"
 REQUIRED_PAIRS = ["LTC/USDT", "XRP/USDT", "BNB/USDT", "LINK/USDT"]
+SMOKE_TIMERANGE = "20240101-20240131"
+SMOKE_TIMEFRAME = "5m"
+ROBUST_DEVELOP_TIMERANGE = "20240101-20240630"
 
 
 _FREQTRADE_BIN_SOURCE = next(
@@ -131,6 +137,143 @@ def _require_data() -> None:
             missing.append(pair)
     if missing:
         pytest.skip("SKIPPED / CANDLE_DATA_MISSING")
+
+
+def _exchange_info_payload(pairs: list[str]) -> dict:
+    symbols = []
+    for pair in pairs:
+        base, quote = pair.split("/")
+        symbols.append({
+            "symbol": f"{base}{quote}",
+            "status": "TRADING",
+            "baseAsset": base,
+            "baseAssetPrecision": 8,
+            "quoteAsset": quote,
+            "quotePrecision": 8,
+            "baseCommissionPrecision": 8,
+            "quoteCommissionPrecision": 8,
+            "orderTypes": ["LIMIT", "LIMIT_MAKER", "MARKET"],
+            "icebergAllowed": True,
+            "ocoAllowed": True,
+            "quoteOrderQtyMarketAllowed": True,
+            "isSpotTradingAllowed": True,
+            "isMarginTradingAllowed": False,
+            "permissions": ["SPOT"],
+            "filters": [
+                {
+                    "filterType": "PRICE_FILTER",
+                    "minPrice": "0.00000001",
+                    "maxPrice": "1000000.00000000",
+                    "tickSize": "0.00000001",
+                },
+                {
+                    "filterType": "LOT_SIZE",
+                    "minQty": "0.00000100",
+                    "maxQty": "1000000.00000000",
+                    "stepSize": "0.00000100",
+                },
+                {
+                    "filterType": "MIN_NOTIONAL",
+                    "minNotional": "0.00010000",
+                    "applyToMarket": True,
+                    "avgPriceMins": 5,
+                },
+                {
+                    "filterType": "MARKET_LOT_SIZE",
+                    "minQty": "0.00000000",
+                    "maxQty": "1000000.00000000",
+                    "stepSize": "0.00000000",
+                },
+            ],
+        })
+    return {
+        "timezone": "UTC",
+        "serverTime": 1704067200000,
+        "rateLimits": [],
+        "exchangeFilters": [],
+        "symbols": symbols,
+    }
+
+
+@contextmanager
+def _local_binance_exchange_info_server(pairs: list[str]):
+    payload = json.dumps(_exchange_info_payload(pairs)).encode("utf-8")
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path.split("?", 1)[0] != "/api/v3/exchangeInfo":
+                self.send_response(404)
+                self.end_headers()
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def log_message(self, format, *args):
+            return
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{server.server_address[1]}"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def _write_smoke_config(tmp_path: Path, *, pairs: list[str], market_base_url: str) -> Path:
+    cfg = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    cfg["timeframe"] = SMOKE_TIMEFRAME
+    cfg["dry_run"] = True
+    cfg["trading_mode"] = "spot"
+    cfg["margin_mode"] = ""
+    cfg["dataformat_ohlcv"] = "feather"
+    cfg["dataformat_trades"] = "feather"
+    cfg["pairlists"] = [{"method": "StaticPairList"}]
+    cfg["exchange"] = {
+        "name": "binance",
+        "key": "",
+        "secret": "",
+        "skip_pair_validation": True,
+        "skip_open_order_update": True,
+        "pair_whitelist": pairs,
+        "ccxt_config": {
+            "options": {
+                "defaultType": "spot",
+                "fetchMarkets": {"types": ["spot"]},
+                "fetchCurrencies": False,
+            },
+            "urls": {
+                "api": {
+                    "public": f"{market_base_url}/api/v3",
+                    "private": f"{market_base_url}/api/v3",
+                    "sapi": f"{market_base_url}/sapi/v1",
+                    "sapiV2": f"{market_base_url}/sapi/v2",
+                    "sapiV3": f"{market_base_url}/sapi/v3",
+                    "sapiV4": f"{market_base_url}/sapi/v4",
+                    "fapiPublic": f"{market_base_url}/fapi/v1",
+                    "fapiPrivate": f"{market_base_url}/fapi/v1",
+                    "dapiPublic": f"{market_base_url}/dapi/v1",
+                    "dapiPrivate": f"{market_base_url}/dapi/v1",
+                    "eapiPublic": f"{market_base_url}/eapi/v1",
+                    "eapiPrivate": f"{market_base_url}/eapi/v1",
+                    "papi": f"{market_base_url}/papi/v1",
+                }
+            },
+        },
+        "ccxt_async_config": {
+            "aiohttp_trust_env": False,
+            "enableRateLimit": False,
+            "use_asyncio_dns": False,
+        },
+    }
+    path = tmp_path / "freqtrade_smoke_config.json"
+    path.write_text(json.dumps(cfg, indent=2), encoding="utf-8")
+    return path
 
 
 def _seed_champion(tmp_path: Path):
@@ -215,6 +358,10 @@ class _RealRunner:
     def __init__(self, tmp_path: Path):
         self.tmp_path = tmp_path
         self._run_dirs = {}  # execution_id -> directory path
+        self._result_zips = {}
+        self.last_command = None
+        self.last_config_path = None
+        self.last_result_zip = None
         # Create run_repository interface for metrics resolution
         class _RunRepository:
             def __init__(self, runner_dict):
@@ -225,6 +372,8 @@ class _RealRunner:
 
     def run_candidate_backtest(self, strategy, version_id, request, candidate_dir=None, params_override=None):
         bin_path = _require_freqtrade_bin()
+        bt_dir = self.tmp_path / f"backtest_results_{version_id}"
+        bt_dir.mkdir(parents=True, exist_ok=True)
         
         # Log candidate artifact paths
         if candidate_dir:
@@ -244,44 +393,59 @@ class _RealRunner:
         else:
             print(f"REAL RUNNER: No candidate directory provided, using baseline strategy")
         
-        cmd = [
-            bin_path,
-            "backtesting",
-            "--config",
-            str(CONFIG_PATH),
-            "--strategy",
-            strategy,
-            "--timerange",
-            request.timerange,
-            "--pairs",
-        ] + request.pairs + [
-            "--userdir",
-            str(USER_DATA_DIR),
-            "--timeframe",
-            request.timeframe,
-        ]
-        
-        # Add candidate strategy path if provided
-        if candidate_dir:
-            cmd.extend(["--strategy-path", str(candidate_dir)])
-            print(f"REAL RUNNER: Added --strategy-path {candidate_dir} to Freqtrade command")
-        
-        print(f"REAL RUNNER: Freqtrade command: {' '.join(cmd)}")
-        
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            env=_sanitized_env(),
-        )
+        with _local_binance_exchange_info_server(request.pairs) as market_base_url:
+            config_path = _write_smoke_config(
+                self.tmp_path, pairs=request.pairs, market_base_url=market_base_url
+            )
+            cmd = [
+                bin_path,
+                "backtesting",
+                "--config",
+                str(config_path),
+                "--strategy",
+                strategy,
+                "--timerange",
+                request.timerange,
+                "--pairs",
+            ] + request.pairs + [
+                "--userdir",
+                str(USER_DATA_DIR),
+                "--datadir",
+                str(DATA_DIR),
+                "--timeframe",
+                request.timeframe,
+                "--export",
+                "trades",
+                "--backtest-directory",
+                str(bt_dir),
+                "--cache",
+                "none",
+            ]
+
+            # Add candidate strategy path if provided
+            if candidate_dir:
+                cmd.extend(["--strategy-path", str(candidate_dir)])
+                print(f"REAL RUNNER: Added --strategy-path {candidate_dir} to Freqtrade command")
+
+            print(f"REAL RUNNER: Freqtrade command: {' '.join(cmd)}")
+            self.last_command = list(cmd)
+            self.last_config_path = config_path
+
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                env=_sanitized_env(),
+            )
         if proc.returncode != 0:
             outcome = _classify_subprocess_error(proc.stderr)
             raise RuntimeError(f"{outcome}: {proc.stderr[:5000]}")
         # Freqtrade creates zip files, not directories with parsed_summary.json
-        result_files = sorted((USER_DATA_DIR / "backtest_results").glob("backtest-result-*.zip"))
+        result_files = sorted(bt_dir.glob("backtest-result-*.zip"))
         if not result_files:
             raise RuntimeError("no backtest result zip file found")
         latest_zip = result_files[-1]
+        self.last_result_zip = latest_zip
         
         # Verify output zip contains candidate artifacts
         import zipfile
@@ -334,6 +498,7 @@ class _RealRunner:
             canonical_snapshot.model_dump_json(indent=2), encoding="utf-8"
         )
         self._run_dirs[execution_id] = run_dir
+        self._result_zips[execution_id] = latest_zip
         return execution_id
 # ── Real smoke tests ──────────────────────────────────────────────────────────
 
@@ -413,26 +578,31 @@ def test_real_backtest_smoke_produces_parsed_summary(tmp_path):
     bt_dir = tmp_path / "backtest_results"
     bt_dir.mkdir(parents=True, exist_ok=True)
     parser_touched = False
-    cmd = [
-        bin_path,
-        "backtesting",
-        "--config", str(CONFIG_PATH),
-        "--strategy", "AIStrategy",
-        "--timerange", "20240101-20240630",
-        "--pairs", *REQUIRED_PAIRS,
-        "--userdir", str(USER_DATA_DIR),
-        "--timeframe", "5m",
-        "--export", "trades",
-        "--export-filename", str(bt_dir / "raw_result.json"),
-        "--backtest-directory", str(bt_dir),
-    ]
-    proc = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        cwd=str(tmp_path),
-        env=_sanitized_env(),
-    )
+    with _local_binance_exchange_info_server(REQUIRED_PAIRS) as market_base_url:
+        config_path = _write_smoke_config(
+            tmp_path, pairs=REQUIRED_PAIRS, market_base_url=market_base_url
+        )
+        cmd = [
+            bin_path,
+            "backtesting",
+            "--config", str(config_path),
+            "--strategy", "AIStrategy",
+            "--timerange", "20240101-20240630",
+            "--pairs", *REQUIRED_PAIRS,
+            "--userdir", str(USER_DATA_DIR),
+            "--datadir", str(DATA_DIR),
+            "--timeframe", "5m",
+            "--export", "trades",
+            "--backtest-directory", str(bt_dir),
+            "--cache", "none",
+        ]
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            cwd=str(tmp_path),
+            env=_sanitized_env(),
+        )
     if proc.returncode != 0:
         outcome = _classification(proc.stderr)
         if outcome.startswith("BLOCKED"):
@@ -1150,9 +1320,8 @@ def test_candidate_artifact_execution(tmp_path):
     assert execution_id is not None, "Execution ID must be returned"
     
     # Verify output zip contains candidate artifacts
-    result_files = sorted((USER_DATA_DIR / "backtest_results").glob("backtest-result-*.zip"))
-    assert len(result_files) > 0, "Backtest result zip must exist"
-    latest_zip = result_files[-1]
+    latest_zip = runner._result_zips[execution_id]
+    assert latest_zip.exists(), "Backtest result zip must exist"
     
     import zipfile
     with zipfile.ZipFile(latest_zip, 'r') as zip_ref:
@@ -1162,6 +1331,489 @@ def test_candidate_artifact_execution(tmp_path):
         params_in_zip = any("AIStrategy.json" in f for f in zip_contents)
         assert strategy_in_zip, "Candidate strategy must be in output zip"
         assert params_in_zip, "Candidate params must be in output zip"
+
+
+def _shape_variant_sidecar(*, target: str, after_value, mode: str) -> dict:
+    data = json.loads((USER_DATA_DIR / "strategies" / "AIStrategy.json").read_text(encoding="utf-8"))
+    original_sell = data["params"]["sell"]["sell_ma_count"]
+    data["parameters"] = {
+        "sell_ma_count": {
+            "type": "int",
+            "editable": True,
+            "current": original_sell,
+            "min": 1,
+            "max": 20,
+            "risk_class": "low",
+        }
+    }
+    if mode in {"parameters", "both"}:
+        data["parameters"][target]["current"] = after_value
+    if mode in {"params", "both"}:
+        data["params"]["sell"][target] = after_value
+    return data
+
+
+def _write_shape_candidate(tmp_path: Path, *, name: str, sidecar: dict) -> Path:
+    candidate_dir = tmp_path / name
+    candidate_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(
+        USER_DATA_DIR / "strategies" / "AIStrategy.py",
+        candidate_dir / "AIStrategy.py",
+    )
+    (candidate_dir / "AIStrategy.json").write_text(
+        json.dumps(sidecar, indent=2), encoding="utf-8"
+    )
+    return candidate_dir
+
+
+def _sidecar_shape_summary(sidecar: dict) -> dict:
+    return {
+        "parameters.sell_ma_count.current": sidecar.get("parameters", {})
+        .get("sell_ma_count", {})
+        .get("current"),
+        "params.sell.sell_ma_count": sidecar.get("params", {})
+        .get("sell", {})
+        .get("sell_ma_count"),
+    }
+
+
+def test_runtime_params_shape_ab_c_smoke(tmp_path):
+    """A7.1: prove which sidecar shape Freqtrade consumes at runtime."""
+    _require_data()
+    from types import SimpleNamespace
+
+    runner = _RealRunner(tmp_path)
+    request = SimpleNamespace(
+        timerange=SMOKE_TIMERANGE,
+        pairs=["LTC/USDT"],
+        timeframe=SMOKE_TIMEFRAME,
+    )
+    variants = {
+        "candidate_a_parameters_only": _shape_variant_sidecar(
+            target="sell_ma_count", after_value=2, mode="parameters"
+        ),
+        "candidate_b_params_only": _shape_variant_sidecar(
+            target="sell_ma_count", after_value=2, mode="params"
+        ),
+        "candidate_c_both_shapes": _shape_variant_sidecar(
+            target="sell_ma_count", after_value=2, mode="both"
+        ),
+    }
+
+    metrics_by_variant = {}
+    zip_artifacts = {}
+    commands = {}
+    for version_id, sidecar in variants.items():
+        candidate_dir = _write_shape_candidate(
+            tmp_path, name=version_id, sidecar=sidecar
+        )
+        print(
+            f"A7.1 SHAPE DIFF {version_id}: "
+            f"{json.dumps(_sidecar_shape_summary(sidecar), sort_keys=True)}"
+        )
+        execution_id = runner.run_candidate_backtest(
+            "AIStrategy", version_id, request, candidate_dir=candidate_dir
+        )
+        commands[version_id] = list(runner.last_command)
+        run_dir = runner._run_dirs[execution_id]
+        metrics = json.loads((run_dir / "parsed_summary.json").read_text(encoding="utf-8"))
+        metrics_by_variant[version_id] = {
+            "total_trades": metrics["total_trades"]["value"],
+            "profit_factor": metrics["profit_factor"]["value"],
+            "expectancy": metrics["expectancy"]["value"],
+            "max_drawdown_pct": metrics["max_drawdown_pct"]["value"],
+        }
+        zip_artifacts[version_id] = runner._result_zips[execution_id]
+        print(
+            f"A7.1 METRICS {version_id}: "
+            f"{json.dumps(metrics_by_variant[version_id], sort_keys=True)}"
+        )
+        print(f"A7.1 COMMAND {version_id}: {' '.join(commands[version_id])}")
+
+    import zipfile
+    for version_id, zip_path in zip_artifacts.items():
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
+            names = zip_ref.namelist()
+        has_py = any(name.endswith("_AIStrategy.py") for name in names)
+        has_json = any(name.endswith("_AIStrategy.json") for name in names)
+        print(f"A7.1 ZIP ARTIFACTS {version_id}: py={has_py}, json={has_json}")
+        assert has_py and has_json
+        assert "--strategy-path" in commands[version_id]
+
+    assert metrics_by_variant["candidate_b_params_only"] == metrics_by_variant[
+        "candidate_c_both_shapes"
+    ]
+    assert metrics_by_variant["candidate_a_parameters_only"] != metrics_by_variant[
+        "candidate_b_params_only"
+    ]
+
+
+def _runtime_param_value(sidecar: dict, target: str):
+    runtime = sidecar.get("params", {})
+    if target.startswith("buy_"):
+        return runtime.get("buy", {}).get(target)
+    if target.startswith("sell_"):
+        return runtime.get("sell", {}).get(target)
+    if target == "stoploss":
+        return runtime.get("stoploss", {}).get("stoploss")
+    raise AssertionError(f"Unsupported sensitivity target: {target}")
+
+
+def _grid_version_id(target: str, value) -> str:
+    safe_value = str(value).replace("-", "neg").replace(".", "p")
+    return f"grid_{target}_{safe_value}"
+
+
+def test_runtime_params_sensitivity_grid_develop_only(tmp_path):
+    """A8: one-parameter-at-a-time DEVELOP-only runtime sensitivity grid."""
+    _require_data()
+
+    from types import SimpleNamespace
+    from backend.services.aeroing4.research.candidate_artifacts import CandidateArtifactService
+    from backend.services.aeroing4.research.experiments import ExactChange
+
+    baseline_sidecar = json.loads((USER_DATA_DIR / "strategies" / "AIStrategy.json").read_text(encoding="utf-8"))
+    baseline = {
+        "buy_ma_count": baseline_sidecar["params"]["buy"]["buy_ma_count"],
+        "buy_ma_gap": baseline_sidecar["params"]["buy"]["buy_ma_gap"],
+        "sell_ma_count": baseline_sidecar["params"]["sell"]["sell_ma_count"],
+        "sell_ma_gap": baseline_sidecar["params"]["sell"]["sell_ma_gap"],
+        "stoploss": baseline_sidecar["params"]["stoploss"]["stoploss"],
+    }
+    grid = {
+        "buy_ma_count": [14, baseline["buy_ma_count"], 20],
+        "buy_ma_gap": [70, baseline["buy_ma_gap"], 100],
+        "sell_ma_count": [12, baseline["sell_ma_count"], 20],
+        "sell_ma_gap": [35, baseline["sell_ma_gap"], 75],
+        "stoploss": [-0.25, baseline["stoploss"], -0.45],
+    }
+
+    runs_root = tmp_path / "runs"
+    strategies_dir = runs_root / "strategies"
+    strategies_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(
+        USER_DATA_DIR / "strategies" / "AIStrategy.py",
+        strategies_dir / "AIStrategy.py",
+    )
+    shutil.copyfile(
+        USER_DATA_DIR / "strategies" / "AIStrategy.json",
+        strategies_dir / "AIStrategy.json",
+    )
+
+    champion = _seed_champion(tmp_path)
+    service = CandidateArtifactService(runs_root)
+    runner = _RealRunner(tmp_path)
+    request = SimpleNamespace(
+        timerange=SMOKE_TIMERANGE,
+        pairs=["LTC/USDT"],
+        timeframe=SMOKE_TIMEFRAME,
+    )
+
+    results = []
+    for target, values in grid.items():
+        for value in values:
+            change = ExactChange(
+                change_type="parameter",
+                target=target,
+                before_value=baseline[target],
+                after_value=value,
+            )
+            artifact = service.create(
+                run_id="runtime-sensitivity-grid",
+                strategy_name="AIStrategy",
+                champion=champion,
+                exact_change=change,
+            )
+            candidate_dir = Path(artifact.candidate_dir)
+            candidate_py = candidate_dir / "AIStrategy.py"
+            candidate_json = candidate_dir / "AIStrategy.json"
+            sidecar = json.loads(candidate_json.read_text(encoding="utf-8"))
+            internal_value = sidecar.get("parameters", {}).get(target, {}).get("current")
+            runtime_value = _runtime_param_value(sidecar, target)
+            internal_ok = internal_value == value
+            runtime_ok = runtime_value == value
+            assert internal_ok
+            assert runtime_ok
+
+            version_id = _grid_version_id(target, value)
+            execution_id = runner.run_candidate_backtest(
+                "AIStrategy",
+                version_id,
+                request,
+                candidate_dir=candidate_dir,
+            )
+            command = list(runner.last_command)
+            result_zip = runner._result_zips[execution_id]
+            import zipfile
+            with zipfile.ZipFile(result_zip, "r") as zip_ref:
+                names = zip_ref.namelist()
+            has_py = any(name.endswith("_AIStrategy.py") for name in names)
+            has_json = any(name.endswith("_AIStrategy.json") for name in names)
+            assert has_py and has_json
+            assert "--strategy-path" in command
+
+            run_dir = runner._run_dirs[execution_id]
+            metrics = json.loads((run_dir / "parsed_summary.json").read_text(encoding="utf-8"))
+            row = {
+                "target": target,
+                "before_value": baseline[target],
+                "test_value": value,
+                "candidate_strategy_dir": str(candidate_dir),
+                "candidate_py": str(candidate_py),
+                "candidate_json": str(candidate_json),
+                "command": command,
+                "command_has_strategy_path": "--strategy-path" in command,
+                "internal_parameters_updated": internal_ok,
+                "runtime_params_updated": runtime_ok,
+                "zip_has_candidate_py": has_py,
+                "zip_has_candidate_json": has_json,
+                "total_trades": metrics["total_trades"]["value"],
+                "profit_factor": metrics["profit_factor"]["value"],
+                "expectancy": metrics["expectancy"]["value"],
+                "max_drawdown_pct": metrics["max_drawdown_pct"]["value"],
+            }
+            results.append(row)
+            print(f"A8 GRID RESULT: {json.dumps(row, sort_keys=True)}")
+
+    baseline_pf = next(
+        row["profit_factor"]
+        for row in results
+        if row["target"] == "buy_ma_count" and row["test_value"] == baseline["buy_ma_count"]
+    )
+    ranked = []
+    for row in results:
+        improvement = row["profit_factor"] - baseline_pf
+        level = "low"
+        if improvement > 1.0:
+            level = "high"
+        elif improvement > 0.1:
+            level = "medium"
+        elif improvement < -0.1:
+            level = "harmful"
+        ranked.append({
+            "target": row["target"],
+            "test_value": row["test_value"],
+            "profit_factor": row["profit_factor"],
+            "expectancy": row["expectancy"],
+            "total_trades": row["total_trades"],
+            "max_drawdown_pct": row["max_drawdown_pct"],
+            "profit_factor_delta_vs_baseline": improvement,
+            "sensitivity_level": level,
+        })
+    ranked.sort(key=lambda item: item["profit_factor_delta_vs_baseline"], reverse=True)
+    print(f"A8 GRID RANKED: {json.dumps(ranked, sort_keys=True)}")
+    assert len(results) == 15
+
+
+def test_runtime_params_robust_gap_sensitivity_recheck_develop_only(tmp_path):
+    """A8.1: DEVELOP-only sensitivity recheck on the larger deterministic sample."""
+    _require_data()
+
+    from types import SimpleNamespace
+    from backend.services.aeroing4.research.candidate_artifacts import CandidateArtifactService
+    from backend.services.aeroing4.research.experiments import ExactChange
+
+    baseline_sidecar = json.loads((USER_DATA_DIR / "strategies" / "AIStrategy.json").read_text(encoding="utf-8"))
+    baseline = {
+        "buy_ma_gap": baseline_sidecar["params"]["buy"]["buy_ma_gap"],
+        "sell_ma_gap": baseline_sidecar["params"]["sell"]["sell_ma_gap"],
+    }
+    grid = {
+        "buy_ma_gap": [70, 90, baseline["buy_ma_gap"], 100, 110],
+        "sell_ma_gap": [35, 50, baseline["sell_ma_gap"], 65, 75],
+    }
+
+    runs_root = tmp_path / "runs"
+    strategies_dir = runs_root / "strategies"
+    strategies_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(
+        USER_DATA_DIR / "strategies" / "AIStrategy.py",
+        strategies_dir / "AIStrategy.py",
+    )
+    shutil.copyfile(
+        USER_DATA_DIR / "strategies" / "AIStrategy.json",
+        strategies_dir / "AIStrategy.json",
+    )
+
+    champion = _seed_champion(tmp_path)
+    service = CandidateArtifactService(runs_root)
+    runner = _RealRunner(tmp_path)
+    request = SimpleNamespace(
+        timerange=ROBUST_DEVELOP_TIMERANGE,
+        pairs=REQUIRED_PAIRS,
+        timeframe=SMOKE_TIMEFRAME,
+    )
+
+    results = []
+    for target, values in grid.items():
+        for value in values:
+            change = ExactChange(
+                change_type="parameter",
+                target=target,
+                before_value=baseline[target],
+                after_value=value,
+            )
+            artifact = service.create(
+                run_id="runtime-robust-gap-sensitivity",
+                strategy_name="AIStrategy",
+                champion=champion,
+                exact_change=change,
+            )
+            candidate_dir = Path(artifact.candidate_dir)
+            candidate_py = candidate_dir / "AIStrategy.py"
+            candidate_json = candidate_dir / "AIStrategy.json"
+            sidecar = json.loads(candidate_json.read_text(encoding="utf-8"))
+            internal_value = sidecar.get("parameters", {}).get(target, {}).get("current")
+            runtime_value = _runtime_param_value(sidecar, target)
+            internal_ok = internal_value == value
+            runtime_ok = runtime_value == value
+            assert internal_ok
+            assert runtime_ok
+
+            version_id = f"robust_{_grid_version_id(target, value)}"
+            execution_id = runner.run_candidate_backtest(
+                "AIStrategy",
+                version_id,
+                request,
+                candidate_dir=candidate_dir,
+            )
+            command = list(runner.last_command)
+            result_zip = runner._result_zips[execution_id]
+            import zipfile
+            with zipfile.ZipFile(result_zip, "r") as zip_ref:
+                names = zip_ref.namelist()
+            has_py = any(name.endswith("_AIStrategy.py") for name in names)
+            has_json = any(name.endswith("_AIStrategy.json") for name in names)
+            assert has_py and has_json
+            assert "--strategy-path" in command
+
+            run_dir = runner._run_dirs[execution_id]
+            metrics = json.loads((run_dir / "parsed_summary.json").read_text(encoding="utf-8"))
+            row = {
+                "target": target,
+                "before_value": baseline[target],
+                "test_value": value,
+                "candidate_strategy_dir": str(candidate_dir),
+                "candidate_py": str(candidate_py),
+                "candidate_json": str(candidate_json),
+                "command": command,
+                "command_has_strategy_path": "--strategy-path" in command,
+                "internal_parameters_updated": internal_ok,
+                "runtime_params_updated": runtime_ok,
+                "zip_has_candidate_py": has_py,
+                "zip_has_candidate_json": has_json,
+                "total_trades": metrics["total_trades"]["value"],
+                "profit_factor": metrics["profit_factor"]["value"],
+                "expectancy": metrics["expectancy"]["value"],
+                "max_drawdown_pct": metrics["max_drawdown_pct"]["value"],
+            }
+            results.append(row)
+            print(f"A8.1 ROBUST GRID RESULT: {json.dumps(row, sort_keys=True)}")
+
+    baseline_pf = next(
+        row["profit_factor"]
+        for row in results
+        if row["target"] == "buy_ma_gap" and row["test_value"] == baseline["buy_ma_gap"]
+    )
+    ranked = []
+    for row in results:
+        trades = row["total_trades"]
+        improvement = row["profit_factor"] - baseline_pf
+        sample_quality = "too low"
+        if trades >= 100:
+            sample_quality = "strong"
+        elif trades >= 20:
+            sample_quality = "acceptable"
+
+        sensitivity = "low"
+        if improvement > 1.0:
+            sensitivity = "high"
+        elif improvement > 0.1:
+            sensitivity = "medium"
+        elif improvement < -0.1:
+            sensitivity = "harmful"
+
+        ranked.append({
+            "target": row["target"],
+            "test_value": row["test_value"],
+            "total_trades": trades,
+            "profit_factor": row["profit_factor"],
+            "expectancy": row["expectancy"],
+            "max_drawdown_pct": row["max_drawdown_pct"],
+            "profit_factor_delta_vs_baseline": improvement,
+            "sample_quality": sample_quality,
+            "sensitivity": sensitivity,
+        })
+    ranked.sort(key=lambda item: item["profit_factor_delta_vs_baseline"], reverse=True)
+    print(f"A8.1 ROBUST GRID RANKED: {json.dumps(ranked, sort_keys=True)}")
+    assert len(results) == 10
+
+
+def test_volatility_compression_breakout_template_real_smoke(tmp_path):
+    """B2: generated deterministic template executes through candidate strategy path."""
+    _require_data()
+
+    from types import SimpleNamespace
+    from backend.services.aeroing4.research.strategy_templates import (
+        DEFAULT_VOLATILITY_COMPRESSION_PARAMS,
+        VOLATILITY_COMPRESSION_FAMILY,
+        write_strategy_from_spec,
+    )
+
+    candidate_dir = tmp_path / "generated_volatility_compression_breakout"
+    artifact = write_strategy_from_spec(
+        {"family": VOLATILITY_COMPRESSION_FAMILY},
+        candidate_dir,
+    )
+    assert artifact.strategy_path.exists()
+    assert artifact.sidecar_path.exists()
+
+    sidecar = json.loads(artifact.sidecar_path.read_text(encoding="utf-8"))
+    assert sidecar["params"]["buy"] == DEFAULT_VOLATILITY_COMPRESSION_PARAMS
+    assert set(sidecar["params"]) == {"buy", "sell", "roi", "stoploss", "trailing"}
+    for name, value in DEFAULT_VOLATILITY_COMPRESSION_PARAMS.items():
+        assert sidecar["parameters"][name]["current"] == value
+
+    runner = _RealRunner(tmp_path)
+    request = SimpleNamespace(
+        timerange=ROBUST_DEVELOP_TIMERANGE,
+        pairs=REQUIRED_PAIRS,
+        timeframe=SMOKE_TIMEFRAME,
+    )
+    execution_id = runner.run_candidate_backtest(
+        artifact.strategy_name,
+        "b2_volatility_compression_breakout",
+        request,
+        candidate_dir=candidate_dir,
+    )
+    command = list(runner.last_command)
+    assert "--strategy-path" in command
+    assert str(candidate_dir) in command
+
+    import zipfile
+    result_zip = runner._result_zips[execution_id]
+    with zipfile.ZipFile(result_zip, "r") as zip_ref:
+        names = zip_ref.namelist()
+    assert any(name.endswith(f"_{artifact.strategy_name}.py") for name in names)
+    assert any(name.endswith(f"_{artifact.strategy_name}.json") for name in names)
+
+    run_dir = runner._run_dirs[execution_id]
+    metrics = json.loads((run_dir / "parsed_summary.json").read_text(encoding="utf-8"))
+    row = {
+        "strategy_name": artifact.strategy_name,
+        "candidate_strategy_dir": str(candidate_dir),
+        "candidate_py": str(artifact.strategy_path),
+        "candidate_json": str(artifact.sidecar_path),
+        "command": command,
+        "command_has_strategy_path": "--strategy-path" in command,
+        "zip_has_candidate_py": True,
+        "zip_has_candidate_json": True,
+        "total_trades": metrics["total_trades"]["value"],
+        "profit_factor": metrics["profit_factor"]["value"],
+        "expectancy": metrics["expectancy"]["value"],
+        "max_drawdown_pct": metrics["max_drawdown_pct"]["value"],
+    }
+    print(f"B2 TEMPLATE REAL SMOKE RESULT: {json.dumps(row, sort_keys=True)}")
 
 
 def test_two_candidates_produce_different_commands(tmp_path):
@@ -1308,12 +1960,10 @@ def test_two_candidate_mutation_smoke(tmp_path):
     assert execution_id_mutated is not None, "Mutated execution must succeed"
     
     # Verify output zips contain different candidate artifacts
-    result_files = sorted((USER_DATA_DIR / "backtest_results").glob("backtest-result-*.zip"))
-    assert len(result_files) >= 2, "At least 2 backtest result zips must exist"
-    
-    # Get the two latest zips
-    latest_zip_baseline = result_files[-2]
-    latest_zip_mutated = result_files[-1]
+    latest_zip_baseline = runner._result_zips[execution_id_baseline]
+    latest_zip_mutated = runner._result_zips[execution_id_mutated]
+    assert latest_zip_baseline.exists(), "Baseline backtest result zip must exist"
+    assert latest_zip_mutated.exists(), "Mutated backtest result zip must exist"
     
     import zipfile
     with zipfile.ZipFile(latest_zip_baseline, 'r') as zip_ref:
@@ -1491,7 +2141,12 @@ def test_real_research_loop_smoke(tmp_path):
     print(f"REAL RESEARCH LOOP: Parent expectancy={failed_metrics.expectancy.value}")
     
     # Setup stores
-    from backend.services.aeroing4.research.experiments import ExperimentStore
+    from backend.services.aeroing4.research.experiments import (
+        ExperimentRecord,
+        ExperimentStatus,
+        ExperimentStore,
+        OriginalStrategyProvenance,
+    )
     from backend.services.aeroing4.research.hypotheses import HypothesisStore
     from backend.services.aeroing4.research.champions import ChampionStore
     from backend.services.aeroing4.research.research_state import ResearchStateStore
@@ -1503,7 +2158,16 @@ def test_real_research_loop_smoke(tmp_path):
     from backend.services.aeroing4.research.experiments import ExactChange
     from backend.services.aeroing4.diagnosis.models import DiagnosisCode
     
-    experiment_store = ExperimentStore(runs_root)
+    class _CountingExperimentStore(ExperimentStore):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.reserve_calls = 0
+
+        def reserve(self, experiment):
+            self.reserve_calls += 1
+            return super().reserve(experiment)
+
+    experiment_store = _CountingExperimentStore(runs_root)
     experiment_store.budget_service = BudgetService(max_total_experiments=5)
     hypothesis_store = HypothesisStore(runs_root)
     champion_store = ChampionStore(runs_root)
@@ -1519,6 +2183,53 @@ def test_real_research_loop_smoke(tmp_path):
     state.current_champion_strategy_hash = parent_champion.strategy_artifact.artifact_hash
     state.current_champion_parameter_hash = parent_champion.parameter_artifact.artifact_hash if parent_champion.parameter_artifact else ""
     state_store.save(state)
+
+    # Seed known failed exact mutations into persisted experiment history.
+    # A6.3 verifies the coordinator's duplicate mutation gate blocks these
+    # before reservation/access/materialization/execution.
+    duplicate_seed_ids = {}
+    seeded_mutations = [
+        ("buy_ma_count", 18, 15),
+        ("stoploss", -0.336, -0.25),
+        ("sell_ma_count", 17, 25),
+        ("stoploss", -0.336, -0.45),
+    ]
+    for idx, (target, before, after) in enumerate(seeded_mutations, start=1):
+        seed_change = ExactChange(
+            change_type="parameter",
+            target=target,
+            before_value=before,
+            after_value=after,
+        )
+        seed_record = ExperimentRecord(
+            run_id="real-research-loop-smoke",
+            hypothesis_id=f"seed-duplicate-{idx}",
+            parent_champion_id=parent_champion.champion_id,
+            original_strategy_provenance=OriginalStrategyProvenance(
+                logical_name="AIStrategy",
+                path_reference=parent_champion.strategy_artifact.original_source_path,
+                path_hash=parent_champion.strategy_artifact.artifact_hash,
+                source_hash=parent_champion.strategy_artifact.original_source_hash,
+                version_id="v1",
+            ),
+            exact_change=seed_change,
+            experiment_identity_hash=f"seeded-duplicate-{idx}",
+            metrics_before=parent_champion.metrics,
+        )
+        saved_seed, duplicate = experiment_store.reserve(seed_record)
+        assert duplicate is None
+        experiment_store.transition_status(
+            "real-research-loop-smoke", saved_seed.experiment_id, ExperimentStatus.READY
+        )
+        experiment_store.transition_status(
+            "real-research-loop-smoke", saved_seed.experiment_id, ExperimentStatus.RUNNING
+        )
+        experiment_store.transition_status(
+            "real-research-loop-smoke", saved_seed.experiment_id, ExperimentStatus.COMPLETED
+        )
+        duplicate_seed_ids[(target, str(before), str(after))] = saved_seed.experiment_id
+    seeded_reserve_calls = experiment_store.reserve_calls
+    print(f"REAL RESEARCH LOOP: Seeded duplicate exclusions={duplicate_seed_ids}")
     
     # Setup real executor using _RealRunner
     runner = _RealRunner(tmp_path)
@@ -1665,6 +2376,57 @@ def test_real_research_loop_smoke(tmp_path):
             print(f"REAL RESEARCH LOOP: AI proposal {result.outcome} - {result.rejection_reason}")
             # NO FALLBACK - fail if AI does not produce valid proposal
             raise RuntimeError(f"Step A5 verification failed: AI proposal {result.outcome} - {result.rejection_reason}")
+
+    class _CapturingOllamaProposalAdapter(OllamaProposalAdapter):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.raw_outputs = []
+
+        async def generate(self, request: ProposalRequest) -> ProposalResult:
+            try:
+                from backend.services.ai.ollama_client import OllamaClient  # type: ignore[import]
+
+                client = OllamaClient(
+                    base_url=self.base_url, model=self.model, strict_json=True
+                )
+                prompt = self._build_prompt(request)
+                response = await client.chat(messages=[{"role": "user", "content": prompt}])
+                await client.close()
+                self.raw_outputs.append(response.content)
+                return self._parse_response(response.content)
+            except Exception as exc:
+                self.raw_outputs.append(f"AI_UNAVAILABLE: {exc}")
+                return ProposalResult(
+                    outcome=ProposalOutcome.AI_UNAVAILABLE,
+                    rejection_reason=f"Ollama unavailable: {exc}",
+                )
+
+    proposal_adapter = _CapturingOllamaProposalAdapter(
+        base_url="http://localhost:11434", model="ornith:9b"
+    )
+    proposal_attempts = []
+
+    async def proposal_real_ai_with_capture(request):
+        attempt_no = len(proposal_attempts) + 1
+        print(f"REAL RESEARCH LOOP: A6.3 AI attempt={attempt_no}")
+        print(f"REAL RESEARCH LOOP: AI model={proposal_adapter.model}")
+        print("REAL RESEARCH LOOP: fallback used: no")
+        result = await proposal_adapter.generate(request)
+        raw_output = proposal_adapter.raw_outputs[-1] if proposal_adapter.raw_outputs else ""
+        proposal_attempts.append((request, result, raw_output))
+        print(f"REAL RESEARCH LOOP: raw AI output attempt {attempt_no}: {raw_output}")
+        print(f"REAL RESEARCH LOOP: schema valid={result.outcome == ProposalOutcome.ACCEPTED}")
+        print(f"REAL RESEARCH LOOP: semantic valid={result.outcome == ProposalOutcome.ACCEPTED}")
+        if result.exact_change:
+            print(
+                "REAL RESEARCH LOOP: proposed mutation "
+                f"target={result.exact_change.target}, "
+                f"before={result.exact_change.before_value}, "
+                f"after={result.exact_change.after_value}"
+            )
+        else:
+            print(f"REAL RESEARCH LOOP: proposal rejected reason={result.rejection_reason}")
+        return result
     
     # Diagnosis function based on Confirmation failure
     def diagnose_fn(champion):
@@ -1682,24 +2444,64 @@ def test_real_research_loop_smoke(tmp_path):
         executor=executor,
         zone_guard=zone_guard,
         diagnose_fn=diagnose_fn,
-        proposal_callable=proposal_real_ai_with_dedup,  # NO FALLBACK for Step A5 with dedup
+        proposal_callable=proposal_real_ai_with_capture,
         develop_timerange="20240101-20240630",  # 6-month develop timerange for sufficient sample
         pairs=["LTC/USDT", "XRP/USDT", "BNB/USDT", "LINK/USDT"],  # 4 pairs for sufficient sample
         timeframe="5m",
         min_sample_trades=30,
     )
     
-    # Run up to 2 iterations for Step A5 bounded research loop
+    # Run one DEVELOP iteration for A6.3. The coordinator itself performs the
+    # bounded duplicate retry, so this permits at most two real AI proposals.
     import asyncio
-    max_iterations = 2
+    max_iterations = 1
+    results = []
     for i in range(max_iterations):
-        print(f"REAL RESEARCH LOOP: Step A5 - Attempt {i+1}/{max_iterations}")
+        before_reserve_calls = experiment_store.reserve_calls
+        before_command = runner.last_command
+        print(f"REAL RESEARCH LOOP: Step A6.3 - DEVELOP iteration {i+1}/{max_iterations}")
         result = asyncio.run(coord.run_one_iteration(run_id="real-research-loop-smoke"))
+        results.append(result)
         print(f"REAL RESEARCH LOOP: Attempt {i+1} - Decision={result.decision if hasattr(result, 'decision') else 'N/A'}")
+        print(f"REAL RESEARCH LOOP: duplicate={result.outcome == LoopOutcome.DUPLICATE_MUTATION}")
+        if result.outcome == LoopOutcome.DUPLICATE_MUTATION:
+            print(f"REAL RESEARCH LOOP: matching experiment id={result.duplicate_of_experiment_id}")
+            print(f"REAL RESEARCH LOOP: experiment reserved={experiment_store.reserve_calls > before_reserve_calls}")
+            print(f"REAL RESEARCH LOOP: Freqtrade executed={runner.last_command != before_command}")
+        if runner.last_command:
+            if "--strategy-path" in runner.last_command:
+                strategy_dir = Path(runner.last_command[runner.last_command.index("--strategy-path") + 1])
+                print(f"REAL RESEARCH LOOP: candidate strategy dir={strategy_dir}")
+                print(f"REAL RESEARCH LOOP: candidate .py path={strategy_dir / 'AIStrategy.py'}")
+                print(f"REAL RESEARCH LOOP: candidate .json path={strategy_dir / 'AIStrategy.json'}")
+            else:
+                print("REAL RESEARCH LOOP: candidate strategy dir=N/A")
+            print(f"REAL RESEARCH LOOP: exact Freqtrade command={' '.join(runner.last_command)}")
+            print(f"REAL RESEARCH LOOP: command includes --strategy-path={'--strategy-path' in runner.last_command}")
+            print(f"REAL RESEARCH LOOP: deterministic config used={runner.last_config_path is not None and runner.last_config_path.name == 'freqtrade_smoke_config.json'}")
+            print("REAL RESEARCH LOOP: Binance/network avoided=yes")
+            if runner.last_result_zip:
+                import zipfile
+                with zipfile.ZipFile(runner.last_result_zip, "r") as zip_ref:
+                    names = zip_ref.namelist()
+                has_py = any(name.endswith("_AIStrategy.py") for name in names)
+                has_json = any(name.endswith("_AIStrategy.json") for name in names)
+                print(f"REAL RESEARCH LOOP: output zip includes candidate .py and .json={has_py and has_json}")
+        if result.experiment_id:
+            exp = experiment_store.get("real-research-loop-smoke", result.experiment_id)
+            if exp and exp.metrics_after:
+                print(f"REAL RESEARCH LOOP: parsed total_trades={exp.metrics_after.total_trades.value}")
+                print(f"REAL RESEARCH LOOP: parsed profit_factor={exp.metrics_after.profit_factor.value}")
+                print(f"REAL RESEARCH LOOP: parsed expectancy={exp.metrics_after.expectancy.value}")
+                print(f"REAL RESEARCH LOOP: parsed max_drawdown_pct={exp.metrics_after.max_drawdown_pct.value}")
+        print(f"REAL RESEARCH LOOP: DecisionPolicy decision={result.decision}")
+        print(f"REAL RESEARCH LOOP: reason codes={result.decision_reason or result.details}")
+        print(f"REAL RESEARCH LOOP: new Champion promoted={bool(result.promoted_champion_id)}")
+        print(f"REAL RESEARCH LOOP: non-seed reservations={experiment_store.reserve_calls - seeded_reserve_calls}")
         
         # Stop if KEEP occurs
         if hasattr(result, 'decision') and result.decision == ExperimentDecision.KEEP:
-            print(f"REAL RESEARCH LOOP: Step A5 - KEEP achieved, stopping early")
+            print(f"REAL RESEARCH LOOP: Step A6.3 - KEEP achieved, stopping early")
             break
     
     print(f"REAL RESEARCH LOOP: Outcome={result.outcome}")
@@ -1709,9 +2511,16 @@ def test_real_research_loop_smoke(tmp_path):
     print(f"REAL RESEARCH LOOP: Decision={result.decision}")
     print(f"REAL RESEARCH LOOP: Details={result.details}")
     
-    # Verify parent champion was reused
-    assert state.current_champion_id == parent_champion.champion_id
-    print("REAL RESEARCH LOOP: Failed Champion reused as parent - verified")
+    # Verify parent champion was reused unless DecisionPolicy promoted a new one.
+    current_state = state_store.load("real-research-loop-smoke")
+    if result.outcome == LoopOutcome.DECISION_KEEP:
+        assert result.promoted_champion_id is not None
+        assert current_state.current_champion_id == result.promoted_champion_id
+    else:
+        assert current_state.current_champion_id == parent_champion.champion_id
+        print("REAL RESEARCH LOOP: Failed Champion reused as parent - verified")
+
+    assert experiment_store.reserve_calls >= seeded_reserve_calls
     
     # Verify hypothesis was created
     if result.hypothesis_id:
@@ -1792,7 +2601,23 @@ def test_candidate_materialization_json_serialization(tmp_path):
     
     # Create a minimal sidecar file
     sidecar_path = strategies_dir / "TestStrategy.json"
-    sidecar_data = {"parameters": {"test_param": {"type": "int", "default": 30, "editable": True}}}
+    sidecar_data = {
+        "params": {
+            "buy": {"buy_ma_count": 18},
+            "sell": {},
+            "roi": {},
+            "stoploss": {"stoploss": -0.1},
+            "trailing": {},
+        },
+        "parameters": {
+            "buy_ma_count": {
+                "type": "int",
+                "default": 18,
+                "current": 18,
+                "editable": True,
+            }
+        },
+    }
     with sidecar_path.open("w", encoding="utf-8") as f:
         json.dump(sidecar_data, f, indent=2)
     
@@ -1829,9 +2654,9 @@ def test_candidate_materialization_json_serialization(tmp_path):
     
     change = ExactChange(
         change_type="parameter",
-        target="test_param",
-        before_value=30,
-        after_value=35,
+        target="buy_ma_count",
+        before_value=18,
+        after_value=15,
     )
     
     # Materialize candidate with the change
@@ -1856,7 +2681,8 @@ def test_candidate_materialization_json_serialization(tmp_path):
     
     # Verify the parameter change was applied
     assert "parameters" in loaded_data, "Sidecar should have parameters"
-    assert "test_param" in loaded_data["parameters"], "Sidecar should have test_param"
+    assert loaded_data["parameters"]["buy_ma_count"]["current"] == 15
+    assert loaded_data["params"]["buy"]["buy_ma_count"] == 15
     
     # Verify UTF-8 encoding works by reading the file
     content = candidate_sidecar.read_text(encoding="utf-8")
@@ -1870,4 +2696,4 @@ def test_candidate_materialization_json_serialization(tmp_path):
     print(f"CANDIDATE MATERIALIZATION: Sidecar path={candidate_sidecar}")
     print(f"CANDIDATE MATERIALIZATION: Original hash={param_hash}")
     print(f"CANDIDATE MATERIALIZATION: New hash={new_hash}")
-    print(f"CANDIDATE MATERIALIZATION: Parameter value={loaded_data['parameters']['test_param']}")
+    print(f"CANDIDATE MATERIALIZATION: Parameter value={loaded_data['parameters']['buy_ma_count']}")

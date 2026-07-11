@@ -40,13 +40,24 @@ def _seed_champion(runs_root: Path, strategy_name: str = "AIStrategy"):
     orig_sidecar.write_text(
         json.dumps(
             {
+                "params": {
+                    "buy": {"buy_ma_count": 18, "buy_ma_gap": 95},
+                    "sell": {"sell_ma_count": 17, "sell_ma_gap": 54},
+                    "roi": {"0": 0.192, "145": 0.0},
+                    "stoploss": {"stoploss": -0.336},
+                    "trailing": {
+                        "trailing_stop": False,
+                        "trailing_stop_positive_offset": 0.0,
+                        "trailing_only_offset_is_reached": False,
+                    },
+                },
                 "parameters": {
-                    "rsi_threshold": {
+                    "buy_ma_count": {
                         "type": "int",
                         "editable": True,
-                        "current": 30,
-                        "min": 10,
-                        "max": 50,
+                        "current": 18,
+                        "min": 1,
+                        "max": 20,
                     }
                 }
             },
@@ -118,7 +129,7 @@ def test_executor_uses_develop_timerange_and_override(tmp_path: Path):
     champ = _make_champion(orig_py, orig_sidecar)
     svc = CandidateArtifactService(tmp_path)
     change = ExactChange(
-        change_type="parameter", target="rsi_threshold", before_value=30, after_value=35
+        change_type="parameter", target="buy_ma_count", before_value=18, after_value=15
     )
     artifact = svc.create(
         run_id="run-1", strategy_name="AIStrategy", champion=champ, exact_change=change
@@ -157,7 +168,7 @@ def test_executor_system_failure_on_run_error(tmp_path: Path):
     champ = _make_champion(orig_py, orig_sidecar)
     svc = CandidateArtifactService(tmp_path)
     change = ExactChange(
-        change_type="parameter", target="rsi_threshold", before_value=30, after_value=35
+        change_type="parameter", target="buy_ma_count", before_value=18, after_value=15
     )
     artifact = svc.create(
         run_id="run-1", strategy_name="AIStrategy", champion=champ, exact_change=change
@@ -185,7 +196,7 @@ def test_executor_no_trades_classification(tmp_path: Path):
     champ = _make_champion(orig_py, orig_sidecar)
     svc = CandidateArtifactService(tmp_path)
     change = ExactChange(
-        change_type="parameter", target="rsi_threshold", before_value=30, after_value=35
+        change_type="parameter", target="buy_ma_count", before_value=18, after_value=15
     )
     artifact = svc.create(
         run_id="run-1", strategy_name="AIStrategy", champion=champ, exact_change=change

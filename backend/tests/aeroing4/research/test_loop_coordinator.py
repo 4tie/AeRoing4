@@ -106,10 +106,15 @@ def _seed_champion(runs_root: Path, parent_id=None, metrics=None):
     py.write_text("class AIStrategy:\n    pass\n", encoding="utf-8")
     sc = sd / "AIStrategy.json"
     sc.write_text(
-        '{"parameters": {'
-        '"rsi_threshold": {"type": "int", "editable": true, "current": 30, "min": 10, "max": 50},'
-        '"buy_ma_count": {"type": "int", "editable": true, "current": 18, "min": 10, "max": 50},'
-        '"sell_ma_count": {"type": "int", "editable": true, "current": 17, "min": 10, "max": 50},'
+        '{"params": {'
+        '"buy": {"buy_ma_count": 18, "buy_ma_gap": 95},'
+        '"sell": {"sell_ma_count": 17, "sell_ma_gap": 54},'
+        '"roi": {"0": 0.192, "145": 0.0},'
+        '"stoploss": {"stoploss": -0.336},'
+        '"trailing": {"trailing_stop": false, "trailing_stop_positive_offset": 0.0, "trailing_only_offset_is_reached": false}'
+        '}, "parameters": {'
+        '"buy_ma_count": {"type": "int", "editable": true, "current": 18, "min": 1, "max": 50},'
+        '"sell_ma_count": {"type": "int", "editable": true, "current": 17, "min": 1, "max": 50},'
         '"stoploss": {"type": "float", "editable": true, "current": -0.336, "min": -0.5, "max": -0.01}'
         '}}',
         encoding="utf-8",
@@ -227,27 +232,27 @@ def _make_coordinator(
     return coord, exp_store, hyp_store, champ_store, state_store, executor
 
 
-def _accepted_proposal(after_value=35):
+def _accepted_proposal(after_value=15):
     return ProposalResult(
         outcome=ProposalOutcome.ACCEPTED,
-        hypothesis_text="raise rsi",
+        hypothesis_text="adjust buy ma count",
         diagnosis_code="NO_EDGE",
         exact_change={
             "change_type": "parameter",
-            "target": "rsi_threshold",
-            "before_value": 30,
+            "target": "buy_ma_count",
+            "before_value": 18,
             "after_value": after_value,
         },
     )
 
 
-def _proposal_for(target, before, after):
+def _proposal_for(target, before, after, *, change_type="parameter"):
     return ProposalResult(
         outcome=ProposalOutcome.ACCEPTED,
         hypothesis_text=f"mutate {target}",
         diagnosis_code="NO_EDGE",
         exact_change={
-            "change_type": "parameter",
+            "change_type": change_type,
             "target": target,
             "before_value": before,
             "after_value": after,
@@ -489,6 +494,32 @@ async def test_duplicate_mutation_float_normalization_rejects_equivalent_values(
     assert res.outcome == LoopOutcome.DUPLICATE_MUTATION
     assert res.duplicate_of_experiment_id == seeded.experiment_id
     assert exp.reserve_calls == calls_before
+    assert executor.last_request is None
+
+
+@pytest.mark.asyncio
+async def test_duplicate_mutation_change_type_synonyms_do_not_bypass_gate(tmp_run):
+    champ = _seed_champion(tmp_run, metrics=_snap(expectancy=0.10))
+    artifact_svc = _CountingArtifactService()
+    coord, exp, hyp, champ_store, state_store, executor = _make_coordinator(
+        tmp_run,
+        champion=champ,
+        proposal=_proposal_for(
+            "stoploss", -0.336, -0.25, change_type="parameter_tune"
+        ),
+        exec_result=_exec_result(_snap(expectancy=0.101)),
+        experiment_store_cls=_CountingExperimentStore,
+        artifact_service=artifact_svc,
+    )
+    seeded = _seed_completed_experiment(exp, "run-1", champ, "stoploss", -0.336, -0.25)
+    calls_before = exp.reserve_calls
+
+    res = await coord.run_one_iteration(run_id="run-1")
+
+    assert res.outcome == LoopOutcome.DUPLICATE_MUTATION
+    assert res.duplicate_of_experiment_id == seeded.experiment_id
+    assert exp.reserve_calls == calls_before
+    assert artifact_svc.create_calls == 0
     assert executor.last_request is None
 
 

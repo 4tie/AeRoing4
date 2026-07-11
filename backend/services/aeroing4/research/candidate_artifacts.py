@@ -18,9 +18,9 @@ Hard guarantees:
 Sidecar mutation preference:
   If the approved target is sidecar-owned (editable parameter in
   strategies/{strategy_name}.json), we rewrite the copied sidecar value and
-  leave the Python untouched. This is the v1-supported mutation path; the
-  Mutation Policy already rejects non-sidecar targets, so this service only
-  ever receives sidecar-owned parameter changes.
+  leave the Python untouched. The copied sidecar must keep AeRoing4's internal
+  tracking shape (`parameters.<target>.current`) synchronized with the
+  Freqtrade runtime shape (`params.*`) that backtesting actually consumes.
 """
 
 from __future__ import annotations
@@ -138,8 +138,9 @@ class CandidateArtifactService:
     def _apply_sidecar_change(sidecar_path: Path, change: ExactChange) -> None:
         """Apply exactly one approved change to the copied sidecar JSON.
 
-        Only sidecar-owned parameter edits are supported in v1. The target key
-        in the sidecar's editable `parameters` block is set to after_value.
+        Only runtime-executable sidecar edits are supported in v1. The target
+        key in AeRoing4's editable `parameters` block is set to after_value,
+        and the corresponding Freqtrade `params.*` location is updated too.
         """
         target = change.target
         if not target:
@@ -149,13 +150,80 @@ class CandidateArtifactService:
         except Exception as exc:
             raise ValueError(f"Cannot read candidate sidecar: {exc}") from exc
 
+        CandidateArtifactService._apply_runtime_params_change(
+            data, target=target, after_value=change.after_value
+        )
+
         params = data.setdefault("parameters", {})
         block = params.get(target)
         if isinstance(block, dict):
             block["current"] = change.after_value
         else:
-            # Flat parameter map: set the key directly.
-            params[target] = change.after_value
+            params[target] = {
+                "editable": True,
+                "current": change.after_value,
+            }
 
         with sidecar_path.open("w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
+
+    @staticmethod
+    def _apply_runtime_params_change(data: dict, *, target: str, after_value) -> None:
+        """Apply a mutation to the Freqtrade-consumed `params.*` location."""
+        runtime = data.get("params")
+        if not isinstance(runtime, dict):
+            raise ValueError(
+                f"Target {target!r} is not runtime-executable: sidecar has no params block"
+            )
+
+        if target.startswith("buy_"):
+            CandidateArtifactService._set_runtime_group_value(
+                runtime, "buy", target, after_value
+            )
+            return
+
+        if target.startswith("sell_"):
+            CandidateArtifactService._set_runtime_group_value(
+                runtime, "sell", target, after_value
+            )
+            return
+
+        if target == "stoploss":
+            group = runtime.get("stoploss")
+            if not isinstance(group, dict) or "stoploss" not in group:
+                raise ValueError(
+                    "Target 'stoploss' is not runtime-executable: "
+                    "params.stoploss.stoploss is missing"
+                )
+            group["stoploss"] = after_value
+            return
+
+        if target in {"roi", "minimal_roi"}:
+            if "roi" not in runtime:
+                raise ValueError(
+                    f"Target {target!r} is not runtime-executable: params.roi is missing"
+                )
+            if not isinstance(after_value, dict):
+                raise ValueError("ROI mutation requires a dict after_value")
+            runtime["roi"] = after_value
+            return
+
+        if target.startswith("trailing_"):
+            CandidateArtifactService._set_runtime_group_value(
+                runtime, "trailing", target, after_value
+            )
+            return
+
+        raise ValueError(f"Target {target!r} is not runtime-executable")
+
+    @staticmethod
+    def _set_runtime_group_value(
+        runtime: dict, group_name: str, target: str, after_value
+    ) -> None:
+        group = runtime.get(group_name)
+        if not isinstance(group, dict) or target not in group:
+            raise ValueError(
+                f"Target {target!r} is not runtime-executable: "
+                f"params.{group_name}.{target} is missing"
+            )
+        group[target] = after_value

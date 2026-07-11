@@ -30,14 +30,39 @@ def _seed_champion(runs_root: Path, strategy_name: str = "AIStrategy"):
     orig_sidecar.write_text(
         json.dumps(
             {
+                "params": {
+                    "buy": {"buy_ma_count": 18, "buy_ma_gap": 95},
+                    "sell": {"sell_ma_count": 17, "sell_ma_gap": 54},
+                    "roi": {"0": 0.192, "145": 0.0},
+                    "stoploss": {"stoploss": -0.336},
+                    "trailing": {
+                        "trailing_stop": False,
+                        "trailing_stop_positive_offset": 0.0,
+                        "trailing_only_offset_is_reached": False,
+                    },
+                },
                 "parameters": {
-                    "rsi_threshold": {
+                    "buy_ma_count": {
                         "type": "int",
                         "editable": True,
-                        "current": 30,
-                        "min": 10,
-                        "max": 50,
-                    }
+                        "current": 18,
+                        "min": 1,
+                        "max": 20,
+                    },
+                    "sell_ma_count": {
+                        "type": "int",
+                        "editable": True,
+                        "current": 17,
+                        "min": 1,
+                        "max": 20,
+                    },
+                    "stoploss": {
+                        "type": "float",
+                        "editable": True,
+                        "current": -0.336,
+                        "min": -0.5,
+                        "max": -0.01,
+                    },
                 }
             },
             indent=2,
@@ -74,9 +99,9 @@ def test_create_copies_strategy_and_sidecar(tmp_path: Path):
 
     change = ExactChange(
         change_type="parameter",
-        target="rsi_threshold",
-        before_value=30,
-        after_value=35,
+        target="buy_ma_count",
+        before_value=18,
+        after_value=15,
     )
     result = svc.create(
         run_id="run-1",
@@ -100,7 +125,7 @@ def test_original_strategy_not_mutated(tmp_path: Path):
     champ = _make_champion(orig_py, orig_sidecar)
     svc = CandidateArtifactService(tmp_path)
     change = ExactChange(
-        change_type="parameter", target="rsi_threshold", before_value=30, after_value=35
+        change_type="parameter", target="buy_ma_count", before_value=18, after_value=15
     )
     svc.create(
         run_id="run-1",
@@ -121,7 +146,7 @@ def test_champion_artifact_untouched_in_place(tmp_path: Path):
 
     svc = CandidateArtifactService(tmp_path)
     change = ExactChange(
-        change_type="parameter", target="rsi_threshold", before_value=30, after_value=35
+        change_type="parameter", target="buy_ma_count", before_value=18, after_value=15
     )
     svc.create(
         run_id="run-1",
@@ -135,12 +160,12 @@ def test_champion_artifact_untouched_in_place(tmp_path: Path):
     assert champ.parameter_artifact.artifact_hash == "def"
 
 
-def test_sidecar_mutation_applies_one_change(tmp_path: Path):
+def test_sidecar_mutation_updates_internal_parameters_shape(tmp_path: Path):
     orig_py, orig_sidecar = _seed_champion(tmp_path)
     champ = _make_champion(orig_py, orig_sidecar)
     svc = CandidateArtifactService(tmp_path)
     change = ExactChange(
-        change_type="parameter", target="rsi_threshold", before_value=30, after_value=35
+        change_type="parameter", target="buy_ma_count", before_value=18, after_value=15
     )
     result = svc.create(
         run_id="run-1",
@@ -151,9 +176,83 @@ def test_sidecar_mutation_applies_one_change(tmp_path: Path):
 
     cand_sidecar = tmp_path / result.parameter_artifact.artifact_path
     data = json.loads(cand_sidecar.read_text(encoding="utf-8"))
-    assert data["parameters"]["rsi_threshold"]["current"] == 35
-    # Only one parameter present, proving exactly one change applied.
-    assert set(data["parameters"].keys()) == {"rsi_threshold"}
+    assert data["parameters"]["buy_ma_count"]["current"] == 15
+    assert data["parameters"]["sell_ma_count"]["current"] == 17
+
+
+def test_sidecar_mutation_updates_buy_runtime_params_shape(tmp_path: Path):
+    orig_py, orig_sidecar = _seed_champion(tmp_path)
+    champ = _make_champion(orig_py, orig_sidecar)
+    svc = CandidateArtifactService(tmp_path)
+    change = ExactChange(
+        change_type="parameter", target="buy_ma_count", before_value=18, after_value=15
+    )
+    result = svc.create(
+        run_id="run-1",
+        strategy_name="AIStrategy",
+        champion=champ,
+        exact_change=change,
+    )
+
+    data = json.loads((tmp_path / result.parameter_artifact.artifact_path).read_text(encoding="utf-8"))
+    assert data["params"]["buy"]["buy_ma_count"] == 15
+    assert data["params"]["sell"]["sell_ma_count"] == 17
+
+
+def test_sidecar_mutation_updates_sell_runtime_params_shape(tmp_path: Path):
+    orig_py, orig_sidecar = _seed_champion(tmp_path)
+    champ = _make_champion(orig_py, orig_sidecar)
+    svc = CandidateArtifactService(tmp_path)
+    change = ExactChange(
+        change_type="parameter", target="sell_ma_count", before_value=17, after_value=2
+    )
+    result = svc.create(
+        run_id="run-1",
+        strategy_name="AIStrategy",
+        champion=champ,
+        exact_change=change,
+    )
+
+    data = json.loads((tmp_path / result.parameter_artifact.artifact_path).read_text(encoding="utf-8"))
+    assert data["params"]["sell"]["sell_ma_count"] == 2
+    assert data["parameters"]["sell_ma_count"]["current"] == 2
+
+
+def test_sidecar_mutation_updates_stoploss_runtime_params_shape(tmp_path: Path):
+    orig_py, orig_sidecar = _seed_champion(tmp_path)
+    champ = _make_champion(orig_py, orig_sidecar)
+    svc = CandidateArtifactService(tmp_path)
+    change = ExactChange(
+        change_type="parameter", target="stoploss", before_value=-0.336, after_value=-0.4
+    )
+    result = svc.create(
+        run_id="run-1",
+        strategy_name="AIStrategy",
+        champion=champ,
+        exact_change=change,
+    )
+
+    data = json.loads((tmp_path / result.parameter_artifact.artifact_path).read_text(encoding="utf-8"))
+    assert data["params"]["stoploss"]["stoploss"] == -0.4
+    assert data["parameters"]["stoploss"]["current"] == -0.4
+
+
+def test_unknown_target_rejected_as_not_runtime_executable(tmp_path: Path):
+    orig_py, orig_sidecar = _seed_champion(tmp_path)
+    champ = _make_champion(orig_py, orig_sidecar)
+    svc = CandidateArtifactService(tmp_path)
+    change = ExactChange(
+        change_type="parameter", target="rsi_threshold", before_value=30, after_value=35
+    )
+
+    import pytest
+    with pytest.raises(ValueError, match="not runtime-executable"):
+        svc.create(
+            run_id="run-1",
+            strategy_name="AIStrategy",
+            champion=champ,
+            exact_change=change,
+        )
 
 
 def test_hashes_computed_before_and_after(tmp_path: Path):
@@ -161,7 +260,7 @@ def test_hashes_computed_before_and_after(tmp_path: Path):
     champ = _make_champion(orig_py, orig_sidecar)
     svc = CandidateArtifactService(tmp_path)
     change = ExactChange(
-        change_type="parameter", target="rsi_threshold", before_value=30, after_value=35
+        change_type="parameter", target="buy_ma_count", before_value=18, after_value=15
     )
     result = svc.create(
         run_id="run-1",

@@ -98,8 +98,14 @@ def _seed_champion(runs_root: Path, parent_id=None, metrics=None):
     py.write_text("class AIStrategy:\n    pass\n", encoding="utf-8")
     sc = sd / "AIStrategy.json"
     sc.write_text(
-        '{"parameters": {"rsi_threshold": {"type": "int", "editable": true, '
-        '"current": 30, "min": 10, "max": 50}}}',
+        '{"params": {'
+        '"buy": {"buy_ma_count": 18, "buy_ma_gap": 95},'
+        '"sell": {"sell_ma_count": 17, "sell_ma_gap": 54},'
+        '"roi": {"0": 0.192, "145": 0.0},'
+        '"stoploss": {"stoploss": -0.336},'
+        '"trailing": {"trailing_stop": false, "trailing_stop_positive_offset": 0.0, "trailing_only_offset_is_reached": false}'
+        '}, "parameters": {"buy_ma_count": {"type": "int", "editable": true, '
+        '"current": 18, "min": 1, "max": 50}}}',
         encoding="utf-8",
     )
     return ChampionReference(
@@ -138,12 +144,12 @@ class _FakeExecutor(CandidateExecutor):
 def _accepted_proposal(after_value=35):
     return ProposalResult(
         outcome=ProposalOutcome.ACCEPTED,
-        hypothesis_text="raise rsi",
+        hypothesis_text="adjust buy ma count",
         diagnosis_code="NO_EDGE",
         exact_change={
             "change_type": "parameter",
-            "target": "rsi_threshold",
-            "before_value": 30,
+            "target": "buy_ma_count",
+            "before_value": 18,
             "after_value": after_value,
         },
     )
@@ -351,8 +357,8 @@ async def test_8_no_arbitrary_code_accepted(tmp_run):
     proposal = ProposalResult(
         outcome=ProposalOutcome.ACCEPTED,
         diagnosis_code="NO_EDGE",
-        exact_change={"change_type": "parameter", "target": "rsi_threshold",
-                      "before_value": 30, "after_value": 35},
+        exact_change={"change_type": "parameter", "target": "buy_ma_count",
+                      "before_value": 18, "after_value": 35},
     )
     coord, exp, hyp, champ_store, state_store, executor = _make_coordinator(
         tmp_run, champion=champ, proposal=proposal, exec_result=_exec_result(_snap(0.14)),
@@ -424,7 +430,7 @@ async def test_10_D_duplicate_no_second_reservation(tmp_run):
     first = await coord.run_one_iteration(run_id="run-1")
     assert first.outcome == LoopOutcome.DECISION_INCONCLUSIVE
     second = await coord.run_one_iteration(run_id="run-1")
-    assert second.outcome == LoopOutcome.DUPLICATE
+    assert second.outcome == LoopOutcome.DUPLICATE_MUTATION
     assert second.duplicate_of_experiment_id == first.experiment_id
     assert len(exp.list_for_run("run-1")) == 1
 

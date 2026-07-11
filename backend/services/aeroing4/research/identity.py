@@ -123,6 +123,27 @@ def _canonical_decimal(value: str) -> str:
     return format(normalized, "f")
 
 
+def _canonical_change_type(value: Any) -> str:
+    """Normalize AI wording variants for the same exact mutation class."""
+    normalized = str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+    if normalized in {
+        "parameter",
+        "param",
+        "parameter_adjustment",
+        "parameter_tune",
+        "parameter_tuning",
+        "parameter_change",
+        "parameter_update",
+        "param_adjustment",
+        "param_tune",
+        "param_tuning",
+        "param_change",
+        "param_update",
+    }:
+        return "parameter"
+    return normalized
+
+
 def canonical_mutation_identity(
     *,
     parent_lineage_id: str,
@@ -139,7 +160,7 @@ def canonical_mutation_identity(
     """
     return {
         "parent_lineage_id": str(parent_lineage_id or "").strip(),
-        "change_type": str(change_type or "").strip().lower(),
+        "change_type": _canonical_change_type(change_type),
         "target": str(target or "").strip(),
         "before_value": _canonical_mutation_value(before_value),
         "after_value": _canonical_mutation_value(after_value),
