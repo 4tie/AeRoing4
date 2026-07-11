@@ -5,6 +5,7 @@
 .venv/
 venv/
 venv_test/
+4t/
 
 # Python
 __pycache__/
