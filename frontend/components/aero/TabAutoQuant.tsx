@@ -20,6 +20,9 @@ const ALL_PAIRS = [
   'LINK/USDT','UNI/USDT','ATOM/USDT','LTC/USDT','XRP/USDT','DOGE/USDT','NEAR/USDT','APE/USDT'
 ];
 
+// Module-level flag for immediate duplicate-click prevention (outside React component)
+let _isClickBlocked = false;
+
 export function TabAutoQuant() {
   const { strategies, aering4StrategyName, setAering4StrategyName, setActiveTab, aering4Running, setAering4Run, setAering4Running } = useAeroStore();
   const [selectedStrategy, setSelectedStrategy] = useState<StrategyLibraryItem | null>(null);
@@ -75,7 +78,7 @@ export function TabAutoQuant() {
     // Prevent duplicate clicks using state
     if (isStartingDevelopRun || aering4Running) {
       setIsStartingDevelopRun(false);
-      isDevelopRunStartingRef.current = false;
+      _isClickBlocked = false;
       return;
     }
 
@@ -83,32 +86,32 @@ export function TabAutoQuant() {
     if (!aering4StrategyName) {
       setValidationError('Please select a strategy');
       setIsStartingDevelopRun(false);
-      isDevelopRunStartingRef.current = false;
+      _isClickBlocked = false;
       return;
     }
     if (pairs.length === 0) {
       setValidationError('Select at least one pair before running a DEVELOP test.');
       setIsStartingDevelopRun(false);
-      isDevelopRunStartingRef.current = false;
+      _isClickBlocked = false;
       return;
     }
     if (!timeframe) {
       setDevelopRunError('Please select a timeframe');
       setIsStartingDevelopRun(false);
-      isDevelopRunStartingRef.current = false;
+      _isClickBlocked = false;
       return;
     }
     const timerange = getTimerange();
     if (!timerange) {
       setDevelopRunError('Please select a timerange');
       setIsStartingDevelopRun(false);
-      isDevelopRunStartingRef.current = false;
+      _isClickBlocked = false;
       return;
     }
     if (maxOpenTrades < 1) {
       setDevelopRunError('Max open trades must be at least 1');
       setIsStartingDevelopRun(false);
-      isDevelopRunStartingRef.current = false;
+      _isClickBlocked = false;
       return;
     }
 
@@ -142,12 +145,12 @@ export function TabAutoQuant() {
           } else {
             setAering4Running(false);
             setIsStartingDevelopRun(false);
-            isDevelopRunStartingRef.current = false;
+            _isClickBlocked = false;
           }
         } catch (e) {
           setAering4Running(false);
           setIsStartingDevelopRun(false);
-          isDevelopRunStartingRef.current = false;
+          _isClickBlocked = false;
           setDevelopRunError(e instanceof Error ? e.message : 'Polling failed');
         }
       };
@@ -155,22 +158,22 @@ export function TabAutoQuant() {
       pollRef.current = setTimeout(poll, 2000);
     } catch (e) {
       setIsStartingDevelopRun(false);
-      isDevelopRunStartingRef.current = false;
+      _isClickBlocked = false;
       setDevelopRunError(e instanceof Error ? e.message : 'Failed to start run');
     }
   };
 
-  // Synchronous wrapper that uses ref for immediate duplicate-click prevention
+  // Synchronous wrapper that uses module-level flag for immediate duplicate-click prevention
   const handleRunDevelopTestSync = (e: React.MouseEvent) => {
-    // IMMEDIATE synchronous check using ref (no React state updates)
-    if (isDevelopRunStartingRef.current) {
+    // IMMEDIATE synchronous check using module-level flag (outside React component)
+    if (_isClickBlocked) {
       e.preventDefault();
       e.stopPropagation();
       return; // Already starting, ignore duplicate click
     }
     
-    // Set ref immediately (synchronous, no React batching)
-    isDevelopRunStartingRef.current = true;
+    // Set module-level flag immediately (synchronous, no React batching)
+    _isClickBlocked = true;
     
     // Disable button immediately at DOM level
     if (developRunButtonRef.current) {
