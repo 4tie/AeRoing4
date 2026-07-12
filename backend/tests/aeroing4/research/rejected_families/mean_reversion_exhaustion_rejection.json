@@ -1,0 +1,111 @@
+{
+  "family": "mean_reversion_exhaustion",
+  "status": "mechanically_verified_but_rejected_pair_dependent",
+  "rejection_reasons": [
+    "Positive aggregate result depends mostly on LINK/USDT (234% of total profit)",
+    "Non-LINK pairs (BNB, LTC, XRP) are weak or negative across all parameter variations",
+    "No robust_positive sensitivity candidate exists (all positive candidates are pair_dependent_positive)",
+    "Best candidate (adx_max=25) has only 5 total trades across 4 pairs, not robust",
+    "Hyperopt is not justified as parameter tuning cannot fix structural pair-dependency",
+    "Not eligible for Confirmation due to lack of multi-pair generalization"
+  ],
+  "true_baseline_metrics": {
+    "total_trades": 105,
+    "wins": 69,
+    "losses": 36,
+    "draws": 0,
+    "win_rate": 0.657,
+    "profit_factor": 1.138,
+    "expectancy": 0.0138,
+    "max_drawdown_pct": -0.0449,
+    "profit_mean": 0.00044,
+    "profit_median": 0.0015,
+    "holding_avg": "0:42:00"
+  },
+  "corrected_pair_level_metrics": {
+    "LINK/USDT": {
+      "trades": 35,
+      "wins": 25,
+      "losses": 10,
+      "win_rate": 0.714,
+      "profit_factor": 2.480,
+      "expectancy": 0.0971,
+      "profit_total": 0.0340
+    },
+    "BNB/USDT": {
+      "trades": 21,
+      "wins": 16,
+      "losses": 5,
+      "win_rate": 0.762,
+      "profit_factor": 1.041,
+      "expectancy": 0.0038,
+      "profit_total": 0.0008
+    },
+    "LTC/USDT": {
+      "trades": 17,
+      "wins": 9,
+      "losses": 8,
+      "win_rate": 0.529,
+      "profit_factor": 0.647,
+      "expectancy": -0.0581,
+      "profit_total": -0.0099
+    },
+    "XRP/USDT": {
+      "trades": 32,
+      "wins": 19,
+      "losses": 13,
+      "win_rate": 0.594,
+      "profit_factor": 0.694,
+      "expectancy": -0.0326,
+      "profit_total": -0.0104
+    }
+  },
+  "corrected_sensitivity_summary": {
+    "total_runs": 14,
+    "robust_positive_count": 0,
+    "pair_dependent_positive_count": 10,
+    "neutral_count": 1,
+    "harmful_count": 3,
+    "best_candidate": {
+      "parameter": "bb_stddev",
+      "value": 1.8,
+      "profit_factor": 1.194,
+      "expectancy": 0.0182,
+      "max_drawdown": -0.0397,
+      "profitable_pairs": "3/4",
+      "pf_excluding_link": "inf",
+      "profit_excluding_link": 0.0191,
+      "pair_concentration": ">60%",
+      "sensitivity": "pair_dependent_positive"
+    },
+    "worst_candidate": {
+      "parameter": "rsi_oversold",
+      "value": 25,
+      "profit_factor": 0.323,
+      "expectancy": -0.1352,
+      "max_drawdown": -0.0168,
+      "profitable_pairs": "0/4",
+      "pf_excluding_link": 0.000,
+      "profit_excluding_link": -0.0149,
+      "sensitivity": "harmful"
+    },
+    "excluding_link_analysis": {
+      "baseline_pf_excluding_link": 0.000,
+      "baseline_profit_excluding_link": -0.0032,
+      "best_pf_excluding_link": "inf",
+      "best_profit_excluding_link": 0.0191,
+      "note": "PF_excluding_link shows 'inf' due to minimal non-LINK trading with zero losses, not genuine profitability"
+    }
+  },
+  "final_decision": "rejected_for_multi_pair_generalization",
+  "eligibility": {
+    "focused_hyperopt": false,
+    "confirmation": false
+  },
+  "audit_steps": [
+    "B4: MeanReversionExhaustion implementation and initial smoke test",
+    "B4.1: Metric integrity and risk audit",
+    "B4.2: DEVELOP-only sensitivity grid",
+    "B4.2.1: Pair-exclusion metric integrity correction"
+  ]
+}

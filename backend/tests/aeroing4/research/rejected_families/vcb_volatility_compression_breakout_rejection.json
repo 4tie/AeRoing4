@@ -1,0 +1,66 @@
+{
+  "family": "volatility_compression_breakout",
+  "status": "mechanically_verified_but_rejected",
+  "decision_date": "2026-07-12",
+  "step": "B2.2",
+  "reasons": [
+    "overtrading: original produced 3156 trades on 4 pairs over 6 months",
+    "negative expectancy: both original (-0.028) and v2 (-0.045) showed negative expectancy",
+    "low profit factor: original PF 0.210, v2 PF 0.239 (both below 1.0)",
+    "high drawdown: original max drawdown -87.4%, v2 max drawdown -57.2%",
+    "v2 did not rescue the family: stricter parameters reduced trades by 60% but strategy remained unprofitable",
+    "core hypothesis (volatility compression breakout) does not produce positive expectancy on this sample"
+  ],
+  "original_baseline_metrics": {
+    "total_trades": 3156,
+    "wins": 441,
+    "losses": 2715,
+    "winrate": 0.1397,
+    "profit_factor": 0.210,
+    "expectancy": -0.028,
+    "max_drawdown": -0.874
+  },
+  "strict_v2_metrics": {
+    "total_trades": 1263,
+    "wins": 181,
+    "losses": 1082,
+    "winrate": 0.1433,
+    "profit_factor": 0.239,
+    "expectancy": -0.045,
+    "max_drawdown": -0.572
+  },
+  "v2_improvements": {
+    "trade_count_reduction_pct": 60.0,
+    "pf_improvement": 0.029,
+    "drawdown_improvement": 0.302
+  },
+  "root_cause_analysis": {
+    "compression_timing": "measured on same candle as breakout, allowing entries without historical compression verification",
+    "breakout_freshness": "no fresh breakout requirement, entered on sustained breakouts from hours ago",
+    "volume_filter": "relative_volume_min 1.25 too permissive for marginal volume",
+    "trend_slope": "no EMA trend slope requirement, entered on declining but above-EMA price action",
+    "atr_extension": "loose range (0 to 1.8) allowed zero-extension and over-extended entries",
+    "exit_conditions": "multiple OR conditions exited too early or too late without prioritization"
+  },
+  "v2_changes_applied": {
+    "compression_timing": "added compressed_recent check with historical minimum over lookback period",
+    "breakout_freshness": "added fresh_breakout requirement (current > level AND prior <= prior level)",
+    "volume_filter": "increased relative_volume_min from 1.25 to 1.6",
+    "trend_slope": "added ema_trend_slope > 0 requirement",
+    "atr_extension": "changed from (0, 1.8) to (0.05, 1.1) to exclude zero and over-extended entries",
+    "exit_conditions": "renamed and added momentum failure check with price decline detection"
+  },
+  "eligibility": {
+    "focused_hyperopt": false,
+    "confirmation": false,
+    "final_unseen": false,
+    "delivery": false
+  },
+  "recommendation": "archive family as rejected, move to next family (trend_pullback_continuation or mean_reversion_exhaustion)",
+  "next_steps": [
+    "preserve template code for learning/history",
+    "do not delete strategy_templates.py implementation",
+    "document rejection in test suite",
+    "proceed to next deterministic family"
+  ]
+}

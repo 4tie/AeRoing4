@@ -1,0 +1,77 @@
+{
+  "family": "trend_pullback_continuation",
+  "status": "mechanically_verified_but_rejected",
+  "decision_date": "2026-07-12",
+  "decision_step": "B3.1",
+  "strategies": [
+    "TrendPullbackContinuation",
+    "TrendPullbackContinuationV2"
+  ],
+  "rejection_reasons": [
+    "Original baseline: PF 0.207, expectancy -0.065, win rate 10.9% on DEVELOP sample (20240101-20240630)",
+    "V2 stricter variant: PF 0.011, expectancy -0.086, win rate 5.0% with only 20 trades",
+    "V2 reduced trades by 95% but did not improve signal quality",
+    "Negative expectancy across all pairs (LINK, BNB, LTC, XRP)",
+    "Entry hypothesis (shallow pullback reclaim in uptrends) does not produce positive expectancy",
+    "Reclaim logic too loose (allows EMA fast reclaim without pullback high reclaim)",
+    "RSI pullback range too broad (25-55 original, 27-52 V2)",
+    "Relative volume filter too weak (>= 1.0 original, >= 1.15 V2)",
+    "All exits via exit_signal (no proper stoploss/ROI risk management)",
+    "Parameter tuning unlikely to rescue structural weakness"
+  ],
+  "original_metrics": {
+    "total_trades": 413,
+    "wins": 45,
+    "losses": 368,
+    "draws": 0,
+    "win_rate": 0.109,
+    "profit_factor": 0.207,
+    "expectancy": -0.065,
+    "max_drawdown_pct": -0.267
+  },
+  "v2_metrics": {
+    "total_trades": 20,
+    "wins": 1,
+    "losses": 19,
+    "draws": 0,
+    "win_rate": 0.05,
+    "profit_factor": 0.011,
+    "expectancy": -0.086,
+    "max_drawdown_pct": -0.017
+  },
+  "pair_level_original": {
+    "LINK/USDT": {
+      "trades": 84,
+      "win_rate": 0.179,
+      "profit_factor": 0.323,
+      "expectancy": -0.061
+    },
+    "BNB/USDT": {
+      "trades": 87,
+      "win_rate": 0.103,
+      "profit_factor": 0.101,
+      "expectancy": -0.069
+    },
+    "LTC/USDT": {
+      "trades": 107,
+      "win_rate": 0.103,
+      "profit_factor": 0.203,
+      "expectancy": -0.064
+    },
+    "XRP/USDT": {
+      "trades": 135,
+      "win_rate": 0.074,
+      "profit_factor": 0.194,
+      "expectancy": -0.064
+    }
+  },
+  "eligibility": {
+    "focused_hyperopt": false,
+    "confirmation": false,
+    "final_unseen": false,
+    "delivery": false,
+    "full_e2e_verified": false
+  },
+  "template_preserved": true,
+  "notes": "Template code retained in strategy_templates.py for learning/history purposes. The strategy mechanically executes correctly but the underlying hypothesis does not produce positive expectancy on the DEVELOP sample."
+}

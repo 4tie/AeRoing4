@@ -1803,7 +1803,22 @@ def test_volatility_compression_breakout_template_real_smoke(tmp_path):
         assert any(name.endswith(f"_{artifact.strategy_name}.json") for name in names)
 
         run_dir = runner._run_dirs[execution_id]
+        
+        # Extract native Freqtrade metrics from JSON
+        backtest_jsons = list(run_dir.glob("backtest-result-*.json"))
+        native_metrics = json.loads(backtest_jsons[0].read_text(encoding="utf-8"))
+        
+        # Freqtrade nests metrics under strategy[strategy_name]
+        strategy_data = native_metrics.get("strategy", {}).get(artifact.strategy_name, {})
+        
+        # Debug: print actual JSON structure keys and sample data
+        print(f"B2.1 {variant.upper()} NATIVE JSON KEYS: {list(native_metrics.keys())}")
+        print(f"B2.1 {variant.upper()} STRATEGY DATA KEYS: {list(strategy_data.keys())}")
+        print(f"B2.1 {variant.upper()} STRATEGY DATA SAMPLE: {json.dumps({k: v for k, v in list(strategy_data.items())[:5]}, indent=2)}")
+        
+        # Extract parsed summary metrics
         metrics = json.loads((run_dir / "parsed_summary.json").read_text(encoding="utf-8"))
+        
         results[variant] = {
             "strategy_name": artifact.strategy_name,
             "candidate_strategy_dir": str(candidate_dir),
@@ -1813,26 +1828,255 @@ def test_volatility_compression_breakout_template_real_smoke(tmp_path):
             "command_has_strategy_path": "--strategy-path" in command,
             "zip_has_candidate_py": True,
             "zip_has_candidate_json": True,
-            "total_trades": metrics["total_trades"]["value"],
-            "profit_factor": metrics["profit_factor"]["value"],
-            "expectancy": metrics["expectancy"]["value"],
-            "max_drawdown_pct": metrics["max_drawdown_pct"]["value"],
-            "win_rate_pct": metrics.get("win_rate_pct", {}).get("value", 0),
+            # Native Freqtrade metrics (from nested structure)
+            "native_total_trades": strategy_data.get("total_trades"),
+            "native_wins": strategy_data.get("wins"),
+            "native_losses": strategy_data.get("losses"),
+            "native_draws": strategy_data.get("draws"),
+            "native_win_rate": strategy_data.get("winrate"),
+            "native_gross_profit": strategy_data.get("profit_total_abs"),
+            "native_gross_loss": strategy_data.get("loss_total_abs") if strategy_data.get("loss_total_abs") else abs(strategy_data.get("profit_total_abs", 0) - strategy_data.get("profit_total", 0)),
+            "native_profit_factor": strategy_data.get("profit_factor"),
+            "native_expectancy": strategy_data.get("expectancy"),
+            "native_avg_win": strategy_data.get("profit_mean"),
+            "native_avg_loss": strategy_data.get("profit_median"),  # Freqtrade uses profit_median for avg loss
+            "native_max_drawdown": strategy_data.get("max_relative_drawdown"),
+            "native_exit_reasons": strategy_data.get("exit_reason_summary", {}),
+            # Parsed summary metrics
+            "parsed_total_trades": metrics["total_trades"]["value"],
+            "parsed_profit_factor": metrics["profit_factor"]["value"],
+            "parsed_expectancy": metrics["expectancy"]["value"],
+            "parsed_max_drawdown_pct": metrics["max_drawdown_pct"]["value"],
+            "parsed_win_rate": metrics.get("win_rate", {}).get("value", 0),
         }
-        print(f"B2.1 {variant.upper()} RESULT: {json.dumps(results[variant], sort_keys=True)}")
+        print(f"B2.1 {variant.upper()} NATIVE METRICS: total_trades={strategy_data.get('total_trades')}, wins={strategy_data.get('wins')}, losses={strategy_data.get('losses')}, winrate={strategy_data.get('winrate')}, profit_factor={strategy_data.get('profit_factor')}")
+        print(f"B2.1 {variant.upper()} PARSED METRICS: {json.dumps({k: v for k, v in results[variant].items() if k.startswith('parsed_')}, sort_keys=True)}")
 
     # Compare results
     original = results["original"]
     v2 = results["strict_v2"]
-    trade_reduction = (original["total_trades"] - v2["total_trades"]) / original["total_trades"] * 100
-    pf_improvement = v2["profit_factor"] - original["profit_factor"]
-    dd_improvement = v2["max_drawdown_pct"] - original["max_drawdown_pct"]
+    trade_reduction = (original["native_total_trades"] - v2["native_total_trades"]) / original["native_total_trades"] * 100
+    pf_improvement = v2["native_profit_factor"] - original["native_profit_factor"]
+    dd_improvement = v2["native_max_drawdown"] - original["native_max_drawdown"]
     
     print(f"B2.1 COMPARISON: trade_count_reduction={trade_reduction:.1f}%, pf_delta={pf_improvement:.3f}, dd_delta={dd_improvement:.3f}")
     
     # Verify v2 reduces overtrading
-    assert v2["total_trades"] < original["total_trades"], "v2 must reduce trade count"
+    assert v2["native_total_trades"] < original["native_total_trades"], "v2 must reduce trade count"
     assert trade_reduction > 50, "v2 must reduce trade count by >50%"
+    
+    # Check PF/win-rate consistency
+    print(f"B2.1 INCONSISTENCY CHECK: original PF={original['native_profit_factor']}, winrate={original['native_win_rate']}")
+    print(f"B2.1 INCONSISTENCY CHECK: v2 PF={v2['native_profit_factor']}, winrate={v2['native_win_rate']}")
+    if original['native_profit_factor'] > 0 and original['native_win_rate'] == 0:
+        print("B2.1 WARNING: PF > 0 but winrate = 0 detected in original")
+    if v2['native_profit_factor'] > 0 and v2['native_win_rate'] == 0:
+        print("B2.1 WARNING: PF > 0 but winrate = 0 detected in v2")
+    
+    # Verify parsed metrics match native metrics
+    assert original['parsed_total_trades'] == original['native_total_trades'], "Parsed total_trades must match native"
+    assert abs(original['parsed_profit_factor'] - original['native_profit_factor']) < 0.001, "Parsed PF must match native"
+    assert abs(original['parsed_win_rate'] - original['native_win_rate']) < 0.001, "Parsed win_rate must match native"
+
+
+def test_trend_pullback_continuation_template_real_smoke(tmp_path):
+    """B3: deterministic smoke test for trend pullback continuation template."""
+    _require_data()
+
+    from types import SimpleNamespace
+    from backend.services.aeroing4.research.strategy_templates import (
+        DEFAULT_TREND_PULLBACK_PARAMS,
+        TREND_PULLBACK_CLASS_NAME,
+        TREND_PULLBACK_FAMILY,
+        write_strategy_from_spec,
+    )
+
+    runner = _RealRunner(tmp_path)
+    request = SimpleNamespace(
+        timerange=ROBUST_DEVELOP_TIMERANGE,
+        pairs=REQUIRED_PAIRS,
+        timeframe=SMOKE_TIMEFRAME,
+    )
+
+    candidate_dir = tmp_path / "generated_trend_pullback"
+    artifact = write_strategy_from_spec({"family": TREND_PULLBACK_FAMILY}, candidate_dir)
+    assert artifact.strategy_path.exists()
+    assert artifact.sidecar_path.exists()
+
+    sidecar = json.loads(artifact.sidecar_path.read_text(encoding="utf-8"))
+    assert sidecar["params"]["buy"] == DEFAULT_TREND_PULLBACK_PARAMS
+    assert set(sidecar["params"]) == {"buy", "sell", "roi", "stoploss", "trailing"}
+    for name, value in DEFAULT_TREND_PULLBACK_PARAMS.items():
+        assert sidecar["parameters"][name]["current"] == value
+
+    execution_id = runner.run_candidate_backtest(
+        artifact.strategy_name,
+        "b3_trend_pullback",
+        request,
+        candidate_dir=candidate_dir,
+    )
+    command = list(runner.last_command)
+    assert "--strategy-path" in command
+    assert str(candidate_dir) in command
+
+    import zipfile
+    result_zip = runner._result_zips[execution_id]
+    with zipfile.ZipFile(result_zip, "r") as zip_ref:
+        names = zip_ref.namelist()
+    assert any(name.endswith(f"_{artifact.strategy_name}.py") for name in names)
+    assert any(name.endswith(f"_{artifact.strategy_name}.json") for name in names)
+
+    run_dir = runner._run_dirs[execution_id]
+    
+    # Extract native Freqtrade metrics from JSON
+    backtest_jsons = list(run_dir.glob("backtest-result-*.json"))
+    native_metrics = json.loads(backtest_jsons[0].read_text(encoding="utf-8"))
+    
+    # Debug: print full JSON structure to understand data layout
+    print(f"B4.1 FULL NATIVE METRICS KEYS: {list(native_metrics.keys())}")
+    if "strategy" in native_metrics:
+        print(f"B4.1 STRATEGY KEYS: {list(native_metrics['strategy'].keys())}")
+        if artifact.strategy_name in native_metrics['strategy']:
+            print(f"B4.1 {artifact.strategy_name} KEYS: {list(native_metrics['strategy'][artifact.strategy_name].keys())}")
+    
+    # Freqtrade nests metrics under strategy[strategy_name]
+    strategy_data = native_metrics.get("strategy", {}).get(artifact.strategy_name, {})
+    
+    # Extract parsed summary metrics
+    metrics = json.loads((run_dir / "parsed_summary.json").read_text(encoding="utf-8"))
+    
+    print(f"B3 TREND PULLBACK NATIVE METRICS: total_trades={strategy_data.get('total_trades')}, wins={strategy_data.get('wins')}, losses={strategy_data.get('losses')}, winrate={strategy_data.get('winrate')}, profit_factor={strategy_data.get('profit_factor')}")
+    print(f"B3 TREND PULLBACK PARSED METRICS: {json.dumps({k: v for k, v in metrics.items() if k in ['total_trades', 'profit_factor', 'expectancy', 'max_drawdown_pct', 'win_rate']}, sort_keys=True)}")
+    
+    # Extract diagnostic metrics for B3.1 audit
+    print(f"B3.1 EXIT REASONS: {strategy_data.get('exit_reason_summary', {})}")
+    print(f"B3.1 PAIR-LEVEL METRICS:")
+    if "results_per_pair" in strategy_data:
+        for pair_data in strategy_data["results_per_pair"]:
+            if pair_data.get("key") != "TOTAL":
+                print(f"  {pair_data.get('key')}: trades={pair_data.get('trades')}, winrate={pair_data.get('winrate')}, profit_factor={pair_data.get('profit_factor')}, expectancy={pair_data.get('expectancy')}")
+    
+    # Verify basic execution succeeded
+    assert strategy_data.get("total_trades") is not None
+    assert strategy_data.get("profit_factor") is not None
+
+
+def test_trend_pullback_original_vs_v2_comparison(tmp_path):
+    """B3.1: compare original B3 baseline with stricter v2 to identify signal quality issues."""
+    _require_data()
+
+    from types import SimpleNamespace
+    from backend.services.aeroing4.research.strategy_templates import (
+        DEFAULT_TREND_PULLBACK_PARAMS,
+        STRICT_TREND_PULLBACK_PARAMS,
+        TREND_PULLBACK_FAMILY,
+        write_strategy_from_spec,
+    )
+
+    runner = _RealRunner(tmp_path)
+    request = SimpleNamespace(
+        timerange=ROBUST_DEVELOP_TIMERANGE,
+        pairs=REQUIRED_PAIRS,
+        timeframe=SMOKE_TIMEFRAME,
+    )
+
+    results = {}
+    for variant, spec in [
+        ("original", {"family": TREND_PULLBACK_FAMILY}),
+        ("strict_v2", {"family": TREND_PULLBACK_FAMILY, "variant": "strict_v2"}),
+    ]:
+        candidate_dir = tmp_path / f"generated_trend_pullback_{variant}"
+        artifact = write_strategy_from_spec(spec, candidate_dir)
+        assert artifact.strategy_path.exists()
+        assert artifact.sidecar_path.exists()
+
+        sidecar = json.loads(artifact.sidecar_path.read_text(encoding="utf-8"))
+        expected_params = DEFAULT_TREND_PULLBACK_PARAMS if variant == "original" else STRICT_TREND_PULLBACK_PARAMS
+        assert sidecar["params"]["buy"] == expected_params
+        assert set(sidecar["params"]) == {"buy", "sell", "roi", "stoploss", "trailing"}
+        for name, value in expected_params.items():
+            assert sidecar["parameters"][name]["current"] == value
+
+        execution_id = runner.run_candidate_backtest(
+            artifact.strategy_name,
+            f"b3_trend_pullback_{variant}",
+            request,
+            candidate_dir=candidate_dir,
+        )
+        command = list(runner.last_command)
+        assert "--strategy-path" in command
+        assert str(candidate_dir) in command
+
+        import zipfile
+        result_zip = runner._result_zips[execution_id]
+        with zipfile.ZipFile(result_zip, "r") as zip_ref:
+            names = zip_ref.namelist()
+        assert any(name.endswith(f"_{artifact.strategy_name}.py") for name in names)
+        assert any(name.endswith(f"_{artifact.strategy_name}.json") for name in names)
+
+        run_dir = runner._run_dirs[execution_id]
+        
+        # Extract native Freqtrade metrics from JSON
+        backtest_jsons = list(run_dir.glob("backtest-result-*.json"))
+        native_metrics = json.loads(backtest_jsons[0].read_text(encoding="utf-8"))
+        
+        # Freqtrade nests metrics under strategy[strategy_name]
+        strategy_data = native_metrics.get("strategy", {}).get(artifact.strategy_name, {})
+        
+        # Extract parsed summary metrics
+        metrics = json.loads((run_dir / "parsed_summary.json").read_text(encoding="utf-8"))
+        
+        results[variant] = {
+            "strategy_name": artifact.strategy_name,
+            "candidate_strategy_dir": str(candidate_dir),
+            "candidate_py": str(artifact.strategy_path),
+            "candidate_json": str(artifact.sidecar_path),
+            "command": command,
+            "command_has_strategy_path": "--strategy-path" in command,
+            "zip_has_candidate_py": True,
+            "zip_has_candidate_json": True,
+            # Native Freqtrade metrics (from nested structure)
+            "native_total_trades": strategy_data.get("total_trades"),
+            "native_wins": strategy_data.get("wins"),
+            "native_losses": strategy_data.get("losses"),
+            "native_draws": strategy_data.get("draws"),
+            "native_win_rate": strategy_data.get("winrate"),
+            "native_profit_factor": strategy_data.get("profit_factor"),
+            "native_expectancy": strategy_data.get("expectancy"),
+            "native_max_drawdown": strategy_data.get("max_relative_drawdown"),
+            "native_exit_reasons": strategy_data.get("exit_reason_summary", {}),
+            # Parsed summary metrics
+            "parsed_total_trades": metrics["total_trades"]["value"],
+            "parsed_profit_factor": metrics["profit_factor"]["value"],
+            "parsed_expectancy": metrics["expectancy"]["value"],
+            "parsed_max_drawdown_pct": metrics["max_drawdown_pct"]["value"],
+            "parsed_win_rate": metrics["win_rate"]["value"],
+        }
+        
+        print(f"B3.1 {variant.upper()} NATIVE METRICS: total_trades={strategy_data.get('total_trades')}, wins={strategy_data.get('wins')}, losses={strategy_data.get('losses')}, winrate={strategy_data.get('winrate')}, profit_factor={strategy_data.get('profit_factor')}, expectancy={strategy_data.get('expectancy')}")
+        print(f"B3.1 {variant.upper()} EXIT REASONS: {strategy_data.get('exit_reason_summary', {})}")
+        print(f"B3.1 {variant.upper()} PAIR-LEVEL METRICS:")
+        if "results_per_pair" in strategy_data:
+            for pair_data in strategy_data["results_per_pair"]:
+                if pair_data.get("key") != "TOTAL":
+                    print(f"  {pair_data.get('key')}: trades={pair_data.get('trades')}, winrate={pair_data.get('winrate')}, profit_factor={pair_data.get('profit_factor')}, expectancy={pair_data.get('expectancy')}")
+    
+    original = results["original"]
+    v2 = results["strict_v2"]
+    
+    print(f"B3.1 COMPARISON:")
+    print(f"  Original trades: {original['native_total_trades']}, V2 trades: {v2['native_total_trades']}")
+    print(f"  Original PF: {original['native_profit_factor']}, V2 PF: {v2['native_profit_factor']}")
+    print(f"  Original winrate: {original['native_win_rate']}, V2 winrate: {v2['native_win_rate']}")
+    print(f"  Original expectancy: {original['native_expectancy']}, V2 expectancy: {v2['native_expectancy']}")
+    
+    # Verify parsed metrics match native metrics
+    assert original['parsed_total_trades'] == original['native_total_trades'], "Parsed total_trades must match native"
+    assert abs(original['parsed_profit_factor'] - original['native_profit_factor']) < 0.001, "Parsed PF must match native"
+    assert abs(original['parsed_win_rate'] - original['native_win_rate']) < 0.001, "Parsed win_rate must match native"
+    assert abs(v2['parsed_total_trades'] - v2['native_total_trades']) < 0.001, "V2 Parsed total_trades must match native"
+    assert abs(v2['parsed_profit_factor'] - v2['native_profit_factor']) < 0.001, "V2 Parsed PF must match native"
+    assert abs(v2['parsed_win_rate'] - v2['native_win_rate']) < 0.001, "V2 Parsed win_rate must match native"
 
 
 def test_two_candidates_produce_different_commands(tmp_path):
@@ -2716,3 +2960,312 @@ def test_candidate_materialization_json_serialization(tmp_path):
     print(f"CANDIDATE MATERIALIZATION: Original hash={param_hash}")
     print(f"CANDIDATE MATERIALIZATION: New hash={new_hash}")
     print(f"CANDIDATE MATERIALIZATION: Parameter value={loaded_data['parameters']['buy_ma_count']}")
+
+
+def test_mean_reversion_exhaustion_template_real_smoke(tmp_path):
+    """B4.1: deterministic real Freqtrade smoke for mean_reversion_exhaustion template with detailed metric extraction."""
+    _require_data()
+
+    from types import SimpleNamespace
+    from backend.services.aeroing4.research.strategy_templates import (
+        DEFAULT_MEAN_REVERSION_PARAMS,
+        MEAN_REVERSION_FAMILY,
+        write_strategy_from_spec,
+    )
+
+    runner = _RealRunner(tmp_path)
+    request = SimpleNamespace(
+        timerange=ROBUST_DEVELOP_TIMERANGE,
+        pairs=REQUIRED_PAIRS,
+        timeframe=SMOKE_TIMEFRAME,
+    )
+
+    candidate_dir = tmp_path / "generated_mean_reversion"
+    artifact = write_strategy_from_spec({"family": MEAN_REVERSION_FAMILY}, candidate_dir)
+    assert artifact.strategy_path.exists()
+    assert artifact.sidecar_path.exists()
+
+    sidecar = json.loads(artifact.sidecar_path.read_text(encoding="utf-8"))
+    assert sidecar["params"]["buy"] == DEFAULT_MEAN_REVERSION_PARAMS
+    assert set(sidecar["params"]) == {"buy", "sell", "roi", "stoploss", "trailing"}
+    for name, value in DEFAULT_MEAN_REVERSION_PARAMS.items():
+        assert sidecar["parameters"][name]["current"] == value
+
+    execution_id = runner.run_candidate_backtest(
+        artifact.strategy_name,
+        "b4_mean_reversion_audit",
+        request,
+        candidate_dir=candidate_dir,
+    )
+    command = list(runner.last_command)
+    assert "--strategy-path" in command
+    assert str(candidate_dir) in command
+
+    import zipfile
+    result_zip = runner._result_zips[execution_id]
+    with zipfile.ZipFile(result_zip, "r") as zip_ref:
+        names = zip_ref.namelist()
+    assert any(name.endswith(f"_{artifact.strategy_name}.py") for name in names)
+    assert any(name.endswith(f"_{artifact.strategy_name}.json") for name in names)
+
+    run_dir = runner._run_dirs[execution_id]
+    
+    # Extract native Freqtrade metrics from JSON
+    backtest_jsons = list(run_dir.glob("backtest-result-*.json"))
+    native_metrics = json.loads(backtest_jsons[0].read_text(encoding="utf-8"))
+    
+    # Debug: print full JSON structure to understand data layout
+    print(f"B4.1 FULL NATIVE METRICS KEYS: {list(native_metrics.keys())}")
+    if "strategy" in native_metrics:
+        print(f"B4.1 STRATEGY KEYS: {list(native_metrics['strategy'].keys())}")
+        if artifact.strategy_name in native_metrics['strategy']:
+            print(f"B4.1 {artifact.strategy_name} KEYS: {list(native_metrics['strategy'][artifact.strategy_name].keys())}")
+    
+    # Freqtrade nests metrics under strategy[strategy_name]
+    strategy_data = native_metrics.get("strategy", {}).get(artifact.strategy_name, {})
+    
+    # Extract parsed summary metrics
+    metrics = json.loads((run_dir / "parsed_summary.json").read_text(encoding="utf-8"))
+    
+    print(f"B4.1 MEAN REVERSION NATIVE METRICS: total_trades={strategy_data.get('total_trades')}, wins={strategy_data.get('wins')}, losses={strategy_data.get('losses')}, winrate={strategy_data.get('winrate')}, profit_factor={strategy_data.get('profit_factor')}")
+    print(f"B4.1 MEAN REVERSION PARSED METRICS: {json.dumps({k: v for k, v in metrics.items() if k in ['total_trades', 'profit_factor', 'expectancy', 'max_drawdown_pct', 'win_rate']}, sort_keys=True)}")
+    
+    # Extract exit reasons
+    exit_reasons = strategy_data.get("exit_reason_summary", {})
+    print(f"B4.1 MEAN REVERSION EXIT REASONS: {json.dumps(exit_reasons, indent=2)}")
+    
+    # Extract pair-level metrics
+    pair_data = strategy_data.get("results_per_pair", [])
+    print(f"B4.1 MEAN REVERSION PAIR-LEVEL METRICS:")
+    for pair_metrics in pair_data:
+        pair = pair_metrics.get('pair', 'unknown')
+        print(f"  {pair}: trades={pair_metrics.get('trades')}, winrate={pair_metrics.get('winrate')}, profit_factor={pair_metrics.get('profit_factor')}, expectancy={pair_metrics.get('expectancy')}, profit_total={pair_metrics.get('profit_total')}")
+    
+    # Extract additional detailed metrics
+    print(f"B4.1 MEAN REVERSION DETAILED METRICS:")
+    print(f"  profit_mean: {strategy_data.get('profit_mean')}")
+    print(f"  profit_median: {strategy_data.get('profit_median')}")
+    print(f"  holding_avg: {strategy_data.get('holding_avg')}")
+    print(f"  winner_holding_avg: {strategy_data.get('winner_holding_avg')}")
+    print(f"  loser_holding_avg: {strategy_data.get('loser_holding_avg')}")
+    print(f"  max_consecutive_wins: {strategy_data.get('max_consecutive_wins')}")
+    print(f"  max_consecutive_losses: {strategy_data.get('max_consecutive_losses')}")
+    print(f"  max_drawdown_account: {strategy_data.get('max_drawdown_account')}")
+    print(f"  best_pair: {strategy_data.get('best_pair')}")
+    print(f"  worst_pair: {strategy_data.get('worst_pair')}")
+    
+    # Verify basic execution succeeded
+    assert strategy_data.get("total_trades") is not None
+    assert strategy_data.get("profit_factor") is not None
+
+
+def test_mean_reversion_exhaustion_sensitivity_grid(tmp_path):
+    """B4.2.1: DEVELOP-only sensitivity grid for MeanReversionExhaustion with corrected metrics."""
+    _require_data()
+
+    from types import SimpleNamespace
+    from backend.services.aeroing4.research.strategy_templates import (
+        DEFAULT_MEAN_REVERSION_PARAMS,
+        MEAN_REVERSION_FAMILY,
+        MEAN_REVERSION_CLASS_NAME,
+        write_strategy_from_spec,
+    )
+
+    runner = _RealRunner(tmp_path)
+    request = SimpleNamespace(
+        timerange=ROBUST_DEVELOP_TIMERANGE,
+        pairs=REQUIRED_PAIRS,
+        timeframe=SMOKE_TIMEFRAME,
+    )
+
+    # Baseline parameters
+    baseline_params = DEFAULT_MEAN_REVERSION_PARAMS.copy()
+    
+    # Sensitivity grid: one parameter at a time
+    sensitivity_grid = {
+        "bb_period": [16, 20, 24],
+        "bb_stddev": [1.8, 2.0, 2.2],
+        "rsi_oversold": [25, 30, 35],
+        "rsi_recovery_min": [32, 35, 40],
+        "ema_guard_period": [30, 50, 80],
+        "adx_max": [25, 40, 55],
+        "atr_period": [10, 14, 20],
+    }
+
+    results = []
+    
+    for param_name, test_values in sensitivity_grid.items():
+        for test_value in test_values:
+            # Skip baseline value (already tested in B4.1)
+            if test_value == baseline_params[param_name]:
+                continue
+            
+            # Create modified parameters
+            modified_params = baseline_params.copy()
+            modified_params[param_name] = test_value
+            
+            # Generate candidate directory name
+            param_suffix = f"{param_name}_{test_value}"
+            candidate_dir = tmp_path / f"sensitivity_{param_suffix}"
+            candidate_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Write strategy with modified parameters
+            artifact = write_strategy_from_spec({"family": MEAN_REVERSION_FAMILY}, candidate_dir)
+            
+            # Update sidecar with modified parameters
+            sidecar = json.loads(artifact.sidecar_path.read_text(encoding="utf-8"))
+            sidecar["params"]["buy"] = modified_params
+            for name, value in modified_params.items():
+                if name in sidecar["parameters"]:
+                    sidecar["parameters"][name]["current"] = value
+            artifact.sidecar_path.write_text(json.dumps(sidecar, indent=2), encoding="utf-8")
+            
+            # Run backtest
+            execution_id = runner.run_candidate_backtest(
+                artifact.strategy_name,
+                f"sensitivity_{param_suffix}",
+                request,
+                candidate_dir=candidate_dir,
+            )
+            
+            # Extract metrics
+            run_dir = runner._run_dirs[execution_id]
+            backtest_jsons = list(run_dir.glob("backtest-result-*.json"))
+            native_metrics = json.loads(backtest_jsons[0].read_text(encoding="utf-8"))
+            strategy_data = native_metrics.get("strategy", {}).get(MEAN_REVERSION_CLASS_NAME, {})
+            
+            # Extract pair-level metrics
+            pair_data = strategy_data.get("results_per_pair", [])
+            
+            # Compute aggregate metrics excluding LINK/USDT
+            total_trades_excluding_link = 0
+            wins_excluding_link = 0
+            losses_excluding_link = 0
+            profit_total_abs_excluding_link = 0
+            profit_total_abs_loss_excluding_link = 0
+            
+            for pair_metrics in pair_data:
+                pair_name = pair_metrics.get("pair", "")
+                if pair_name == "LINK/USDT":
+                    continue
+                
+                total_trades_excluding_link += pair_metrics.get("trades", 0)
+                wins_excluding_link += pair_metrics.get("wins", 0)
+                losses_excluding_link += pair_metrics.get("losses", 0)
+                profit_total_abs_excluding_link += pair_metrics.get("profit_total_abs", 0)
+                profit_total_abs_loss_excluding_link += pair_metrics.get("profit_total_abs_loss", 0)
+            
+            # Compute actual PF excluding LINK (cannot be negative)
+            pf_excluding_link = 0
+            if profit_total_abs_loss_excluding_link > 0:
+                pf_excluding_link = profit_total_abs_excluding_link / profit_total_abs_loss_excluding_link
+            elif profit_total_abs_excluding_link > 0:
+                pf_excluding_link = float('inf')  # No losses, infinite PF
+            
+            # Compute net profit excluding LINK
+            total_profit = strategy_data.get("profit_total", 0)
+            link_profit = 0
+            for pair_metrics in pair_data:
+                if pair_metrics.get("pair") == "LINK/USDT":
+                    link_profit = pair_metrics.get("profit_total", 0)
+                    break
+            
+            profit_excluding_link = total_profit - link_profit
+            
+            # Count profitable pairs and pairs with PF > 1 (out of 4 total pairs)
+            profitable_pairs = 0
+            pf_gt_1_pairs = 0
+            for pair_metrics in pair_data:
+                if pair_metrics.get("profit_total", 0) > 0:
+                    profitable_pairs += 1
+                if pair_metrics.get("profit_factor", 0) > 1.0:
+                    pf_gt_1_pairs += 1
+            
+            # Check if one pair contributes > 60% of total profit
+            max_pair_profit = 0
+            for pair_metrics in pair_data:
+                pair_profit = abs(pair_metrics.get("profit_total", 0))
+                if pair_profit > max_pair_profit:
+                    max_pair_profit = pair_profit
+            
+            pair_concentration = (max_pair_profit / abs(total_profit)) if total_profit != 0 else 0
+            is_pair_dependent = pair_concentration > 0.6
+            
+            result = {
+                "parameter": param_name,
+                "value": test_value,
+                "total_trades": strategy_data.get("total_trades"),
+                "wins": strategy_data.get("wins"),
+                "losses": strategy_data.get("losses"),
+                "draws": strategy_data.get("draws"),
+                "win_rate": strategy_data.get("winrate"),
+                "profit_factor": strategy_data.get("profit_factor"),
+                "expectancy": strategy_data.get("expectancy"),
+                "max_drawdown": strategy_data.get("max_drawdown_account"),
+                "profit_mean": strategy_data.get("profit_mean"),
+                "profit_median": strategy_data.get("profit_median"),
+                "holding_avg": strategy_data.get("holding_avg"),
+                "profitable_pairs": profitable_pairs,
+                "pf_gt_1_pairs": pf_gt_1_pairs,
+                "pf_excluding_link": pf_excluding_link,
+                "profit_excluding_link": profit_excluding_link,
+                "is_pair_dependent": is_pair_dependent,
+                "pair_concentration": pair_concentration,
+                "pair_data": pair_data,
+            }
+            results.append(result)
+            
+            print(f"B4.2.1 SENSITIVITY: {param_name}={test_value}, PF={result['profit_factor']:.3f}, expectancy={result['expectancy']:.4f}, profitable_pairs={profitable_pairs}/4, pf_excluding_link={pf_excluding_link:.3f}, pair_dependent={is_pair_dependent}")
+    
+    # Print ranking table with corrected field names
+    print(f"\nB4.2.1 SENSITIVITY RANKING TABLE:")
+    print(f"{'Parameter':<20} {'Value':<10} {'Trades':<8} {'PF':<8} {'Expectancy':<10} {'DD':<8} {'ProfPairs':<12} {'PF_excl_LINK':<12} {'Profit_excl_LINK':<15} {'Sensitivity':<20}")
+    print("-" * 140)
+    
+    baseline_pf = 1.138
+    baseline_expectancy = 0.0138
+    baseline_dd = 0.0449
+    
+    for result in results:
+        # Determine sensitivity level
+        pf = result["profit_factor"] or 0
+        exp = result["expectancy"] or 0
+        dd = result["max_drawdown"] or 0
+        prof_pairs = result["profitable_pairs"]
+        pf_gt_1 = result["pf_gt_1_pairs"]
+        pf_excl_link = result["pf_excluding_link"]
+        pair_dep = result["is_pair_dependent"]
+        
+        if pf > baseline_pf and exp > 0 and dd <= baseline_dd * 1.2 and prof_pairs >= 2 and not pair_dep:
+            sensitivity = "robust_positive"
+        elif pf > baseline_pf and exp > 0:
+            sensitivity = "pair_dependent_positive"
+        elif pf > 0.9 and exp > 0:
+            sensitivity = "neutral"
+        else:
+            sensitivity = "harmful"
+        
+        pf_excl_str = f"{pf_excl_link:.3f}" if pf_excl_link != float('inf') else "inf"
+        prof_pairs_str = f"{prof_pairs}/4"
+        print(f"{result['parameter']:<20} {result['value']:<10} {result['total_trades']:<8} {pf:<8.3f} {exp:<10.4f} {dd:<8.4f} {prof_pairs_str:<12} {pf_excl_str:<12} {result['profit_excluding_link']:<15.4f} {sensitivity:<20}")
+    
+    # Save results to file for report
+    results_file = tmp_path / "sensitivity_results.json"
+    results_file.write_text(json.dumps(results, indent=2), encoding="utf-8")
+    
+    # Basic assertion that at least some sensitivity runs completed
+    assert len(results) > 0, "No sensitivity runs completed"
+    
+    # Print detailed pair-level metrics for baseline and best candidate
+    print(f"\nB4.2.1 BASELINE PAIR-LEVEL METRICS:")
+    baseline_result = results[0]  # First result as baseline reference
+    for pair_metrics in baseline_result["pair_data"]:
+        pair_name = pair_metrics.get("pair", "unknown")
+        print(f"  {pair_name}: trades={pair_metrics.get('trades')}, wins={pair_metrics.get('wins')}, losses={pair_metrics.get('losses')}, winrate={pair_metrics.get('winrate'):.3f}, profit_factor={pair_metrics.get('profit_factor'):.3f}, expectancy={pair_metrics.get('expectancy'):.4f}, profit_total={pair_metrics.get('profit_total'):.4f}")
+    
+    # Find best candidate (highest PF)
+    best_result = max(results, key=lambda r: r["profit_factor"] or 0)
+    print(f"\nB4.2.1 BEST CANDIDATE PAIR-LEVEL METRICS ({best_result['parameter']}={best_result['value']}):")
+    for pair_metrics in best_result["pair_data"]:
+        pair_name = pair_metrics.get("pair", "unknown")
+        print(f"  {pair_name}: trades={pair_metrics.get('trades')}, wins={pair_metrics.get('wins')}, losses={pair_metrics.get('losses')}, winrate={pair_metrics.get('winrate'):.3f}, profit_factor={pair_metrics.get('profit_factor'):.3f}, expectancy={pair_metrics.get('expectancy'):.4f}, profit_total={pair_metrics.get('profit_total'):.4f}")

@@ -1,0 +1,165 @@
+{
+  "candidates": [
+    {
+      "family": "regime_adaptive_dual_mode",
+      "description": "Regime-adaptive strategy that switches between trend-following and range-bound modes based on ADX and volatility state",
+      "entry_logic": {
+        "trend_mode": {
+          "condition": "ADX > trend_threshold AND volatility_expansion",
+          "entry": "Price above fast_ema AND RSI in bullish range AND volume_above_average",
+          "parameters": {
+            "adx_trend_min": {"type": "int", "default": 25, "min": 20, "max": 35},
+            "ema_fast_period": {"type": "int", "default": 9, "min": 5, "max": 15},
+            "ema_slow_period": {"type": "int", "default": 21, "min": 15, "max": 30},
+            "rsi_bullish_min": {"type": "int", "default": 50, "min": 45, "max": 55},
+            "volume_ratio_min": {"type": "float", "default": 1.2, "min": 1.0, "max": 1.5}
+          }
+        },
+        "range_mode": {
+          "condition": "ADX < range_threshold AND volatility_contraction",
+          "entry": "Price near lower_bollinger AND RSI oversold recovering AND volume_spike",
+          "parameters": {
+            "adx_range_max": {"type": "int", "default": 20, "min": 15, "max": 25},
+            "bb_period": {"type": "int", "default": 20, "min": 15, "max": 25},
+            "bb_stddev": {"type": "float", "default": 2.0, "min": 1.5, "max": 2.5},
+            "rsi_oversold": {"type": "int", "default": 30, "min": 25, "max": 35},
+            "rsi_recovery": {"type": "int", "default": 35, "min": 30, "max": 40},
+            "volume_spike_ratio": {"type": "float", "default": 1.5, "min": 1.2, "max": 2.0}
+          }
+        }
+      },
+      "exit_logic": {
+        "trend_exit": "Price below slow_ema OR RSI overbought OR trailing_stop",
+        "range_exit": "Price at bb_middle OR RSI neutral OR fixed_stop",
+        "parameters": {
+          "trailing_stop_pct": {"type": "float", "default": 0.02, "min": 0.015, "max": 0.03},
+          "fixed_stop_pct": {"type": "float", "default": 0.05, "min": 0.03, "max": 0.08}
+        }
+      },
+      "risk_management": {
+        "stoploss": -0.06,
+        "roi_tiers": {
+          "0": 0.05,
+          "60": 0.03,
+          "180": 0.0
+        }
+      },
+      "multi_pair_robustness": {
+        "regime_detection": "Uses ADX and volatility to detect market state, applies appropriate logic per regime",
+        "no_pair_hardcoding": "Entry/exit conditions are pair-agnostic, based on universal indicators",
+        "balanced_parameter_count": "12 parameters total, focused on regime detection and signal quality"
+      }
+    },
+    {
+      "family": "momentum_continuation_quality",
+      "description": "Momentum continuation strategy with volatility quality and volume confirmation filters, not pullback-only",
+      "entry_logic": {
+        "primary_condition": "Strong momentum detected via price change and volume",
+        "entry": "Price_change > threshold AND volume_quality AND volatility_quality AND not_overextended",
+        "parameters": {
+          "price_change_threshold": {"type": "float", "default": 0.015, "min": 0.01, "max": 0.025},
+          "momentum_period": {"type": "int", "default": 14, "min": 10, "max": 20},
+          "volume_ma_period": {"type": "int", "default": 20, "min": 15, "max": 30},
+          "volume_quality_min": {"type": "float", "default": 1.3, "min": 1.1, "max": 1.6},
+          "atr_period": {"type": "int", "default": 14, "min": 10, "max": 20},
+          "atr_expansion_min": {"type": "float", "default": 1.2, "min": 1.0, "max": 1.5},
+          "rsi_max_entry": {"type": "int", "default": 70, "min": 65, "max": 75}
+        }
+      },
+      "exit_logic": {
+        "momentum_exit": "Momentum weakens OR volume drops OR volatility contracts",
+        "parameters": {
+          "momentum_weak_threshold": {"type": "float", "default": 0.005, "min": 0.003, "max": 0.01},
+          "volume_drop_ratio": {"type": "float", "default": 0.8, "min": 0.7, "max": 0.9},
+          "atr_contraction_ratio": {"type": "float", "default": 0.9, "min": 0.8, "max": 1.0}
+        }
+      },
+      "risk_management": {
+        "stoploss": -0.07,
+        "roi_tiers": {
+          "0": 0.06,
+          "120": 0.04,
+          "300": 0.0
+        }
+      },
+      "multi_pair_robustness": {
+        "momentum_universal": "Momentum is a universal market phenomenon, not pair-specific",
+        "quality_filters": "Volume and volatility quality filters ensure signal strength across pairs",
+        "not_pullback": "Enters on momentum continuation, not pullback, avoiding TrendPullbackContinuation failure",
+        "balanced_parameter_count": "10 parameters focused on momentum quality"
+      }
+    },
+    {
+      "family": "breakout_retest_confirmation",
+      "description": "Breakout retest strategy that avoids first breakout candle, waits for retest/hold confirmation with volume and ATR filters",
+      "entry_logic": {
+        "breakout_detection": "Price breaks above resistance or below support",
+        "retest_condition": "Price returns to breakout level and holds",
+        "entry": "Breakout confirmed AND retest successful AND volume_confirmation AND ATR_normal",
+        "parameters": {
+          "lookback_period": {"type": "int", "default": 20, "min": 15, "max": 30},
+          "breakout_threshold": {"type": "float", "default": 0.02, "min": 0.015, "max": 0.03},
+          "retest_tolerance_pct": {"type": "float", "default": 0.005, "min": 0.003, "max": 0.01},
+          "hold_candles": {"type": "int", "default": 2, "min": 1, "max": 3},
+          "volume_confirmation_ratio": {"type": "float", "default": 1.4, "min": 1.2, "max": 1.8},
+          "atr_period": {"type": "int", "default": 14, "min": 10, "max": 20},
+          "atr_normal_range": {"type": "float", "default": 1.5, "min": 1.2, "max": 2.0}
+        }
+      },
+      "exit_logic": {
+        "breakout_fail": "Price returns below breakout level",
+        "take_profit": "Fixed target based on ATR",
+        "parameters": {
+          "atr_multiplier_tp": {"type": "float", "default": 2.0, "min": 1.5, "max": 2.5},
+          "fail_threshold_pct": {"type": "float", "default": 0.01, "min": 0.005, "max": 0.015}
+        }
+      },
+      "risk_management": {
+        "stoploss": -0.05,
+        "roi_tiers": {
+          "0": 0.04,
+          "90": 0.02,
+          "240": 0.0
+        }
+      },
+      "multi_pair_robustness": {
+        "breakout_universal": "Breakouts are universal across markets, not pair-specific",
+        "retest_filter": "Retest requirement avoids false breakouts that plagued VolatilityCompressionBreakout",
+        "volume_atr_filters": "Volume and ATR filters ensure signal quality across pairs",
+        "not_simple_breakout": "Requires retest confirmation, avoiding simple breakout failure",
+        "balanced_parameter_count": "10 parameters focused on breakout quality and confirmation"
+      }
+    }
+  ],
+  "ranking": [
+    {
+      "rank": 1,
+      "family": "regime_adaptive_dual_mode",
+      "score": 8.5,
+      "reasoning": "Explicitly addresses regime dependency, applies appropriate logic per market state, most comprehensive approach to multi-pair robustness"
+    },
+    {
+      "rank": 2,
+      "family": "breakout_retest_confirmation",
+      "score": 7.5,
+      "reasoning": "Breakouts are universal, retest filter avoids false signals, directly addresses overtrading issue from VolatilityCompressionBreakout"
+    },
+    {
+      "rank": 3,
+      "family": "momentum_continuation_quality",
+      "score": 7.0,
+      "reasoning": "Momentum is universal, quality filters ensure signal strength, avoids pullback-only failure mode"
+    }
+  ],
+  "failure_mode_avoidance": {
+    "MA_count_gap": "None of the candidates use pure MA count/gap logic",
+    "volatility_breakout": "Breakout_retest_confirmation adds retest filter to avoid false breakouts",
+    "trend_pullback": "Momentum_continuation enters on continuation, not pullback",
+    "mean_reversion_exhaustion": "Regime_adaptive uses regime detection instead of pure mean reversion",
+    "pair_specific": "All candidates use universal indicators (ADX, volume, ATR, RSI) without pair hardcoding",
+    "excessive_parameters": "All candidates have 10-12 parameters, focused on signal quality",
+    "future_looking": "All candidates use standard lagging indicators with shift(1) where needed"
+  },
+  "recommended_first_candidate": "regime_adaptive_dual_mode",
+  "recommendation_reason": "Regime-adaptive strategy most directly addresses the fundamental failure mode discovered: strategies that work in one regime but fail in others. By explicitly detecting market state and applying appropriate logic, it has the highest potential for multi-pair robustness."
+}
