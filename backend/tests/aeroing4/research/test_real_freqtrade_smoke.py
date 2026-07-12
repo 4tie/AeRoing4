@@ -1031,12 +1031,14 @@ def test_real_focused_hyperopt_smoke(tmp_path):
     champion_store = ChampionStore(runs_root / "champions")
     state_store = ResearchStateStore(runs_root)
     zone_guard = DataZoneGuard(state_store, runs_root)
+    strategies_dir = runs_root / "strategies"
     
     service = FocusedHyperoptService(
         runs_root=runs_root,
         backtest_runner=runner,
         champion_store=champion_store,
         zone_guard=zone_guard,
+        strategies_dir=strategies_dir,
         budget=budget_policy,
         develop_timerange="20240101-20240131",  # Short 1-month timerange
         pairs=["BTC/USDT"],  # Single pair for speed
@@ -1512,7 +1514,8 @@ def test_runtime_params_sensitivity_grid_develop_only(tmp_path):
     )
 
     champion = _seed_champion(tmp_path)
-    service = CandidateArtifactService(runs_root)
+    strategies_dir = tmp_path / "strategies"
+    service = CandidateArtifactService(runs_root, strategies_dir)
     runner = _RealRunner(tmp_path)
     request = SimpleNamespace(
         timerange=SMOKE_TIMERANGE,
@@ -1647,7 +1650,8 @@ def test_runtime_params_robust_gap_sensitivity_recheck_develop_only(tmp_path):
     )
 
     champion = _seed_champion(tmp_path)
-    service = CandidateArtifactService(runs_root)
+    strategies_dir = tmp_path / "strategies"
+    service = CandidateArtifactService(runs_root, strategies_dir)
     runner = _RealRunner(tmp_path)
     request = SimpleNamespace(
         timerange=ROBUST_DEVELOP_TIMERANGE,
@@ -2446,7 +2450,8 @@ def test_real_research_loop_smoke(tmp_path):
     hypothesis_store = HypothesisStore(runs_root)
     champion_store = ChampionStore(runs_root)
     state_store = ResearchStateStore(runs_root)
-    artifact_service = CandidateArtifactService(runs_root)
+    strategies_dir = runs_root / "strategies"
+    artifact_service = CandidateArtifactService(runs_root, strategies_dir)
     
     # Register parent champion
     champion_store.register(parent_champion)
@@ -2896,7 +2901,8 @@ def test_candidate_materialization_json_serialization(tmp_path):
         json.dump(sidecar_data, f, indent=2)
     
     # Create candidate artifact service
-    service = CandidateArtifactService(runs_root)
+    strategies_dir = runs_root / "strategies"
+    service = CandidateArtifactService(runs_root, strategies_dir)
     
     # Create a minimal champion reference
     from backend.services.aeroing4.research.champions import ChampionReference, ArtifactReference, ChampionSourceType

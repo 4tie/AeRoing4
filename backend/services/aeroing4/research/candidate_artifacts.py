@@ -60,8 +60,9 @@ class CandidateArtifactResult(BaseModel):
 class CandidateArtifactService:
     """Creates run-local candidate artifacts from a champion + one change."""
 
-    def __init__(self, runs_root: Path):
+    def __init__(self, runs_root: Path, strategies_dir: Path):
         self.runs_root = Path(runs_root)
+        self.strategies_dir = Path(strategies_dir)
 
     def create(
         self,
@@ -78,7 +79,7 @@ class CandidateArtifactService:
 
         # Resolve the original source files from the champion's audit references.
         orig_strategy = Path(champion.strategy_artifact.original_source_path)
-        orig_sidecar = self.runs_root / "strategies" / f"{strategy_name}.json"
+        orig_sidecar = self.strategies_dir / f"{strategy_name}.json"
 
         if not orig_strategy.exists():
             raise FileNotFoundError(

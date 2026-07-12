@@ -523,6 +523,7 @@ class AeRoing4Orchestrator:
                                 diagnosis_code = DiagnosisCode.NO_EDGE
                                 allowed_targets = discover_allowed_mutation_targets(
                                     run.strategy_name, self.state_store.runs_root, self.services,
+                                    strategies_dir=self.services.paths.strategies_dir,
                                 )
                                 hyperopt_svc = build_focused_hyperopt_service(
                                     self.services, self.state_store.runs_root,

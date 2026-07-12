@@ -185,7 +185,8 @@ def _make_coordinator(
     state_store.save(state)
 
     executor = _FakeExecutor(runs_root, exec_result, call_log=call_log or [])
-    artifact_svc = CandidateArtifactService(runs_root)
+    strategies_dir = runs_root / "strategies"
+    artifact_svc = CandidateArtifactService(runs_root, strategies_dir)
     guard = DataZoneGuard(state_store, runs_root)
 
     async def proposal_callable(request: ProposalRequest) -> ProposalResult:
@@ -202,6 +203,7 @@ def _make_coordinator(
         zone_guard=guard,
         diagnose_fn=lambda c: diagnose_code,
         proposal_callable=proposal_callable,
+        strategies_dir=runs_root / "strategies",
         develop_timerange="20240101-20240630",
         pairs=["BTC/USDT"],
         timeframe="5m",

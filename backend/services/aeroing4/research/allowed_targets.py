@@ -59,9 +59,9 @@ class NoSafeMutationTargetError(Exception):
     """Raised when no trusted editable mutation target can be discovered."""
 
 
-def _safe_sidecar_targets(strategy_name: str, runs_root: Path) -> list[AllowedMutationTarget]:
+def _safe_sidecar_targets(strategy_name: str, strategies_dir: Path) -> list[AllowedMutationTarget]:
     """Return allowed targets from a strategy sidecar metadata file if present."""
-    sidecar = runs_root / "strategies" / f"{strategy_name}.json"
+    sidecar = strategies_dir / f"{strategy_name}.json"
     if not sidecar.exists():
         return []
 
@@ -154,6 +154,7 @@ def discover_allowed_mutation_targets(
     *,
     runs_root: Path,
     services: Any | None = None,
+    strategies_dir: Path | None = None,
 ) -> list[AllowedMutationTarget]:
     """Discover allowed mutation targets from trusted backend evidence.
 
@@ -163,7 +164,11 @@ def discover_allowed_mutation_targets(
 
     Returns empty list if no trusted editable target can be discovered.
     """
-    targets = _safe_sidecar_targets(strategy_name, runs_root)
+    if strategies_dir is None and services is not None:
+        strategies_dir = services.paths.strategies_dir
+    if strategies_dir is None:
+        return []
+    targets = _safe_sidecar_targets(strategy_name, strategies_dir)
     if targets:
         return targets
 

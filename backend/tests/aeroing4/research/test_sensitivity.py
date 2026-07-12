@@ -121,7 +121,8 @@ def _make(tmp_path, sidecar_params, *, zone_allowed=True, runner_fail=False):
     champ = _seed_champion(tmp_path, sidecar_params)
     zone = _FakeZoneGuard(allowed=zone_allowed)
     runner = _FakeRunner(fail=runner_fail)
-    svc = SensitivityService(runs_root=tmp_path, backtest_runner=runner, zone_guard=zone)
+    strategies_dir = tmp_path / "strategies"
+    svc = SensitivityService(runs_root=tmp_path, backtest_runner=runner, zone_guard=zone, strategies_dir=strategies_dir)
     return svc, champ, zone, runner
 
 

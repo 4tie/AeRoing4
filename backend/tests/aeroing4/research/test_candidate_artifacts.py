@@ -95,7 +95,8 @@ def _make_champion(orig_py: Path, orig_sidecar: Path) -> ChampionReference:
 def test_create_copies_strategy_and_sidecar(tmp_path: Path):
     orig_py, orig_sidecar = _seed_champion(tmp_path)
     champ = _make_champion(orig_py, orig_sidecar)
-    svc = CandidateArtifactService(tmp_path)
+    strategies_dir = tmp_path / "strategies"
+    svc = CandidateArtifactService(tmp_path, strategies_dir)
 
     change = ExactChange(
         change_type="parameter",
@@ -123,7 +124,8 @@ def test_original_strategy_not_mutated(tmp_path: Path):
     orig_sidecar_text_before = orig_sidecar.read_text(encoding="utf-8")
 
     champ = _make_champion(orig_py, orig_sidecar)
-    svc = CandidateArtifactService(tmp_path)
+    strategies_dir = tmp_path / "strategies"
+    svc = CandidateArtifactService(tmp_path, strategies_dir)
     change = ExactChange(
         change_type="parameter", target="buy_ma_count", before_value=18, after_value=15
     )
@@ -144,7 +146,8 @@ def test_champion_artifact_untouched_in_place(tmp_path: Path):
     champ = _make_champion(orig_py, orig_sidecar)
     champ_before = champ.model_dump_json()
 
-    svc = CandidateArtifactService(tmp_path)
+    strategies_dir = tmp_path / "strategies"
+    svc = CandidateArtifactService(tmp_path, strategies_dir)
     change = ExactChange(
         change_type="parameter", target="buy_ma_count", before_value=18, after_value=15
     )
@@ -163,7 +166,8 @@ def test_champion_artifact_untouched_in_place(tmp_path: Path):
 def test_sidecar_mutation_updates_internal_parameters_shape(tmp_path: Path):
     orig_py, orig_sidecar = _seed_champion(tmp_path)
     champ = _make_champion(orig_py, orig_sidecar)
-    svc = CandidateArtifactService(tmp_path)
+    strategies_dir = tmp_path / "strategies"
+    svc = CandidateArtifactService(tmp_path, strategies_dir)
     change = ExactChange(
         change_type="parameter", target="buy_ma_count", before_value=18, after_value=15
     )
@@ -183,7 +187,8 @@ def test_sidecar_mutation_updates_internal_parameters_shape(tmp_path: Path):
 def test_sidecar_mutation_updates_buy_runtime_params_shape(tmp_path: Path):
     orig_py, orig_sidecar = _seed_champion(tmp_path)
     champ = _make_champion(orig_py, orig_sidecar)
-    svc = CandidateArtifactService(tmp_path)
+    strategies_dir = tmp_path / "strategies"
+    svc = CandidateArtifactService(tmp_path, strategies_dir)
     change = ExactChange(
         change_type="parameter", target="buy_ma_count", before_value=18, after_value=15
     )
@@ -202,7 +207,8 @@ def test_sidecar_mutation_updates_buy_runtime_params_shape(tmp_path: Path):
 def test_sidecar_mutation_updates_sell_runtime_params_shape(tmp_path: Path):
     orig_py, orig_sidecar = _seed_champion(tmp_path)
     champ = _make_champion(orig_py, orig_sidecar)
-    svc = CandidateArtifactService(tmp_path)
+    strategies_dir = tmp_path / "strategies"
+    svc = CandidateArtifactService(tmp_path, strategies_dir)
     change = ExactChange(
         change_type="parameter", target="sell_ma_count", before_value=17, after_value=2
     )
@@ -221,7 +227,8 @@ def test_sidecar_mutation_updates_sell_runtime_params_shape(tmp_path: Path):
 def test_sidecar_mutation_updates_stoploss_runtime_params_shape(tmp_path: Path):
     orig_py, orig_sidecar = _seed_champion(tmp_path)
     champ = _make_champion(orig_py, orig_sidecar)
-    svc = CandidateArtifactService(tmp_path)
+    strategies_dir = tmp_path / "strategies"
+    svc = CandidateArtifactService(tmp_path, strategies_dir)
     change = ExactChange(
         change_type="parameter", target="stoploss", before_value=-0.336, after_value=-0.4
     )
@@ -240,7 +247,8 @@ def test_sidecar_mutation_updates_stoploss_runtime_params_shape(tmp_path: Path):
 def test_unknown_target_rejected_as_not_runtime_executable(tmp_path: Path):
     orig_py, orig_sidecar = _seed_champion(tmp_path)
     champ = _make_champion(orig_py, orig_sidecar)
-    svc = CandidateArtifactService(tmp_path)
+    strategies_dir = tmp_path / "strategies"
+    svc = CandidateArtifactService(tmp_path, strategies_dir)
     change = ExactChange(
         change_type="parameter", target="rsi_threshold", before_value=30, after_value=35
     )
@@ -258,7 +266,8 @@ def test_unknown_target_rejected_as_not_runtime_executable(tmp_path: Path):
 def test_hashes_computed_before_and_after(tmp_path: Path):
     orig_py, orig_sidecar = _seed_champion(tmp_path)
     champ = _make_champion(orig_py, orig_sidecar)
-    svc = CandidateArtifactService(tmp_path)
+    strategies_dir = tmp_path / "strategies"
+    svc = CandidateArtifactService(tmp_path, strategies_dir)
     change = ExactChange(
         change_type="parameter", target="buy_ma_count", before_value=18, after_value=15
     )

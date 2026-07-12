@@ -174,6 +174,7 @@ class ResearchLoopCoordinator:
         diagnose_fn: DiagnoseFn,
         proposal_callable: ProposalCallable,
         budget_service=None,
+        strategies_dir: Path,
         develop_timerange: str,
         pairs: list[str],
         timeframe: str = "5m",
@@ -185,6 +186,7 @@ class ResearchLoopCoordinator:
         min_sample_trades: int = 30,
     ):
         self.runs_root = runs_root
+        self.strategies_dir = strategies_dir
         self.experiment_store = experiment_store
         self.hypothesis_store = hypothesis_store
         self.champion_store = champion_store
@@ -332,6 +334,7 @@ class ResearchLoopCoordinator:
             allowed_targets = discover_allowed_mutation_targets(
                 strategy_name, runs_root=self.runs_root,
                 services=getattr(self, "services", None),
+                strategies_dir=self.strategies_dir,
             )
             if not allowed_targets:
                 return self._stop(run_id, LoopOutcome.NO_SAFE_TARGET, LoopStage.VALIDATION,
@@ -904,6 +907,7 @@ class ResearchLoopCoordinator:
     ) -> ProposalResult:
         allowed_targets = discover_allowed_mutation_targets(
             self._strategy_name(champion), runs_root=self.runs_root,
+            strategies_dir=self.strategies_dir,
         )
         request = ProposalRequest(
             run_id=run_id,

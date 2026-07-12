@@ -127,7 +127,8 @@ def _make_fake_runner(with_summary: bool = True, raise_on_run: bool = False):
 def test_executor_uses_develop_timerange_and_override(tmp_path: Path):
     orig_py, orig_sidecar = _seed_champion(tmp_path)
     champ = _make_champion(orig_py, orig_sidecar)
-    svc = CandidateArtifactService(tmp_path)
+    strategies_dir = tmp_path / "strategies"
+    svc = CandidateArtifactService(tmp_path, strategies_dir)
     change = ExactChange(
         change_type="parameter", target="buy_ma_count", before_value=18, after_value=15
     )
@@ -166,7 +167,8 @@ def test_executor_uses_develop_timerange_and_override(tmp_path: Path):
 def test_executor_system_failure_on_run_error(tmp_path: Path):
     orig_py, orig_sidecar = _seed_champion(tmp_path)
     champ = _make_champion(orig_py, orig_sidecar)
-    svc = CandidateArtifactService(tmp_path)
+    strategies_dir = tmp_path / "strategies"
+    svc = CandidateArtifactService(tmp_path, strategies_dir)
     change = ExactChange(
         change_type="parameter", target="buy_ma_count", before_value=18, after_value=15
     )
@@ -194,7 +196,8 @@ def test_executor_system_failure_on_run_error(tmp_path: Path):
 def test_executor_no_trades_classification(tmp_path: Path):
     orig_py, orig_sidecar = _seed_champion(tmp_path)
     champ = _make_champion(orig_py, orig_sidecar)
-    svc = CandidateArtifactService(tmp_path)
+    strategies_dir = tmp_path / "strategies"
+    svc = CandidateArtifactService(tmp_path, strategies_dir)
     change = ExactChange(
         change_type="parameter", target="buy_ma_count", before_value=18, after_value=15
     )

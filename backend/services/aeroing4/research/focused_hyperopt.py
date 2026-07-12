@@ -121,6 +121,7 @@ class FocusedHyperoptService:
         champion_store: ChampionStore,
         zone_guard: DataZoneGuard,
         *,
+        strategies_dir: Path,
         budget: FocusedHyperoptBudgetPolicy | None = None,
         develop_timerange: str = "20240101-20240630",
         pairs: list[str] | None = None,
@@ -134,6 +135,7 @@ class FocusedHyperoptService:
         metrics_version: str = "1.0.0",
     ):
         self.runs_root = Path(runs_root)
+        self.strategies_dir = Path(strategies_dir)
         self.backtest_runner = backtest_runner
         self.champion_store = champion_store
         self.zone_guard = zone_guard
@@ -402,7 +404,7 @@ class FocusedHyperoptService:
         pattern: byte-for-byte .py copy, sidecar copy with multiple param values,
         SHA-256 artifact references). Original strategy file is never mutated."""
         orig_strategy = Path(champion.strategy_artifact.original_source_path)
-        orig_sidecar = self.runs_root / "strategies" / f"{strategy_name}.json"
+        orig_sidecar = self.strategies_dir / f"{strategy_name}.json"
         if not orig_strategy.exists():
             raise FileNotFoundError(f"Champion original strategy not found: {orig_strategy}")
 

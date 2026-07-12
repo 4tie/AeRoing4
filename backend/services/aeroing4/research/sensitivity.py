@@ -115,6 +115,7 @@ class SensitivityService:
         backtest_runner: Any,
         zone_guard: DataZoneGuard,
         *,
+        strategies_dir: Path,
         develop_timerange: str = "20240101-20240630",
         pairs: list[str] | None = None,
         timeframe: str = "5m",
@@ -129,6 +130,7 @@ class SensitivityService:
         samples_per_param: int = 2,
     ):
         self.runs_root = Path(runs_root)
+        self.strategies_dir = Path(strategies_dir)
         self.backtest_runner = backtest_runner
         self.zone_guard = zone_guard
         self.develop_timerange = develop_timerange
@@ -372,7 +374,7 @@ class SensitivityService:
 
     def _materialize(self, *, run_id, strategy_name, champion, values):
         orig_strategy = Path(champion.strategy_artifact.original_source_path)
-        orig_sidecar = self.runs_root / "strategies" / f"{strategy_name}.json"
+        orig_sidecar = self.strategies_dir / f"{strategy_name}.json"
         if not orig_strategy.exists():
             raise FileNotFoundError(str(orig_strategy))
         candidate_id = str(uuid.uuid4())

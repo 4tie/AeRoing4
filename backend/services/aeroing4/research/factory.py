@@ -47,7 +47,7 @@ def build_research_loop_coordinator(
     hypothesis_store = HypothesisStore(runs_root)
     champion_store = ChampionStore(runs_root)
     state_store = ResearchStateStore(runs_root)
-    artifact_service = CandidateArtifactService(runs_root)
+    artifact_service = CandidateArtifactService(runs_root, services.paths.strategies_dir)
     executor = CandidateExecutor(runs_root, services.backtest_runner)
     zone_guard = DataZoneGuard(state_store, runs_root)
 
@@ -72,6 +72,7 @@ def build_research_loop_coordinator(
         zone_guard=zone_guard,
         diagnose_fn=diagnose_fn,
         proposal_callable=proposal_generator.propose,
+        strategies_dir=services.paths.strategies_dir,
         develop_timerange=develop_timerange,
         pairs=pairs or ["BTC/USDT", "ETH/USDT", "BNB/USDT"],
         timeframe=timeframe,
@@ -97,6 +98,7 @@ def build_focused_hyperopt_service(
         backtest_runner=services.backtest_runner,
         champion_store=champion_store,
         zone_guard=zone_guard,
+        strategies_dir=services.paths.strategies_dir,
         develop_timerange=develop_timerange,
         pairs=pairs or ["BTC/USDT", "ETH/USDT", "BNB/USDT"],
         timeframe=timeframe,
@@ -117,6 +119,7 @@ def build_sensitivity_service(
         runs_root=runs_root,
         backtest_runner=services.backtest_runner,
         zone_guard=zone_guard,
+        strategies_dir=services.paths.strategies_dir,
         develop_timerange=develop_timerange,
         pairs=pairs or ["BTC/USDT", "ETH/USDT", "BNB/USDT"],
         timeframe=timeframe,

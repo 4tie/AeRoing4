@@ -130,8 +130,10 @@ def _make(tmp_path, *, zone_allowed=True, runner_fail=False):
     store.register(champ)
     zone = _FakeZoneGuard(allowed=zone_allowed)
     runner = _FakeRunner(fail=runner_fail)
+    strategies_dir = tmp_path / "strategies"
     svc = FocusedHyperoptService(
         runs_root=tmp_path, backtest_runner=runner, champion_store=store, zone_guard=zone,
+        strategies_dir=strategies_dir,
         budget=FocusedHyperoptBudgetPolicy(default_epochs=6, max_epochs=20, max_search_targets=12),
     )
     return svc, champ, zone, runner, store

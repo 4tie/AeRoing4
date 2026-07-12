@@ -202,7 +202,8 @@ def _make_coordinator(
 
     if artifact_service is None:
         from backend.services.aeroing4.research.candidate_artifacts import CandidateArtifactService
-        artifact_svc = CandidateArtifactService(runs_root)
+        strategies_dir = runs_root / "strategies"
+        artifact_svc = CandidateArtifactService(runs_root, strategies_dir)
     else:
         artifact_svc = artifact_service
     executor = _FakeExecutor(runs_root, exec_result)
@@ -224,6 +225,7 @@ def _make_coordinator(
         zone_guard=guard,
         diagnose_fn=lambda c: diagnose_code,
         proposal_callable=proposal_callable,
+        strategies_dir=runs_root / "strategies",
         develop_timerange="20240101-20240630",
         pairs=["BTC/USDT"],
         timeframe="5m",
