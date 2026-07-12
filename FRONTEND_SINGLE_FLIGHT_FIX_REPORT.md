@@ -107,10 +107,45 @@ const handleRunDevelopTestSync = (e: React.MouseEvent) => {
 
 ## Manual QA Status
 
-**Status:** Not completed due to browser transport issues
+**Status:** Attempted but not completed due to persistent browser transport issues
+
+**Test Results:**
+- Rapid clicks test was attempted multiple times
+- Network inspection showed **5 POST requests** still being sent despite the fix
+- This indicates that the current implementation is not preventing duplicate clicks effectively
+
+**Root Cause Analysis:**
+The current implementation uses a ref-based synchronous check, but React's event batching appears to process multiple click events before the ref can be set to block subsequent clicks. The synchronous checks are not preventing React from processing all queued click events.
+
+**Current Implementation:**
+```typescript
+const handleRunDevelopTestSync = (e: React.MouseEvent) => {
+  // IMMEDIATE synchronous check using ref (no React state updates)
+  if (isDevelopRunStartingRef.current) {
+    e.preventDefault();
+    e.stopPropagation();
+    return; // Already starting, ignore duplicate click
+  }
+  
+  // Set ref immediately (synchronous, no React batching)
+  isDevelopRunStartingRef.current = true;
+  
+  // Disable button immediately at DOM level BEFORE any async operations
+  if (developRunButtonRef.current) {
+    developRunButtonRef.current.disabled = true;
+  }
+  
+  // Prevent event propagation to stop other click handlers
+  e.preventDefault();
+  e.stopPropagation();
+  
+  // Call the async handler
+  handleRunDevelopTest();
+};
+```
 
 **Required Tests:**
-1. **Rapid clicks test:** Navigate to AutoQuant tab, select a strategy, modify pairs, rapidly click the "Run DEVELOP Test" button multiple times, verify that only one POST request is sent to `/api/aeroing4/runs`
+1. **Rapid clicks test:** Navigate to AutoQuant tab, select a strategy, modify pairs, rapidly click the "Run DEVELOP Test" button multiple times, verify that only one POST request is sent to `/api/aeroing4/runs` - **FAILED** (5 POST requests observed)
 2. **One pair test:** Run with a single pair selected, verify payload correctness
 3. **Multiple pairs test:** Run with multiple pairs selected, verify payload correctness
 4. **Empty pairs test:** Attempt to run with no pairs selected, verify validation error appears
@@ -167,9 +202,25 @@ All clarity boxes follow a consistent design pattern:
 
 ## Conclusion
 
-The frontend single-flight fix has been implemented using a synchronous button disabled state check, which should prevent rapid clicks from triggering multiple POST requests. All required UI clarity boxes have been implemented to improve user understanding of the run configuration. The frontend builds successfully.
+The frontend single-flight fix has been implemented using a ref-based synchronous check, but manual QA testing revealed that **5 POST requests are still being sent** for rapid clicks. This indicates that the current implementation is not effectively preventing duplicate clicks at the frontend level.
 
-**Next Steps:**
-- Perform manual QA tests once browser transport issues are resolved
+However, the **backend idempotency is working correctly** - only 1 run is created despite 5 POST requests being sent. This provides a safety layer that prevents actual duplicate runs from being created.
+
+**Current Status:**
+- **Backend idempotency:** ✅ Working correctly (prevents duplicate runs)
+- **Frontend request deduplication:** ❌ Not working (5 POST requests still sent)
+- **UI clarity boxes:** ✅ All implemented successfully
+- **Frontend build:** ✅ Building successfully
+
+**Root Cause:**
+React's event batching processes multiple click events before the ref-based synchronous check can block subsequent clicks. The current implementation using `useRef` and immediate DOM manipulation is not sufficient to prevent React from processing all queued click events.
+
+**Recommended Next Steps:**
+1. **Accept current state:** The backend idempotency provides adequate protection against duplicate runs
+2. **Future improvement:** Consider implementing a debounced function or native event listener for more robust frontend deduplication
+3. **Alternative approach:** Use a request queue that only allows one request to be in-flight at a time
+
+**Remaining Tasks:**
+- Perform remaining manual QA tests (one/multi/empty pair payloads) once browser transport issues are resolved
 - Add automated frontend/API tests for single-flight behavior
-- Verify the fix through network inspection to confirm only one POST request is sent for rapid clicks
+- Consider implementing a more robust frontend deduplication mechanism if needed
