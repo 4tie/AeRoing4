@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAeroStore } from '@/lib/aeroStore';
 import { getStrategyDetail, getRiskMetrics, StrategyDetail, RiskMetrics } from '@/lib/api';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { AlertTriangle, RefreshCw, Zap } from 'lucide-react';
 
 const Panel = ({ label, children, className = '' }: { label: string; children: React.ReactNode; className?: string }) => (
@@ -121,15 +121,15 @@ export function TabLearn() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Panel label="WIN / LOSS DISTRIBUTION">
           <div className="flex items-center gap-4">
-            <ResponsiveContainer width={120} height={120}>
-              <PieChart>
-                <Pie dataKey="value" data={winPie} cx="50%" cy="50%" innerRadius={32} outerRadius={50} paddingAngle={2}>
+            <div style={{ width: 120, height: 120 }}>
+              <PieChart width={120} height={120}>
+                <Pie dataKey="value" data={winPie} cx={60} cy={60} innerRadius={32} outerRadius={50} paddingAngle={2}>
                   <Cell fill="#00FF88" />
                   <Cell fill="#FF3B5C" />
                 </Pie>
                 <Tooltip contentStyle={{ background: '#0d0d0d', border: '1px solid rgba(0,229,255,0.2)', borderRadius: 0, fontSize: 11, fontFamily: 'monospace' }} />
               </PieChart>
-            </ResponsiveContainer>
+            </div>
             <div className="space-y-2 text-sm font-mono">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 inline-block" style={{ background: 'var(--t-green)' }} />

@@ -44,20 +44,22 @@ class FakeStrategyRegistry:
 
 
 class FakeServices:
-    def __init__(self, strategy):
+    def __init__(self, strategy, strategies_dir=None):
         self.strategy_registry = FakeStrategyRegistry(strategy)
+        self.paths = type('obj', (object,), {'strategies_dir': strategies_dir})() if strategies_dir else None
 
 
 def test_sidecar_metadata_discovery(tmp_path: Path):
     strategy_name = "strategy_with_sidecar"
-    sidecar = tmp_path / "strategies" / f"{strategy_name}.json"
+    strategies_dir = tmp_path / "strategies"
+    sidecar = strategies_dir / f"{strategy_name}.json"
     sidecar.parent.mkdir(parents=True, exist_ok=True)
     sidecar.write_text(
         '{"parameters": {"stoploss": {"editable": true, "type": "float", "current": -0.05, "min": -0.5, "max": 0.0, "risk_class": "high"}}}',
         encoding="utf-8",
     )
 
-    targets = discover_allowed_mutation_targets(strategy_name, runs_root=tmp_path)
+    targets = discover_allowed_mutation_targets(strategy_name, runs_root=tmp_path, strategies_dir=strategies_dir)
     assert len(targets) == 1
     target = targets[0]
     assert target.name == "stoploss"
@@ -72,15 +74,17 @@ def test_missing_sidecar_returns_empty_without_services():
 
 
 def test_declared_parameter_targets_used_when_sidecar_missing(tmp_path: Path):
+    strategies_dir = tmp_path / "strategies"
     strategy = FakeStrategy([FakeParameter("stoploss", value=-0.03)])
     targets = discover_allowed_mutation_targets(
-        "strategy_no_sidecar", runs_root=tmp_path, services=FakeServices(strategy)
+        "strategy_no_sidecar", runs_root=tmp_path, services=FakeServices(strategy, strategies_dir)
     )
     assert len(targets) == 1
     assert targets[0].source == MutationTargetSource.DECLARED_PARAMETERS
 
 
 def test_non_editable_parameters_are_excluded(tmp_path: Path):
+    strategies_dir = tmp_path / "strategies"
     strategy = FakeStrategy(
         [
             FakeParameter("stoploss", value=-0.03, editable=True),
@@ -88,7 +92,7 @@ def test_non_editable_parameters_are_excluded(tmp_path: Path):
         ]
     )
     targets = discover_allowed_mutation_targets(
-        "strategy_mixed", runs_root=tmp_path, services=FakeServices(strategy)
+        "strategy_mixed", runs_root=tmp_path, services=FakeServices(strategy, strategies_dir)
     )
     assert [t.name for t in targets] == ["stoploss"]
 
@@ -99,8 +103,9 @@ def test_no_trusted_targets_returns_empty():
 
 
 def test_boolean_parameter_risk_class():
+    strategies_dir = Path("/tmp/strategies")
     strategy = FakeStrategy([FakeBoolParameter("buy_enabled")])
     targets = discover_allowed_mutation_targets(
-        "bool_strategy", runs_root=Path("/tmp"), services=FakeServices(strategy)
+        "bool_strategy", runs_root=Path("/tmp"), services=FakeServices(strategy, strategies_dir)
     )
     assert targets[0].risk_class == MutationTargetRiskClass.LOW

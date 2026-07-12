@@ -1,12 +1,11 @@
-import type { NextConfig } from 'next';
 import dotenv from 'dotenv';
 
 // Load .env into process.env (dotenv.populate is used internally to inject)
 dotenv.config({ path: '.env', override: true });
 
-const nextConfig: NextConfig = {
+const nextConfig = {
   reactStrictMode: false,
-  turbopack: {},
+  // turbopack: {}, // Disabled due to "Next.js package not found" panic errors
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -32,4 +31,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-

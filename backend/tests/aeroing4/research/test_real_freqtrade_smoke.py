@@ -1502,7 +1502,7 @@ def test_runtime_params_sensitivity_grid_develop_only(tmp_path):
     }
 
     runs_root = tmp_path / "runs"
-    strategies_dir = runs_root / "strategies"
+    strategies_dir = tmp_path / "strategies"
     strategies_dir.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(
         USER_DATA_DIR / "strategies" / "AIStrategy.py",
@@ -1514,7 +1514,6 @@ def test_runtime_params_sensitivity_grid_develop_only(tmp_path):
     )
 
     champion = _seed_champion(tmp_path)
-    strategies_dir = tmp_path / "strategies"
     service = CandidateArtifactService(runs_root, strategies_dir)
     runner = _RealRunner(tmp_path)
     request = SimpleNamespace(
@@ -1638,7 +1637,7 @@ def test_runtime_params_robust_gap_sensitivity_recheck_develop_only(tmp_path):
     }
 
     runs_root = tmp_path / "runs"
-    strategies_dir = runs_root / "strategies"
+    strategies_dir = tmp_path / "strategies"
     strategies_dir.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(
         USER_DATA_DIR / "strategies" / "AIStrategy.py",
@@ -1650,7 +1649,6 @@ def test_runtime_params_robust_gap_sensitivity_recheck_develop_only(tmp_path):
     )
 
     champion = _seed_champion(tmp_path)
-    strategies_dir = tmp_path / "strategies"
     service = CandidateArtifactService(runs_root, strategies_dir)
     runner = _RealRunner(tmp_path)
     request = SimpleNamespace(
@@ -2713,6 +2711,7 @@ def test_real_research_loop_smoke(tmp_path):
         return DiagnosisCode.LOW_PROFIT_FACTOR
     
     # Build coordinator
+    strategies_dir = runs_root / "strategies"
     coord = ResearchLoopCoordinator(
         runs_root=runs_root,
         experiment_store=experiment_store,
@@ -2724,6 +2723,7 @@ def test_real_research_loop_smoke(tmp_path):
         zone_guard=zone_guard,
         diagnose_fn=diagnose_fn,
         proposal_callable=proposal_real_ai_with_capture,
+        strategies_dir=strategies_dir,
         develop_timerange="20240101-20240630",  # 6-month develop timerange for sufficient sample
         pairs=["LTC/USDT", "XRP/USDT", "BNB/USDT", "LINK/USDT"],  # 4 pairs for sufficient sample
         timeframe="5m",
@@ -3534,3 +3534,208 @@ def test_breakout_retest_variant_e_combined_relaxation(tmp_path):
         for pair_metrics in pair_data:
             pair = pair_metrics.get('pair', 'unknown')
             print(f"  {pair}: trades={pair_metrics.get('trades')}, winrate={pair_metrics.get('winrate')}, profit_factor={pair_metrics.get('profit_factor')}, expectancy={pair_metrics.get('expectancy')}, profit_total={pair_metrics.get('profit_total')}")
+
+
+def test_minimal_candidate_flow_smoke(tmp_path):
+    """Minimal real candidate smoke test for candidate flow endpoint verification.
+    
+    This test creates a minimal real candidate artifact and verifies that the
+    /api/aeroing4/candidate-flow/latest endpoint returns populated flow data.
+    Uses MultiMa strategy, single pair, and short timerange to minimize execution time.
+    """
+    _require_data()
+    
+    from backend.services.aeroing4.research.candidate_artifacts import CandidateArtifactService
+    from backend.services.aeroing4.research.experiments import ExactChange
+    from types import SimpleNamespace
+    
+    # Setup minimal candidate directory
+    runs_root = tmp_path / "runs"
+    strategies_dir = tmp_path / "strategies"
+    strategies_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Copy MultiMa strategy files
+    shutil.copyfile(
+        USER_DATA_DIR / "strategies" / "MultiMa.py",
+        strategies_dir / "MultiMa.py",
+    )
+    shutil.copyfile(
+        USER_DATA_DIR / "strategies" / "MultiMa.json",
+        strategies_dir / "MultiMa.json",
+    )
+    
+    # Create minimal candidate artifact with parameter change
+    candidate_dir = tmp_path / "candidate"
+    candidate_dir.mkdir(parents=True, exist_ok=True)
+    
+    shutil.copyfile(
+        strategies_dir / "MultiMa.py",
+        candidate_dir / "MultiMa.py",
+    )
+    
+    # Modify stoploss in candidate JSON
+    import json
+    candidate_json = json.loads((strategies_dir / "MultiMa.json").read_text(encoding="utf-8"))
+    original_stoploss = candidate_json["params"]["stoploss"]["stoploss"]
+    candidate_json["params"]["stoploss"]["stoploss"] = -0.06  # Small change
+    (candidate_dir / "MultiMa.json").write_text(json.dumps(candidate_json, indent=2), encoding="utf-8")
+    
+    print(f"MINIMAL CANDIDATE SMOKE: Original stoploss={original_stoploss}, Candidate stoploss=-0.06")
+    
+    # Setup runner
+    runner = _RealRunner(tmp_path)
+    
+    # Create minimal backtest request
+    request = SimpleNamespace(
+        pairs=["BTC/USDT"],  # Single pair
+        timerange="20240101-20240107",  # 1 week timerange
+        timeframe="5m",
+    )
+    
+    # Run candidate backtest
+    print(f"MINIMAL CANDIDATE SMOKE: Running candidate backtest with MultiMa strategy")
+    execution_id = runner.run_candidate_backtest(
+        "MultiMa",
+        "minimal_candidate_smoke",
+        request,
+        candidate_dir=str(candidate_dir),
+    )
+    
+    print(f"MINIMAL CANDIDATE SMOKE: Execution ID={execution_id}")
+    print(f"MINIMAL CANDIDATE SMOKE: Freqtrade command={' '.join(runner.last_command)}")
+    print(f"MINIMAL CANDIDATE SMOKE: Output zip={runner.last_result_zip}")
+    
+    # Verify output zip contains candidate artifacts
+    import zipfile
+    with zipfile.ZipFile(runner.last_result_zip, 'r') as zip_ref:
+        names = zip_ref.namelist()
+    has_py = any(name.endswith("_MultiMa.py") for name in names)
+    has_json = any(name.endswith("_MultiMa.json") for name in names)
+    print(f"MINIMAL CANDIDATE SMOKE: ZIP contains .py={has_py}, .json={has_json}")
+    
+    assert has_py, "Output zip should contain candidate .py file"
+    assert has_json, "Output zip should contain candidate .json file"
+    assert "--strategy-path" in runner.last_command, "Command should include --strategy-path"
+    
+    # Setup run structure for candidate flow endpoint
+    run_id = "minimal-candidate-smoke-run"
+    run_dir = runs_root / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Create minimal experiment structure
+    experiment_id = "minimal_candidate_experiment"
+    experiment_dir = run_dir / "experiments" / experiment_id
+    experiment_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Copy candidate artifacts to experiment directory
+    experiment_candidate_dir = experiment_dir / "candidate"
+    experiment_candidate_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(candidate_dir / "MultiMa.py", experiment_candidate_dir / "MultiMa.py")
+    shutil.copyfile(candidate_dir / "MultiMa.json", experiment_candidate_dir / "MultiMa.json")
+    
+    # Copy result zip to experiment directory
+    result_zip_dir = experiment_dir / "backtest_results"
+    result_zip_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(runner.last_result_zip, result_zip_dir / runner.last_result_zip.name)
+    
+    # Write Freqtrade command to file for tolerant builder
+    if runner.last_command:
+        command_file = experiment_dir / "freqtrade_command.txt"
+        command_file.write_text(" ".join(runner.last_command), encoding="utf-8")
+    
+    print(f"MINIMAL CANDIDATE SMOKE: Experiment structure created")
+    print(f"MINIMAL CANDIDATE SMOKE: Run ID={run_id}")
+    print(f"MINIMAL CANDIDATE SMOKE: Experiment ID={experiment_id}")
+    print(f"MINIMAL CANDIDATE SMOKE: Candidate directory={experiment_candidate_dir}")
+    print(f"MINIMAL CANDIDATE SMOKE: Result zip copied to {result_zip_dir}")
+    
+    # Verify tolerant builder can build flow from partial artifacts
+    from backend.services.aeroing4.strategy_library import build_candidate_flow_for_run
+    
+    # Create minimal run repository interface
+    class _MinimalRunRepository:
+        def __init__(self, run_dirs):
+            self._run_dirs = run_dirs
+        def find_run_dir(self, execution_id):
+            return self._run_dirs.get(execution_id)
+    
+    run_repository = _MinimalRunRepository({execution_id: experiment_dir})
+    
+    # Build candidate flow using tolerant builder (no ExperimentRecord required)
+    flow_response = build_candidate_flow_for_run(
+        run_id=run_id,
+        runs_root=runs_root,
+        run_repository=run_repository,
+        strategies_dir=strategies_dir,
+    )
+    
+    print(f"MINIMAL CANDIDATE SMOKE: Flow response candidate exists={flow_response.candidate is not None}")
+    
+    assert flow_response.candidate is not None, "Tolerant builder should return candidate from artifacts"
+    
+    candidate = flow_response.candidate
+    print(f"MINIMAL CANDIDATE SMOKE: Flow fields:")
+    print(f"  run_id={candidate.run_id}")
+    print(f"  strategy_name={candidate.strategy_name}")
+    print(f"  official_source_strategy_path={candidate.official_source_strategy_path}")
+    print(f"  official_source_json_path={candidate.official_source_json_path}")
+    print(f"  candidate_directory={candidate.candidate_directory}")
+    print(f"  copied_candidate_py={candidate.copied_candidate_py}")
+    print(f"  copied_candidate_json={candidate.copied_candidate_json}")
+    print(f"  freqtrade_command={candidate.freqtrade_command}")
+    print(f"  strategy_path_argument={candidate.strategy_path_argument}")
+    print(f"  output_zip_path={candidate.output_zip_path}")
+    print(f"  output_zip_contains_py={candidate.output_zip_contains_py}")
+    print(f"  output_zip_contains_json={candidate.output_zip_contains_json}")
+    print(f"  decision={candidate.decision}")
+    print(f"  reason_codes={candidate.reason_codes}")
+    
+    # Verify critical fields are populated from artifacts
+    assert candidate.run_id == run_id
+    assert candidate.strategy_name == "MultiMa"
+    assert candidate.official_source_strategy_path is not None
+    assert candidate.official_source_json_path is not None
+    assert candidate.candidate_directory is not None
+    assert candidate.copied_candidate_py is not None
+    assert candidate.copied_candidate_json is not None
+    assert candidate.freqtrade_command is not None
+    assert candidate.strategy_path_argument is not None
+    assert candidate.output_zip_path is not None
+    assert candidate.output_zip_contains_py is True
+    assert candidate.output_zip_contains_json is True
+    assert "--strategy-path" in candidate.freqtrade_command
+    
+    # Verify decision is marked as unavailable (not invented)
+    assert candidate.decision == "UNAVAILABLE"
+    assert "INCOMPLETE_EXPERIMENT_RECORD" in candidate.reason_codes
+    
+    # Verify metrics are empty (not invented)
+    assert candidate.parsed_metrics == {}
+    
+    # Verify steps show missing status for decision and next action
+    decision_step = next(s for s in candidate.steps if s.name == "Decision")
+    assert decision_step.status == "missing"
+    assert "incomplete" in decision_step.message.lower()
+    
+    next_action_step = next(s for s in candidate.steps if s.name == "Next Action")
+    assert next_action_step.status == "missing"
+    assert "incomplete" in next_action_step.message.lower()
+    
+    # Verify other steps show done status
+    source_step = next(s for s in candidate.steps if s.name == "Source Strategy")
+    assert source_step.status == "done"
+    
+    candidate_copy_step = next(s for s in candidate.steps if s.name == "Candidate Copy")
+    assert candidate_copy_step.status == "done"
+    
+    execution_step = next(s for s in candidate.steps if s.name == "Freqtrade Execution")
+    assert execution_step.status == "done"
+    assert execution_step.technical_details.get("contains_strategy_path") is True
+    
+    metrics_step = next(s for s in candidate.steps if s.name == "Metrics Parsing")
+    assert metrics_step.status == "done"
+    
+    print(f"MINIMAL CANDIDATE SMOKE: Tolerant builder verified - all critical fields populated")
+    print(f"MINIMAL CANDIDATE SMOKE: Decision correctly marked as UNAVAILABLE")
+    print(f"MINIMAL CANDIDATE SMOKE: Metrics correctly empty (not invented)")
+    print(f"MINIMAL CANDIDATE SMOKE: Test completed successfully")

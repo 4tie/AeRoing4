@@ -202,6 +202,155 @@ def test_empty_autoquant_flow_renders_clear_empty_state():
         assert step_name in source
 
 
+PARTIAL_ARTIFACT_FLOW_FIXTURE = {
+    "run_id": "partial-artifact-run",
+    "candidate": {
+        "run_id": "partial-artifact-run",
+        "experiment_id": "partial-experiment",
+        "candidate_id": None,
+        "strategy_name": "MultiMa",
+        "official_source_strategy_path": "user_data/strategies/MultiMa.py",
+        "official_source_json_path": "user_data/strategies/MultiMa.json",
+        "candidate_directory": "user_data/aeroing4/runs/partial-artifact-run/experiments/partial-experiment/candidate",
+        "copied_candidate_py": "user_data/aeroing4/runs/partial-artifact-run/experiments/partial-experiment/candidate/MultiMa.py",
+        "copied_candidate_json": "user_data/aeroing4/runs/partial-artifact-run/experiments/partial-experiment/candidate/MultiMa.json",
+        "official_files_unchanged": None,
+        "freqtrade_command": "freqtrade backtesting --strategy-path user_data/aeroing4/runs/partial-artifact-run/experiments/partial-experiment/candidate --strategy MultiMa",
+        "strategy_path_argument": "user_data/aeroing4/runs/partial-artifact-run/experiments/partial-experiment/candidate",
+        "strategy_path_points_to_candidate_dir": True,
+        "strategy_path_points_to_run_dir": False,
+        "strategy_path_points_to_candidate_or_run_dir": True,
+        "output_zip_path": "user_data/aeroing4/runs/partial-artifact-run/experiments/partial-experiment/backtest_results/backtest-result.zip",
+        "output_zip_contains_py": True,
+        "output_zip_contains_json": True,
+        "parsed_metrics": {},
+        "decision": "UNAVAILABLE",
+        "reason_codes": ["INCOMPLETE_EXPERIMENT_RECORD"],
+        "steps": [
+            {
+                "name": "Source Strategy",
+                "status": "done",
+                "paths": {
+                    "official_strategy": "user_data/strategies/MultiMa.py",
+                    "official_json": "user_data/strategies/MultiMa.json",
+                },
+                "message": "Official strategy source loaded.",
+                "technical_details": {"strategy_name": "MultiMa"},
+            },
+            {
+                "name": "Candidate Copy",
+                "status": "done",
+                "paths": {
+                    "candidate_dir": "user_data/aeroing4/runs/partial-artifact-run/experiments/partial-experiment/candidate",
+                    "candidate_py": "user_data/aeroing4/runs/partial-artifact-run/experiments/partial-experiment/candidate/MultiMa.py",
+                    "candidate_json": "user_data/aeroing4/runs/partial-artifact-run/experiments/partial-experiment/candidate/MultiMa.json",
+                },
+                "message": "Candidate copy created from artifacts.",
+                "technical_details": {"official_files_unchanged": None},
+            },
+            {
+                "name": "Freqtrade Execution",
+                "status": "done",
+                "paths": {
+                    "strategy_path": "user_data/aeroing4/runs/partial-artifact-run/experiments/partial-experiment/candidate",
+                },
+                "message": "Freqtrade command captured with run-local --strategy-path.",
+                "technical_details": {"command": "freqtrade backtesting --strategy-path user_data/aeroing4/runs/partial-artifact-run/experiments/partial-experiment/candidate --strategy MultiMa", "contains_strategy_path": True},
+            },
+            {
+                "name": "Metrics Parsing",
+                "status": "done",
+                "paths": {"output_zip": "user_data/aeroing4/runs/partial-artifact-run/experiments/partial-experiment/backtest_results/backtest-result.zip"},
+                "message": "Output zip available.",
+                "technical_details": {
+                    "zip_contains_py": True,
+                    "zip_contains_json": True,
+                },
+            },
+            {
+                "name": "Decision",
+                "status": "missing",
+                "paths": {},
+                "message": "Research decision not available (incomplete experiment record).",
+                "technical_details": {"status": "missing", "reason": "ExperimentRecord incomplete"},
+            },
+            {
+                "name": "Next Action",
+                "status": "missing",
+                "paths": {},
+                "message": "Next action not available (research decision incomplete).",
+                "technical_details": {"status": "missing", "reason": "ExperimentRecord incomplete"},
+            },
+        ],
+    },
+    "message": "Candidate flow built from partial artifacts (research decision incomplete).",
+}
+
+
+def test_partial_artifact_flow_shows_available_fields():
+    """Test that partial artifact flow shows available fields and marks missing decision."""
+    candidate = PARTIAL_ARTIFACT_FLOW_FIXTURE["candidate"]
+    
+    # Required fields should be present
+    assert candidate["official_source_strategy_path"] is not None
+    assert candidate["official_source_json_path"] is not None
+    assert candidate["candidate_directory"] is not None
+    assert candidate["copied_candidate_py"] is not None
+    assert candidate["copied_candidate_json"] is not None
+    assert candidate["freqtrade_command"] is not None
+    assert candidate["strategy_path_argument"] is not None
+    assert candidate["output_zip_path"] is not None
+    assert candidate["output_zip_contains_py"] is True
+    assert candidate["output_zip_contains_json"] is True
+    
+    # Decision should be marked as unavailable
+    assert candidate["decision"] == "UNAVAILABLE"
+    assert "INCOMPLETE_EXPERIMENT_RECORD" in candidate["reason_codes"]
+    
+    # Metrics should be empty (not available)
+    assert candidate["parsed_metrics"] == {}
+    
+    # Steps should show missing status for decision and next action
+    decision_step = next(s for s in candidate["steps"] if s["name"] == "Decision")
+    assert decision_step["status"] == "missing"
+    assert "incomplete experiment record" in decision_step["message"].lower()
+    
+    next_action_step = next(s for s in candidate["steps"] if s["name"] == "Next Action")
+    assert next_action_step["status"] == "missing"
+    assert "incomplete" in next_action_step["message"].lower()
+    
+    # Other steps should show done status
+    source_step = next(s for s in candidate["steps"] if s["name"] == "Source Strategy")
+    assert source_step["status"] == "done"
+    
+    candidate_copy_step = next(s for s in candidate["steps"] if s["name"] == "Candidate Copy")
+    assert candidate_copy_step["status"] == "done"
+    
+    execution_step = next(s for s in candidate["steps"] if s["name"] == "Freqtrade Execution")
+    assert execution_step["status"] == "done"
+    assert execution_step["technical_details"]["contains_strategy_path"] is True
+    
+    metrics_step = next(s for s in candidate["steps"] if s["name"] == "Metrics Parsing")
+    assert metrics_step["status"] == "done"
+
+
+def test_partial_artifact_flow_does_not_invent_metrics_or_decision():
+    """Test that partial artifact flow does not invent fake metrics or decisions."""
+    candidate = PARTIAL_ARTIFACT_FLOW_FIXTURE["candidate"]
+    
+    # Decision should not be a real trading decision
+    assert candidate["decision"] not in ["KEEP", "DROP", "INCONCLUSIVE"]
+    assert candidate["decision"] == "UNAVAILABLE"
+    
+    # Metrics should be empty, not fake values
+    assert candidate["parsed_metrics"] == {}
+    assert "total_trades" not in candidate["parsed_metrics"]
+    assert "profit_factor" not in candidate["parsed_metrics"]
+    
+    # Reason codes should clearly indicate incomplete record
+    assert "INCOMPLETE_EXPERIMENT_RECORD" in candidate["reason_codes"]
+
+
 def test_populated_autoquant_flow_fixture_renders_all_six_steps():
     source = STRATEGY_VIEW.read_text(encoding="utf-8")
     candidate = POPULATED_FLOW_FIXTURE["candidate"]

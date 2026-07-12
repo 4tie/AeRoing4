@@ -149,14 +149,22 @@ def build_candidate_flow_for_run(
     try:
         experiments = store.list_for_run(run_id)
     except Exception as exc:  # noqa: BLE001 - read model should fail closed for this run
-        raise BackendError(f"Could not read candidate experiments for run '{run_id}': {exc}", status_code=500) from exc
+        # Fall back to artifact-based builder if experiment store is unavailable
+        return _build_candidate_flow_from_artifacts(
+            run_id=run_id,
+            runs_root=Path(runs_root),
+            run_repository=run_repository,
+            strategies_dir=Path(strategies_dir),
+        )
 
     candidate = _latest_candidate_experiment(experiments)
     if candidate is None:
-        return AutoQuantFlowResponse(
+        # Fall back to artifact-based builder if no experiments found
+        return _build_candidate_flow_from_artifacts(
             run_id=run_id,
-            candidate=None,
-            message="No candidate experiment artifacts found for this run.",
+            runs_root=Path(runs_root),
+            run_repository=run_repository,
+            strategies_dir=Path(strategies_dir),
         )
 
     return AutoQuantFlowResponse(
@@ -613,6 +621,184 @@ def _build_candidate_flow(
         decision=decision,
         reason_codes=reason_codes,
         steps=step_models,
+    )
+
+
+def _build_candidate_flow_from_artifacts(
+    *,
+    run_id: str,
+    runs_root: Path,
+    run_repository: Any,
+    strategies_dir: Path,
+) -> AutoQuantFlowResponse:
+    """Build candidate flow from partial artifacts when ExperimentRecord is unavailable.
+    
+    This tolerant builder extracts whatever information is available from the run directory
+    without requiring a complete ExperimentRecord. Missing fields are clearly marked.
+    """
+    run_dir = runs_root / run_id
+    if not run_dir.exists():
+        return AutoQuantFlowResponse(
+            run_id=run_id,
+            candidate=None,
+            message=f"Run directory does not exist: {run_dir}",
+        )
+    
+    # Scan for candidate artifacts
+    experiments_dir = run_dir / "experiments"
+    if not experiments_dir.exists():
+        return AutoQuantFlowResponse(
+            run_id=run_id,
+            candidate=None,
+            message=f"No experiments directory found in run: {experiments_dir}",
+        )
+    
+    # Find the latest experiment directory
+    experiment_dirs = sorted(
+        [p for p in experiments_dir.iterdir() if p.is_dir()],
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    
+    if not experiment_dirs:
+        return AutoQuantFlowResponse(
+            run_id=run_id,
+            candidate=None,
+            message="No experiment directories found in run.",
+        )
+    
+    latest_experiment_dir = experiment_dirs[0]
+    candidate_dir = latest_experiment_dir / "candidate"
+    
+    # Find strategy name from candidate files
+    candidate_py_files = list(candidate_dir.glob("*.py")) if candidate_dir.exists() else []
+    candidate_json_files = list(candidate_dir.glob("*.json")) if candidate_dir.exists() else []
+    
+    if not candidate_py_files:
+        return AutoQuantFlowResponse(
+            run_id=run_id,
+            candidate=None,
+            message="No candidate .py file found in candidate directory.",
+        )
+    
+    strategy_name = candidate_py_files[0].stem
+    copied_py = str(candidate_py_files[0]) if candidate_py_files else None
+    copied_json = str(candidate_json_files[0]) if candidate_json_files else None
+    
+    # Official strategy paths
+    official_strategy = str(strategies_dir / f"{strategy_name}.py")
+    official_json = str(strategies_dir / f"{strategy_name}.json")
+    
+    # Find output zip
+    backtest_results_dir = latest_experiment_dir / "backtest_results"
+    output_zips = list(backtest_results_dir.glob("backtest-result-*.zip")) if backtest_results_dir.exists() else []
+    output_zip = str(output_zips[0]) if output_zips else None
+    
+    # Check zip contents
+    zip_contains_py = False
+    zip_contains_json = False
+    if output_zip:
+        zip_contains_py, zip_contains_json = _zip_contains_strategy_files(output_zip)
+    
+    # Try to find Freqtrade command
+    command = None
+    strategy_path_arg = None
+    command_file = latest_experiment_dir / "freqtrade_command.txt"
+    if command_file.exists():
+        command = _read_text(command_file)
+        strategy_path_arg = _extract_strategy_path_argument(command)
+    
+    # Build flow with available artifacts
+    source_ok = _exists(official_strategy)
+    candidate_ok = _exists(copied_py) and _exists(copied_json)
+    command_ok = bool(command and "--strategy-path" in command)
+    
+    points_to_candidate = _same_path(strategy_path_arg, str(candidate_dir)) if candidate_dir else False
+    
+    # Build steps with available information
+    step_models = [
+        AutoQuantFlowStep(
+            name="Source Strategy",
+            status="done" if source_ok else "error",
+            paths={"official_strategy": official_strategy, "official_json": official_json},
+            message="Official strategy source loaded." if source_ok else "Official strategy source is missing.",
+            technical_details={"strategy_name": strategy_name},
+        ),
+        AutoQuantFlowStep(
+            name="Candidate Copy",
+            status="done" if candidate_ok else "pending",
+            paths={"candidate_dir": str(candidate_dir) if candidate_dir else None, "candidate_py": copied_py, "candidate_json": copied_json},
+            message=(
+                "Candidate copy created from artifacts."
+                if candidate_ok
+                else "Waiting for candidate artifact copy."
+            ),
+            technical_details={"official_files_unchanged": None},
+        ),
+        AutoQuantFlowStep(
+            name="Freqtrade Execution",
+            status="done" if command_ok else "pending",
+            paths={"strategy_path": strategy_path_arg},
+            message=(
+                "Freqtrade command captured with run-local --strategy-path."
+                if command_ok
+                else "Freqtrade command has not been captured yet."
+            ),
+            technical_details={"command": command, "contains_strategy_path": bool(command_ok)},
+        ),
+        AutoQuantFlowStep(
+            name="Metrics Parsing",
+            status="done" if output_zip else "pending",
+            paths={"output_zip": output_zip},
+            message="Output zip available." if output_zip else "Output zip not available yet.",
+            technical_details={
+                "zip_contains_py": zip_contains_py,
+                "zip_contains_json": zip_contains_json,
+            },
+        ),
+        AutoQuantFlowStep(
+            name="Decision",
+            status="missing",
+            paths={},
+            message="Research decision not available (incomplete experiment record).",
+            technical_details={"status": "missing", "reason": "ExperimentRecord incomplete"},
+        ),
+        AutoQuantFlowStep(
+            name="Next Action",
+            status="missing",
+            paths={},
+            message="Next action not available (research decision incomplete).",
+            technical_details={"status": "missing", "reason": "ExperimentRecord incomplete"},
+        ),
+    ]
+    
+    return AutoQuantFlowResponse(
+        run_id=run_id,
+        candidate=AutoQuantCandidateFlow(
+            run_id=run_id,
+            experiment_id=latest_experiment_dir.name,
+            candidate_id=None,
+            strategy_name=strategy_name,
+            official_source_strategy_path=official_strategy,
+            official_source_json_path=official_json,
+            candidate_directory=str(candidate_dir) if candidate_dir else None,
+            copied_candidate_py=copied_py,
+            copied_candidate_json=copied_json,
+            official_files_unchanged=None,
+            freqtrade_command=command,
+            strategy_path_argument=strategy_path_arg,
+            strategy_path_points_to_candidate_dir=points_to_candidate,
+            strategy_path_points_to_run_dir=False,
+            strategy_path_points_to_candidate_or_run_dir=points_to_candidate,
+            output_zip_path=output_zip,
+            output_zip_contains_py=zip_contains_py,
+            output_zip_contains_json=zip_contains_json,
+            parsed_metrics={},
+            decision="UNAVAILABLE",
+            reason_codes=["INCOMPLETE_EXPERIMENT_RECORD"],
+            steps=step_models,
+        ),
+        message="Candidate flow built from partial artifacts (research decision incomplete).",
     )
 
 
