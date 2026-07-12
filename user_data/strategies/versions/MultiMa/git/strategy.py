@@ -7,8 +7,8 @@ import pandas as pd
 
 class MultiMa(IStrategy):
     INTERFACE_VERSION: int = 3
-    buy_params = {'buy_ma_count': 8, 'buy_ma_gap': 14}
-    sell_params = {'sell_ma_count': 15, 'sell_ma_gap': 66}
+    buy_params = {'buy_ma_count': 6, 'buy_ma_gap': 14}
+    sell_params = {'sell_ma_count': 14, 'sell_ma_gap': 66}
     minimal_roi = {'0': 0.523, '1553': 0.123, '2332': 0.076, '3169': 0.0}
     stoploss = -0.345
     trailing_stop = False
@@ -18,9 +18,9 @@ class MultiMa(IStrategy):
     timeframe = '4h'
     count_max = 20
     gap_max = 100
-    buy_ma_count = IntParameter(1, count_max, default=8, space='buy')
+    buy_ma_count = IntParameter(1, count_max, default=6, space='buy')
     buy_ma_gap = IntParameter(1, gap_max, default=14, space='buy')
-    sell_ma_count = IntParameter(1, count_max, default=15, space='sell')
+    sell_ma_count = IntParameter(1, count_max, default=14, space='sell')
     sell_ma_gap = IntParameter(1, gap_max, default=66, space='sell')
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
