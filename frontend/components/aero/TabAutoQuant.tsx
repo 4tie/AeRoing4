@@ -1,9 +1,8 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useAeroStore } from '@/lib/aeroStore';
-import { Play, Loader2, BookOpen, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
-import { AeRoing4Panel } from '@/components/aero/AeRoing4Panel';
-import { getStrategyLibraryScan, startAeRoing4Run, getAeRoing4Run, type StrategyLibraryItem } from '@/lib/api';
+import { Play, Loader2, BookOpen, AlertCircle, ChevronDown, ChevronRight, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { getStrategyLibraryScan, startAeRoing4Run, getAeRoing4Run, type StrategyLibraryItem, type AeRoing4RunState } from '@/lib/api';
 
 const TIMEFRAMES = ['1m', '5m', '15m', '1h', '4h', '1d'];
 
@@ -29,19 +28,17 @@ export function TabAutoQuant() {
   const [timerangeCustom, setTimerangeCustom] = useState('');
   const [maxOpenTrades, setMaxOpenTrades] = useState(5);
   const [pairs, setPairs] = useState(['BTC/USDT','ETH/USDT']);
+  const [currentRun, setCurrentRun] = useState<AeRoing4RunState | null>(null);
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [showAdvancedDiscovery, setShowAdvancedDiscovery] = useState(false);
   
   // DEVELOP run state
   const [isStartingDevelopRun, setIsStartingDevelopRun] = useState(false);
   const [developRunError, setDevelopRunError] = useState<string | null>(null);
-  const [developRunDebug, setDevelopRunDebug] = useState<Record<string, unknown> | null>(null);
-  const [showDebug, setShowDebug] = useState(false);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const developRunInFlightRef = useRef(false);
   const developRunButtonRef = useRef<HTMLButtonElement>(null);
-  const cooldownTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const CLICK_COOLDOWN_MS = 2000;
-  const isHandlerExecutingRef = useRef(false);
-  const debouncedClickRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isProcessingRef = useRef(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Load selected strategy details
   useEffect(() => {
@@ -65,35 +62,11 @@ export function TabAutoQuant() {
   };
 
   // Handle RUN DEVELOP TEST button click
-  const handleRunDevelopTest = async () => {
-    // Prevent handler re-entry at the outermost level
-    if (isHandlerExecutingRef.current) return;
-    isHandlerExecutingRef.current = true;
-
-    // Clear any existing cooldown timeout
-    if (cooldownTimeoutRef.current) {
-      clearTimeout(cooldownTimeoutRef.current);
-    }
-
-    // Clear any existing debounce timeout
-    if (debouncedClickRef.current) {
-      clearTimeout(debouncedClickRef.current);
-    }
-
-    // Immediate duplicate-click prevention using ref
-    if (developRunInFlightRef.current) {
-      isHandlerExecutingRef.current = false;
-      return;
-    }
-    developRunInFlightRef.current = true;
-
-    // Set cooldown to prevent any clicks for 2 seconds
-    cooldownTimeoutRef.current = setTimeout(() => {
-      developRunInFlightRef.current = false;
-      isHandlerExecutingRef.current = false;
-      cooldownTimeoutRef.current = null;
-    }, CLICK_COOLDOWN_MS);
-
+  const handleRunDevelopTest = async (e: React.MouseEvent) => {
+    // Prevent event propagation and default behavior
+    e.preventDefault();
+    e.stopPropagation();
+    
     // Synchronously disable the button to prevent rapid clicks
     if (developRunButtonRef.current) {
       developRunButtonRef.current.disabled = true;
@@ -101,13 +74,12 @@ export function TabAutoQuant() {
 
     // Set loading state immediately to disable button
     setIsStartingDevelopRun(true);
+    setValidationError(null);
     setDevelopRunError(null);
 
     // Prevent duplicate clicks using state
     if (isStartingDevelopRun || aering4Running) {
-      developRunInFlightRef.current = false;
       setIsStartingDevelopRun(false);
-      isHandlerExecutingRef.current = false;
       if (developRunButtonRef.current) {
         developRunButtonRef.current.disabled = false;
       }
@@ -116,20 +88,16 @@ export function TabAutoQuant() {
 
     // Validation
     if (!aering4StrategyName) {
-      setDevelopRunError('Please select a strategy');
+      setValidationError('Please select a strategy');
       setIsStartingDevelopRun(false);
-      developRunInFlightRef.current = false;
-      isHandlerExecutingRef.current = false;
       if (developRunButtonRef.current) {
         developRunButtonRef.current.disabled = false;
       }
       return;
     }
     if (pairs.length === 0) {
-      setDevelopRunError('Please select at least one pair');
+      setValidationError('Select at least one pair before running a DEVELOP test.');
       setIsStartingDevelopRun(false);
-      developRunInFlightRef.current = false;
-      isHandlerExecutingRef.current = false;
       if (developRunButtonRef.current) {
         developRunButtonRef.current.disabled = false;
       }
@@ -138,8 +106,6 @@ export function TabAutoQuant() {
     if (!timeframe) {
       setDevelopRunError('Please select a timeframe');
       setIsStartingDevelopRun(false);
-      developRunInFlightRef.current = false;
-      isHandlerExecutingRef.current = false;
       if (developRunButtonRef.current) {
         developRunButtonRef.current.disabled = false;
       }
@@ -149,8 +115,6 @@ export function TabAutoQuant() {
     if (!timerange) {
       setDevelopRunError('Please select a timerange');
       setIsStartingDevelopRun(false);
-      developRunInFlightRef.current = false;
-      isHandlerExecutingRef.current = false;
       if (developRunButtonRef.current) {
         developRunButtonRef.current.disabled = false;
       }
@@ -159,28 +123,14 @@ export function TabAutoQuant() {
     if (maxOpenTrades < 1) {
       setDevelopRunError('Max open trades must be at least 1');
       setIsStartingDevelopRun(false);
-      developRunInFlightRef.current = false;
-      isHandlerExecutingRef.current = false;
       if (developRunButtonRef.current) {
         developRunButtonRef.current.disabled = false;
       }
       return;
     }
 
-    setDevelopRunDebug({
-      endpoint: '/api/aeroing4/runs',
-      method: 'POST',
-      strategy: aering4StrategyName,
-      timeframe,
-      timerange,
-      pairs,
-      maxOpenTrades,
-      mode: 'DEVELOP',
-      enable_pair_discovery: false,
-    });
-
+    // Start DEVELOP run (no pair discovery)
     try {
-      // Start DEVELOP run (no pair discovery)
       const initial = await startAeRoing4Run({
         strategy_name: aering4StrategyName,
         timeframe,
@@ -197,34 +147,22 @@ export function TabAutoQuant() {
       setAering4Running(true);
       const runId = initial._runId;
 
-      setDevelopRunDebug(prev => ({
-        ...prev,
-        run_id: runId,
-        status: 'started',
-      }));
-
       // Poll for run status
       const poll = async () => {
         try {
           const updated = await getAeRoing4Run(runId);
           setAering4Run(updated);
-          setDevelopRunDebug(prev => ({
-            ...prev,
-            current_status: updated.status,
-            outcome: updated.smoke_outcome === 'NO_SIGNAL_ACTIVITY' ? 'no_signal_activity' : updated.outcome,
-          }));
+          setCurrentRun(updated);
 
           if (updated.status === 'running' || updated.status === 'pending') {
             pollRef.current = setTimeout(poll, 2000);
           } else {
             setAering4Running(false);
             setIsStartingDevelopRun(false);
-            developRunInFlightRef.current = false;
           }
         } catch (e) {
           setAering4Running(false);
           setIsStartingDevelopRun(false);
-          developRunInFlightRef.current = false;
           setDevelopRunError(e instanceof Error ? e.message : 'Polling failed');
         }
       };
@@ -232,63 +170,54 @@ export function TabAutoQuant() {
       pollRef.current = setTimeout(poll, 2000);
     } catch (e) {
       setIsStartingDevelopRun(false);
-      developRunInFlightRef.current = false;
-      isHandlerExecutingRef.current = false;
       if (developRunButtonRef.current) {
         developRunButtonRef.current.disabled = false;
       }
       setDevelopRunError(e instanceof Error ? e.message : 'Failed to start run');
-      setDevelopRunDebug(prev => ({
-        ...prev,
-        error: e instanceof Error ? e.message : 'Unknown error',
-      }));
     }
   };
 
-  // Debounced click handler to prevent rapid clicks
-  const handleRunDevelopTestDebounced = () => {
-    if (debouncedClickRef.current) {
-      clearTimeout(debouncedClickRef.current);
+  // Synchronous wrapper to prevent duplicate clicks using ref-based boolean
+  const handleRunDevelopTestSync = (e: React.MouseEvent) => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    
+    // Immediately disable button via DOM for synchronous effect
+    if (developRunButtonRef.current) {
+      developRunButtonRef.current.disabled = true;
     }
-    debouncedClickRef.current = setTimeout(() => {
-      handleRunDevelopTest();
-      debouncedClickRef.current = null;
-    }, 100);
+    
+    handleRunDevelopTest(e).finally(() => {
+      isProcessingRef.current = false;
+    });
   };
-
-  // Cleanup polling on unmount
-  useEffect(() => {
-    return () => {
-      if (pollRef.current) clearTimeout(pollRef.current);
-    };
-  }, []);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="mb-4">
-        <span className="t-label block mb-1">TAB 03 · AUTOQUANT</span>
-        <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--t-text)', letterSpacing: '-0.02em' }}>
+      <div className="mb-6">
+        <span className="t-label block mb-2">TAB 03 · AUTOQUANT</span>
+        <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--t-text)', letterSpacing: '-0.02em' }}>
           AutoQuant
         </h1>
-        <span className="text-xs font-mono" style={{ color: 'var(--t-muted)' }}>
-          Run strategy validation and discovery tests
+        <span className="text-sm font-mono" style={{ color: 'var(--t-muted)' }}>
+          Strategy validation and pair discovery workflow
         </span>
       </div>
 
-      {/* Step 1: Select Strategy */}
+      {/* Section 1: Strategy */}
       <div className="t-card">
-        <div className="px-3 py-1.5 flex items-center gap-2" style={{ borderBottom: '1px solid var(--t-border)' }}>
-          <span className="w-1.5 h-1.5 shrink-0" style={{ background: 'var(--t-cyan)' }} />
-          <span className="t-label">STEP 1 · SELECT STRATEGY</span>
+        <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: '1px solid var(--t-border)' }}>
+          <span className="w-2 h-2 shrink-0" style={{ background: 'var(--t-cyan)' }} />
+          <span className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>1. STRATEGY</span>
         </div>
         <div className="p-4 space-y-4">
           <div>
-            <span className="t-label block mb-1.5">STRATEGY</span>
+            <span className="text-sm font-semibold block mb-2" style={{ color: 'var(--t-text)' }}>Selected Strategy</span>
             <select 
               value={aering4StrategyName} 
               onChange={e => setAering4StrategyName(e.target.value)}
-              className="w-full px-3 py-2 text-xs font-mono t-focus"
+              className="w-full px-4 py-3 text-sm font-mono t-focus"
               style={{ background: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)', outline: 'none' }}
             >
               <option value="">Select strategy...</option>
@@ -299,32 +228,53 @@ export function TabAutoQuant() {
           </div>
 
           {selectedStrategy && (
-            <div className="p-3" style={{ background: 'rgba(0,229,255,0.03)', border: '1px solid var(--t-border)' }}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-mono font-bold" style={{ color: 'var(--t-cyan)' }}>
+            <div className="p-4" style={{ background: 'rgba(0,229,255,0.03)', border: '1px solid var(--t-border)' }}>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-mono font-bold" style={{ color: 'var(--t-cyan)' }}>
                   {selectedStrategy.strategy_name}
                 </span>
                 <button
                   onClick={() => setActiveTab('strategies')}
-                  className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-mono transition-all"
+                  className="flex items-center gap-2 px-3 py-1.5 text-xs font-mono transition-all"
                   style={{ border: '1px solid var(--t-border)', color: 'var(--t-label)', background: 'transparent' }}
                   onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--t-border-hi)')}
                   onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--t-border)')}
                 >
-                  <BookOpen size={10} /> VIEW IN LIBRARY
+                  <BookOpen size={12} /> View in Library
                 </button>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
+              <div className="grid grid-cols-2 gap-3 text-xs font-mono">
                 <div><span style={{ color: 'var(--t-muted)' }}>Class:</span> {selectedStrategy.class_name || '-'}</div>
-                <div><span style={{ color: 'var(--t-muted)' }}>Timeframe:</span> {selectedStrategy.timeframe || '-'}</div>
-                <div><span style={{ color: 'var(--t-muted)' }}>Python params:</span> {selectedStrategy.python_parameters.length}</div>
-                <div><span style={{ color: 'var(--t-muted)' }}>Runtime params:</span> {selectedStrategy.json_runtime_params.length}</div>
+                <div><span style={{ color: 'var(--t-muted)' }}>Default Timeframe:</span> {selectedStrategy.timeframe || '-'}</div>
+                <div><span style={{ color: 'var(--t-muted)' }}>Python Parameters:</span> {selectedStrategy.python_parameters.length}</div>
+                <div><span style={{ color: 'var(--t-muted)' }}>Runtime Parameters:</span> {selectedStrategy.json_runtime_params.length}</div>
               </div>
+              {selectedStrategy.timeframe && timeframe !== selectedStrategy.timeframe && (
+                <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--t-border)' }}>
+                  <div className="flex items-start gap-2" style={{ color: 'var(--t-yellow)' }}>
+                    <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                    <div className="text-xs">
+                      <span className="font-semibold">Selected timeframe differs from strategy default</span>
+                      <div className="mt-1" style={{ color: 'var(--t-muted)' }}>
+                        Strategy default: {selectedStrategy.timeframe} · Selected: {timeframe}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
               {selectedStrategy.warnings.length > 0 && (
-                <div className="mt-2 pt-2" style={{ borderTop: '1px solid var(--t-border)' }}>
-                  <span className="text-[10px] font-mono" style={{ color: 'var(--t-yellow)' }}>
-                    {selectedStrategy.warnings.length} warning{selectedStrategy.warnings.length > 1 ? 's' : ''}
-                  </span>
+                <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--t-border)' }}>
+                  <div className="flex items-start gap-2" style={{ color: 'var(--t-yellow)' }}>
+                    <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                    <div className="text-xs">
+                      <span className="font-semibold">{selectedStrategy.warnings.length} warning{selectedStrategy.warnings.length > 1 ? 's' : ''}</span>
+                      <div className="mt-1" style={{ color: 'var(--t-muted)' }}>
+                        {selectedStrategy.warnings.map((w, i) => (
+                          <div key={i}>• {w.message}</div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -332,19 +282,19 @@ export function TabAutoQuant() {
         </div>
       </div>
 
-      {/* Step 2: Configure Test */}
+      {/* Section 2: Test Setup */}
       <div className="t-card">
-        <div className="px-3 py-1.5 flex items-center gap-2" style={{ borderBottom: '1px solid var(--t-border)' }}>
-          <span className="w-1.5 h-1.5 shrink-0" style={{ background: 'var(--t-cyan)' }} />
-          <span className="t-label">STEP 2 · CONFIGURE TEST</span>
+        <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: '1px solid var(--t-border)' }}>
+          <span className="w-2 h-2 shrink-0" style={{ background: 'var(--t-cyan)' }} />
+          <span className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>2. TEST SETUP</span>
         </div>
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-5">
           <div>
-            <span className="t-label block mb-1.5">TIMEFRAME</span>
+            <span className="text-sm font-semibold block mb-2" style={{ color: 'var(--t-text)' }}>Timeframe</span>
             <select 
               value={timeframe} 
               onChange={e => setTimeframe(e.target.value)}
-              className="w-full px-3 py-2 text-xs font-mono t-focus"
+              className="w-full px-4 py-3 text-sm font-mono t-focus"
               style={{ background: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)', outline: 'none' }}
             >
               {TIMEFRAMES.map(tf => (
@@ -354,11 +304,11 @@ export function TabAutoQuant() {
           </div>
 
           <div>
-            <span className="t-label block mb-1.5">TIMERANGE</span>
+            <span className="text-sm font-semibold block mb-2" style={{ color: 'var(--t-text)' }}>Timerange</span>
             <select 
               value={timerangePreset} 
               onChange={e => setTimerangePreset(e.target.value)}
-              className="w-full px-3 py-2 text-xs font-mono t-focus mb-2"
+              className="w-full px-4 py-3 text-sm font-mono t-focus mb-3"
               style={{ background: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)', outline: 'none' }}
             >
               {TIMERANGE_PRESETS.map(preset => (
@@ -371,33 +321,36 @@ export function TabAutoQuant() {
                 value={timerangeCustom} 
                 onChange={e => setTimerangeCustom(e.target.value)}
                 placeholder="YYYYMMDD-YYYYMMDD"
-                className="w-full px-3 py-2 text-xs font-mono t-focus"
+                className="w-full px-4 py-3 text-sm font-mono t-focus"
                 style={{ background: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)', outline: 'none' }} 
               />
             )}
+            <div className="mt-2 text-xs font-mono" style={{ color: 'var(--t-muted)' }}>
+              Resolved: {getTimerange()}
+            </div>
           </div>
 
           <div>
-            <span className="t-label block mb-1.5">MAX OPEN TRADES</span>
+            <span className="text-sm font-semibold block mb-2" style={{ color: 'var(--t-text)' }}>Max Open Trades</span>
             <input 
               type="number" 
               value={maxOpenTrades} 
               onChange={e => setMaxOpenTrades(Number(e.target.value))}
               min={1}
               max={10}
-              className="w-full px-3 py-2 text-xs font-mono t-focus"
+              className="w-full px-4 py-3 text-sm font-mono t-focus"
               style={{ background: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)', outline: 'none' }} 
             />
           </div>
 
           <div>
-            <span className="t-label block mb-1.5">PAIRS ({pairs.length} selected)</span>
-            <div className="flex flex-wrap gap-1.5">
+            <span className="text-sm font-semibold block mb-2" style={{ color: 'var(--t-text)' }}>Pairs ({pairs.length} selected)</span>
+            <div className="flex flex-wrap gap-2 mb-3">
               {ALL_PAIRS.map(p => (
                 <button 
                   key={p} 
                   onClick={() => togglePair(p)}
-                  className="px-2 py-1 text-[10px] font-mono transition-all"
+                  className="px-3 py-1.5 text-xs font-mono transition-all"
                   style={{ 
                     border: `1px solid ${pairs.includes(p) ? 'var(--t-border-hi)' : 'var(--t-border)'}`, 
                     background: pairs.includes(p) ? 'rgba(0,229,255,0.08)' : 'transparent', 
@@ -408,84 +361,329 @@ export function TabAutoQuant() {
                 </button>
               ))}
             </div>
+            <div className="p-3" style={{ background: 'rgba(0,229,255,0.03)', border: '1px solid var(--t-border)' }}>
+              <span className="text-xs font-semibold" style={{ color: 'var(--t-text)' }}>Effective pairs for this run:</span>
+              <div className="mt-1 text-sm font-mono" style={{ color: 'var(--t-cyan)' }}>
+                {pairs.length > 0 ? pairs.join(', ') : 'None selected'}
+              </div>
+              {pairs.length > 1 && (
+                <div className="mt-2 text-xs" style={{ color: 'var(--t-muted)' }}>
+                  Note: Smoke backtest will run on all selected pairs. Pair discovery will evaluate the full discovery universe.
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Step 3: Run */}
-      <div className="flex items-center gap-3">
-        <button
-          ref={developRunButtonRef}
-          disabled={!aering4StrategyName || pairs.length === 0 || aering4Running || isStartingDevelopRun}
-          onClick={handleRunDevelopTestDebounced}
-          className="flex items-center gap-2 px-5 py-2.5 text-sm font-mono font-bold transition-all disabled:opacity-40"
-          style={{ background: 'rgba(0,229,255,0.08)', border: '1px solid var(--t-border-hi)', color: 'var(--t-cyan)' }}
-          onMouseEnter={e => !aering4Running && !isStartingDevelopRun && (e.currentTarget.style.background = 'rgba(0,229,255,0.15)')}
-          onMouseLeave={e => !aering4Running && !isStartingDevelopRun && (e.currentTarget.style.background = 'rgba(0,229,255,0.08)')}
-        >
-          {isStartingDevelopRun || aering4Running ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
-          {isStartingDevelopRun ? 'STARTING...' : aering4Running ? 'RUNNING...' : 'RUN DEVELOP TEST'}
-        </button>
-        <button 
-          onClick={() => {
-            setPairs(['BTC/USDT','ETH/USDT']);
-            setTimeframe('5m');
-            setTimerangePreset('20230101-20240101');
-            setTimerangeCustom('');
-            setMaxOpenTrades(5);
-            setDevelopRunError(null);
-            setDevelopRunDebug(null);
-          }}
-          className="flex items-center gap-2 px-4 py-2.5 text-sm font-mono transition-all"
-          style={{ border: '1px solid var(--t-border)', color: 'var(--t-label)', background: 'transparent' }}
-          onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--t-border-hi)')}
-          onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--t-border)')}
-        >
-          RESET
-        </button>
-      </div>
-
-      {/* Error message */}
-      {developRunError && (
-        <div className="px-4 py-2 text-xs font-mono flex items-center gap-2" style={{ background: 'rgba(255,59,92,0.06)', border: '1px solid rgba(255,59,92,0.3)', color: 'var(--t-red)' }}>
-          <AlertCircle size={12} />
-          {developRunError}
+      {/* Section 3: Run Control */}
+      <div className="t-card">
+        <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: '1px solid var(--t-border)' }}>
+          <span className="w-2 h-2 shrink-0" style={{ background: 'var(--t-cyan)' }} />
+          <span className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>3. RUN CONTROL</span>
         </div>
-      )}
+        <div className="p-4 space-y-4">
+          <div className="flex items-center gap-3">
+            <button
+              ref={developRunButtonRef}
+              disabled={!aering4StrategyName || pairs.length === 0 || aering4Running || isProcessingRef.current}
+              onClick={handleRunDevelopTestSync}
+              className="flex items-center gap-2 px-6 py-3 font-semibold transition-all"
+              style={{
+                background: (!aering4StrategyName || pairs.length === 0 || aering4Running || isStartingDevelopRun) 
+                  ? 'rgba(0,229,255,0.1)' 
+                  : 'var(--t-cyan)',
+                color: (!aering4StrategyName || pairs.length === 0 || aering4Running || isStartingDevelopRun) 
+                  ? 'var(--t-muted)' 
+                  : 'var(--t-bg)',
+                border: '1px solid var(--t-border)',
+                cursor: (!aering4StrategyName || pairs.length === 0 || aering4Running || isStartingDevelopRun) 
+                  ? 'not-allowed' 
+                  : 'pointer',
+                opacity: (!aering4StrategyName || pairs.length === 0 || aering4Running || isStartingDevelopRun) ? 0.6 : 1
+              }}
+            >
+              {isStartingDevelopRun ? (
+                <Loader2 className="animate-spin" size={18} />
+              ) : (
+                <Play size={18} />
+              )}
+              {isStartingDevelopRun ? 'Starting...' : 'Run DEVELOP Test'}
+            </button>
 
-      {/* Debug details */}
-      {developRunDebug && (
-        <div className="t-card">
-          <button 
-            onClick={() => setShowDebug(!showDebug)}
-            className="w-full px-3 py-2 flex items-center justify-between text-xs font-mono"
-            style={{ color: 'var(--t-muted)' }}
-          >
-            <span>DEBUG DETAILS</span>
-            {showDebug ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-          </button>
-          {showDebug && (
-            <div className="px-3 pb-3 text-[10px] font-mono space-y-1" style={{ color: 'var(--t-muted)' }}>
-              <div>Endpoint: {developRunDebug.endpoint as string}</div>
-              <div>Method: {developRunDebug.method as string}</div>
-              <div>Strategy: {developRunDebug.strategy as string}</div>
-              <div>Timeframe: {developRunDebug.timeframe as string}</div>
-              <div>Timerange: {developRunDebug.timerange as string}</div>
-              <div>Pairs: {(developRunDebug.pairs as string[]).join(', ')}</div>
-              <div>Max Open Trades: {developRunDebug.maxOpenTrades as number}</div>
-              <div>Mode: {developRunDebug.mode as string}</div>
-              <div>Pair Discovery: {developRunDebug.enable_pair_discovery ? 'enabled' : 'disabled'}</div>
-              {(developRunDebug.run_id as string | undefined) && <div>Run ID: {String(developRunDebug.run_id)}</div>}
-              {(developRunDebug.current_status as string | undefined) && <div>Status: {String(developRunDebug.current_status)}</div>}
-              {(developRunDebug.outcome as string | undefined) && <div>Outcome: {String(developRunDebug.outcome)}</div>}
-              {(developRunDebug.error as string | undefined) && <div style={{ color: 'var(--t-red)' }}>Error: {String(developRunDebug.error)}</div>}
+            <button
+              onClick={() => {
+                setPairs(['BTC/USDT','ETH/USDT']);
+                setTimeframe('5m');
+                setTimerangePreset('20230101-20240101');
+                setTimerangeCustom('');
+                setMaxOpenTrades(5);
+                setDevelopRunError(null);
+                setValidationError(null);
+                setCurrentRun(null);
+              }}
+              className="px-4 py-3 font-semibold transition-all"
+              style={{
+                background: 'transparent',
+                color: 'var(--t-label)',
+                border: '1px solid var(--t-border)'
+              }}
+            >
+              Reset
+            </button>
+          </div>
+
+          {validationError && (
+            <div className="flex items-start gap-2 p-3" style={{ background: 'rgba(255,100,100,0.1)', border: '1px solid var(--t-red)' }}>
+              <XCircle size={16} className="shrink-0 mt-0.5" style={{ color: 'var(--t-red)' }} />
+              <span className="text-sm" style={{ color: 'var(--t-red)' }}>{validationError}</span>
             </div>
           )}
+
+          {developRunError && (
+            <div className="flex items-start gap-2 p-3" style={{ background: 'rgba(255,100,100,0.1)', border: '1px solid var(--t-red)' }}>
+              <XCircle size={16} className="shrink-0 mt-0.5" style={{ color: 'var(--t-red)' }} />
+              <span className="text-sm" style={{ color: 'var(--t-red)' }}>{developRunError}</span>
+            </div>
+          )}
+
+          {/* Advanced: Pair Discovery - Collapsed by default */}
+          <div className="mt-4">
+            <button
+              onClick={() => setShowAdvancedDiscovery(!showAdvancedDiscovery)}
+              className="flex items-center gap-2 text-xs font-mono transition-all"
+              style={{ color: 'var(--t-muted)' }}
+            >
+              {showAdvancedDiscovery ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              Advanced: Pair Discovery
+            </button>
+            {showAdvancedDiscovery && (
+              <div className="mt-3 p-3" style={{ background: 'rgba(0,229,255,0.02)', border: '1px solid var(--t-border)' }}>
+                <div className="text-xs" style={{ color: 'var(--t-muted)' }}>
+                  Pair Discovery is an advanced workflow that evaluates multiple pairs across a discovery universe.
+                  It runs automatically after a successful smoke backtest when enabled.
+                </div>
+                <div className="mt-2 text-xs font-mono" style={{ color: 'var(--t-label)' }}>
+                  Current status: Disabled (DEVELOP mode uses selected pairs only)
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Section 4: Live Run Monitor */}
+      {currentRun && (
+        <div className="t-card">
+          <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: '1px solid var(--t-border)' }}>
+            <span className="w-2 h-2 shrink-0" style={{ background: currentRun.status === 'running' ? 'var(--t-cyan)' : currentRun.status === 'done' ? 'var(--t-green)' : 'var(--t-red)' }} />
+            <span className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>4. LIVE RUN MONITOR</span>
+            <span className="ml-auto text-xs font-mono" style={{ color: 'var(--t-muted)' }}>
+              {currentRun.status.toUpperCase()}
+            </span>
+          </div>
+          <div className="p-4 space-y-3">
+            {/* Run summary */}
+            <div className="grid grid-cols-2 gap-3 text-xs font-mono">
+              <div><span style={{ color: 'var(--t-muted)' }}>Run ID:</span> {currentRun.id.slice(0, 8)}...</div>
+              <div><span style={{ color: 'var(--t-muted)' }}>Strategy:</span> {currentRun.strategy_name}</div>
+              <div><span style={{ color: 'var(--t-muted)' }}>Timeframe:</span> {currentRun.strategy_timeframe}</div>
+              <div><span style={{ color: 'var(--t-muted)' }}>Pairs:</span> {currentRun.smoke_pairs.join(', ')}</div>
+            </div>
+
+            {/* Workflow steps */}
+            <div className="space-y-2">
+              {currentRun.steps.map((step, idx) => (
+                <div key={step.id}>
+                  <button
+                    onClick={() => setExpandedSection(expandedSection === step.id ? null : step.id)}
+                    className="w-full px-3 py-2 flex items-center justify-between text-xs font-mono transition-all"
+                    style={{ 
+                      background: expandedSection === step.id ? 'rgba(0,229,255,0.05)' : 'transparent',
+                      border: '1px solid var(--t-border)'
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      {step.status === 'done' && <CheckCircle2 size={14} style={{ color: 'var(--t-green)' }} />}
+                      {step.status === 'running' && <Loader2 size={14} className="animate-spin" style={{ color: 'var(--t-cyan)' }} />}
+                      {step.status === 'error' && <XCircle size={14} style={{ color: 'var(--t-red)' }} />}
+                      {step.status === 'pending' && <Clock size={14} style={{ color: 'var(--t-muted)' }} />}
+                      <span>{idx + 1}. {step.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span style={{ color: 'var(--t-muted)' }}>{step.status.toUpperCase()}</span>
+                      {expandedSection === step.id ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                    </div>
+                  </button>
+                  {expandedSection === step.id && (
+                    <div className="px-3 py-2 text-xs font-mono" style={{ background: 'rgba(0,229,255,0.02)', border: '1px solid var(--t-border)', borderTop: 'none' }}>
+                      <div className="space-y-1" style={{ color: 'var(--t-muted)' }}>
+                        {step.logs.length > 0 && (
+                          <div className="max-h-32 overflow-auto">
+                            {step.logs.map((log, i) => (
+                              <div key={i}>• {log}</div>
+                            ))}
+                          </div>
+                        )}
+                        {step.logs.length === 0 && <div>No logs available</div>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Logs/details expandable */}
+            <button
+              onClick={() => setExpandedSection(expandedSection === 'logs' ? null : 'logs')}
+              className="w-full px-3 py-2 flex items-center justify-between text-xs font-mono transition-all"
+              style={{ border: '1px solid var(--t-border)', color: 'var(--t-muted)' }}
+            >
+              <span>View Full Logs & Details</span>
+              {expandedSection === 'logs' ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            </button>
+            {expandedSection === 'logs' && (
+              <div className="px-3 py-2 text-xs font-mono space-y-2" style={{ background: 'rgba(0,229,255,0.02)', border: '1px solid var(--t-border)', borderTop: 'none' }}>
+                <div><span style={{ color: 'var(--t-muted)' }}>Freqtrade Command:</span> {currentRun.freqtrade_command || 'N/A'}</div>
+                <div><span style={{ color: 'var(--t-muted)' }}>Output Path:</span> {currentRun.output_result_path || 'N/A'}</div>
+                {currentRun.log_excerpt && (
+                  <div>
+                    <span style={{ color: 'var(--t-muted)' }}>Log Excerpt:</span>
+                    <pre className="mt-1 max-h-32 overflow-auto">{currentRun.log_excerpt}</pre>
+                  </div>
+                )}
+                {currentRun.execution_error && (
+                  <div style={{ color: 'var(--t-red)' }}>
+                    <span style={{ color: 'var(--t-muted)' }}>Error:</span> {currentRun.execution_error}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Step 4: Current Flow - AeRoing4 Panel */}
-      <AeRoing4Panel />
+      {/* Section 5: Results & Charts */}
+      {currentRun && currentRun.status === 'done' && (
+        <div className="t-card">
+          <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: '1px solid var(--t-border)' }}>
+            <span className="w-2 h-2 shrink-0" style={{ background: 'var(--t-cyan)' }} />
+            <span className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>5. RESULTS & CHARTS</span>
+          </div>
+          <div className="p-4 space-y-4">
+            {/* Outcome summary cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="p-3" style={{ background: 'rgba(0,229,255,0.03)', border: '1px solid var(--t-border)' }}>
+                <div className="text-xs" style={{ color: 'var(--t-muted)' }}>Outcome</div>
+                <div className="text-sm font-bold mt-1" style={{ color: 'var(--t-cyan)' }}>
+                  {currentRun.outcome || 'Unknown'}
+                </div>
+              </div>
+              <div className="p-3" style={{ background: 'rgba(0,229,255,0.03)', border: '1px solid var(--t-border)' }}>
+                <div className="text-xs" style={{ color: 'var(--t-muted)' }}>Total Trades</div>
+                <div className="text-sm font-bold mt-1" style={{ color: 'var(--t-text)' }}>
+                  {currentRun.total_trades ?? 0}
+                </div>
+              </div>
+              <div className="p-3" style={{ background: 'rgba(0,229,255,0.03)', border: '1px solid var(--t-border)' }}>
+                <div className="text-xs" style={{ color: 'var(--t-muted)' }}>Profit Factor</div>
+                <div className="text-sm font-bold mt-1" style={{ color: 'var(--t-text)' }}>
+                  {currentRun.run_artifacts?.profit_factor ?? 'N/A'}
+                </div>
+              </div>
+              <div className="p-3" style={{ background: 'rgba(0,229,255,0.03)', border: '1px solid var(--t-border)' }}>
+                <div className="text-xs" style={{ color: 'var(--t-muted)' }}>Max Drawdown</div>
+                <div className="text-sm font-bold mt-1" style={{ color: 'var(--t-text)' }}>
+                  {currentRun.run_artifacts?.max_drawdown ?? 'N/A'}
+                </div>
+              </div>
+            </div>
+
+            {/* No signal activity explanation */}
+            {currentRun.outcome === 'NO_SIGNAL_ACTIVITY' && (
+              <div className="p-4" style={{ background: 'rgba(255,200,0,0.05)', border: '1px solid var(--t-yellow)' }}>
+                <div className="flex items-start gap-2">
+                  <AlertCircle size={16} className="shrink-0 mt-0.5" style={{ color: 'var(--t-yellow)' }} />
+                  <div className="text-sm">
+                    <span className="font-semibold" style={{ color: 'var(--t-yellow)' }}>No Signal Activity</span>
+                    <div className="mt-2" style={{ color: 'var(--t-muted)' }}>
+                      The backtest completed successfully, but this strategy produced no trades for the selected pair, timeframe, and timerange.
+                    </div>
+                    <div className="mt-2 text-xs" style={{ color: 'var(--t-muted)' }}>
+                      Try: longer timerange · different pair · strategy default timeframe · another strategy
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Pair discovery results */}
+            {currentRun.discovery_result && currentRun.discovery_result.ranked_pairs && currentRun.discovery_result.ranked_pairs.length > 0 && (
+              <div>
+                <div className="text-sm font-semibold mb-2" style={{ color: 'var(--t-text)' }}>Pair Discovery Results</div>
+                <div className="space-y-2">
+                  {currentRun.discovery_result.ranked_pairs.slice(0, 5).map((pair: any, idx: number) => (
+                    <div key={pair.pair} className="flex items-center justify-between p-2" style={{ background: 'rgba(0,229,255,0.02)', border: '1px solid var(--t-border)' }}>
+                      <div className="text-xs font-mono">{idx + 1}. {pair.pair}</div>
+                      <div className="text-xs font-mono" style={{ color: 'var(--t-cyan)' }}>Score: {pair.score?.toFixed(2)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Section 6: Next Action */}
+      {currentRun && currentRun.status === 'done' && (
+        <div className="t-card">
+          <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: '1px solid var(--t-border)' }}>
+            <span className="w-2 h-2 shrink-0" style={{ background: 'var(--t-cyan)' }} />
+            <span className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>6. NEXT ACTION</span>
+          </div>
+          <div className="p-4">
+            {currentRun.outcome === 'NO_SIGNAL_ACTIVITY' && (
+              <div className="flex items-start gap-3">
+                <AlertCircle size={20} className="shrink-0 mt-0.5" style={{ color: 'var(--t-yellow)' }} />
+                <div className="text-sm">
+                  <span className="font-semibold" style={{ color: 'var(--t-text)' }}>Adjust Test Parameters</span>
+                  <div className="mt-1" style={{ color: 'var(--t-muted)' }}>
+                    Try a longer timerange, different pair, or the strategy&apos;s default timeframe.
+                  </div>
+                </div>
+              </div>
+            )}
+            {currentRun.outcome === 'SUCCESS' && currentRun.total_trades && currentRun.total_trades > 0 && (
+              <div className="flex items-start gap-3">
+                <CheckCircle2 size={20} className="shrink-0 mt-0.5" style={{ color: 'var(--t-green)' }} />
+                <div className="text-sm">
+                  <span className="font-semibold" style={{ color: 'var(--t-text)' }}>Inspect Results</span>
+                  <div className="mt-1" style={{ color: 'var(--t-muted)' }}>
+                    Review the backtest metrics and trades in the Results tab.
+                  </div>
+                </div>
+              </div>
+            )}
+            {currentRun.outcome === 'EXECUTION_FAILURE' && (
+              <div className="flex items-start gap-3">
+                <XCircle size={20} className="shrink-0 mt-0.5" style={{ color: 'var(--t-red)' }} />
+                <div className="text-sm">
+                  <span className="font-semibold" style={{ color: 'var(--t-text)' }}>Fix Validation Error</span>
+                  <div className="mt-1" style={{ color: 'var(--t-muted)' }}>
+                    Check the logs for the specific validation failure and fix the strategy or configuration.
+                  </div>
+                </div>
+              </div>
+            )}
+            {!currentRun.outcome && (
+              <div className="text-sm" style={{ color: 'var(--t-muted)' }}>
+                Run completed. Check the Results tab for details.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
