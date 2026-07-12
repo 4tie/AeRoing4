@@ -428,9 +428,10 @@ export async function getStrategies(): Promise<Strategy[]> {
 export async function getStrategyDetail(name: string): Promise<StrategyDetail> {
   if (!name) return { name: '', timeframe: '5m', stoploss: -0.10, roi: [], indicators: [], trades: [], equity: [] };
   try {
-    const [filesRes, contentRes] = await Promise.all([
+    const [filesRes, contentRes, backtestRes] = await Promise.all([
       fetch(`${API_BASE_URL}/api/strategies/files/${encodeURIComponent(name)}`),
       fetch(`${API_BASE_URL}/api/strategies/content?filename=${encodeURIComponent(name)}.py`),
+      fetch(`${API_BASE_URL}/api/strategies/${encodeURIComponent(name)}/latest-backtest`),
     ]);
 
     // Parse JSON params (ROI, stoploss)
@@ -438,6 +439,8 @@ export async function getStrategyDetail(name: string): Promise<StrategyDetail> {
     let roi: Strategy['roi'] = [];
     let timeframe = '5m';
     let indicators: string[] = [];
+    let trades: Trade[] = [];
+    let equity: { time: string; value: number }[] = [];
 
     if (filesRes.ok) {
       const data = await filesRes.json() as Record<string, unknown>;
@@ -486,7 +489,23 @@ export async function getStrategyDetail(name: string): Promise<StrategyDetail> {
       indicators = Array.from(seen);
     }
 
-    return { name, timeframe, stoploss, roi, indicators, trades: [], equity: [] };
+    // Load real backtest data if available
+    if (backtestRes.ok) {
+      const backtestData = await backtestRes.json() as Record<string, unknown>;
+      if (backtestData.found === true) {
+        equity = (backtestData.equity as { time: string; value: number }[]) || [];
+        const backtestTrades = (backtestData.trades as Record<string, unknown>[]) || [];
+        trades = backtestTrades.map(t => ({
+          timestamp: '',
+          pair: String(t.pair),
+          side: (t.side as 'long' | 'short') || 'long',
+          profit: Number(t.profit) || 0,
+          duration: String(t.duration),
+        }));
+      }
+    }
+
+    return { name, timeframe, stoploss, roi, indicators, trades, equity };
   } catch { /* fall through */ }
   return { name, timeframe: '5m', stoploss: -0.10, roi: [], indicators: [], trades: [], equity: [] };
 }
@@ -578,9 +597,12 @@ export async function getRiskMetrics(strategyName: string): Promise<RiskMetrics>
 
 /** Run a backtest — starts run then polls for completion. */
 export async function runBacktest(config: {
+  strategy: string;
+  timeframe: string;
   pairs: string[];
   timerange: string;
   stakeAmount: number;
+  maxOpenTrades: number;
 }): Promise<BacktestResult> {
   try {
     // Start the run
@@ -588,9 +610,13 @@ export async function runBacktest(config: {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        strategy_name: config.strategy,
+        version_id: 'latest',
+        timeframe: config.timeframe,
         pairs: config.pairs,
         timerange: config.timerange,
         dry_run_wallet: config.stakeAmount,
+        max_open_trades: config.maxOpenTrades,
       }),
     });
     if (!startRes.ok) throw new Error(`Start failed: ${startRes.status}`);
@@ -608,7 +634,7 @@ export async function runBacktest(config: {
           const resultRes = await fetch(`${API_BASE_URL}/api/backtest/results/${status.run_id}`);
           if (resultRes.ok) {
             const result = await resultRes.json() as Record<string, unknown>;
-            const summary = (result.summary ?? result) as Record<string, unknown>;
+            const summary = (result.parsed_summary ?? result.summary ?? result) as Record<string, unknown>;
             return {
               totalTrades: Number(summary.total_trades ?? 0),
               winRate: Number(summary.win_rate ?? 0) * 100,

@@ -68,9 +68,25 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    uvicorn.run(
-        "server:app",
-        host=os.getenv("BACKEND_HOST", "0.0.0.0"),
-        port=int(os.getenv("BACKEND_PORT", "8000")),
-        reload=False,
-    )
+    import signal
+    import sys
+    
+    def handle_shutdown(signum, frame):
+        print("\nShutting down server...")
+        sys.exit(0)
+    
+    # Handle Ctrl+C gracefully
+    signal.signal(signal.SIGINT, handle_shutdown)
+    if os.name == "nt":
+        signal.signal(signal.SIGBREAK, handle_shutdown)
+    
+    try:
+        uvicorn.run(
+            "server:app",
+            host=os.getenv("BACKEND_HOST", "0.0.0.0"),
+            port=int(os.getenv("BACKEND_PORT", "8000")),
+            reload=False,
+        )
+    except KeyboardInterrupt:
+        print("\nServer stopped.")
+        sys.exit(0)

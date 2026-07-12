@@ -157,16 +157,9 @@ export function AeroLayout({ children }: { children: React.ReactNode }) {
               <span className="t-label">{'// RUN HISTORY'}</span>
             </div>
             <div className="flex-1 p-2 space-y-1">
-              {['BT-2024-01','BT-2023-12','BT-2023-11'].map((r) => (
-                <div key={r} className="flex items-center gap-2 p-2 cursor-pointer"
-                  style={{ border: '1px solid transparent' }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--t-border-hi)')}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = 'transparent')}
-                >
-                  <Clock size={10} style={{ color: 'var(--t-muted)' }} />
-                  <span className="text-[11px] font-mono" style={{ color: 'var(--t-label)' }}>{r}</span>
-                </div>
-              ))}
+              <div className="text-xs font-mono py-8 text-center" style={{ color: 'var(--t-muted)' }}>
+                No run history available yet
+              </div>
             </div>
           </aside>
         )}

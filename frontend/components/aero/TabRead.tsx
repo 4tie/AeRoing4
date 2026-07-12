@@ -133,12 +133,12 @@ export function TabRead() {
       </div>
 
       {/* Equity curve */}
-      <Panel label="EQUITY CURVE · SIMULATED" className="t-card-glow">
+      <Panel label="EQUITY CURVE" className="t-card-glow">
         <EquityChart data={detail.equity} />
       </Panel>
 
       {/* Trades — key forces remount on strategy change so cascade replays */}
-      <Panel key={`trades-${selectedStrategyName}`} label="SIMULATED RECENT TRADES">
+      <Panel key={`trades-${selectedStrategyName}`} label="RECENT TRADES">
         {/* Win/Loss summary */}
         <div className="flex items-center gap-3 mb-3 pb-3" style={{ borderBottom: '1px solid var(--t-border)' }}>
           {(() => {

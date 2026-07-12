@@ -1,29 +1,28 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 
-// Deterministic pseudo-random equity curve seeded by strategy name
-function seededCurve(name: string, points = 20): number[] {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (Math.imul(31, h) + name.charCodeAt(i)) | 0;
-  const rng = () => { h = (Math.imul(1664525, h) + 1013904223) | 0; return (h >>> 0) / 0xffffffff; };
-  const vals: number[] = [0];
-  for (let i = 1; i < points; i++) vals.push(vals[i - 1] + (rng() - 0.44) * 2);
-  return vals;
+interface Props { 
+  name: string; 
+  selected: boolean; 
+  width?: number; 
+  height?: number;
+  data?: number[]; // Real equity curve data
 }
 
-interface Props { name: string; selected: boolean; width?: number; height?: number }
-
-export function StrategySpark({ name, selected, width = 48, height = 22 }: Props) {
+export function StrategySpark({ name, selected, width = 48, height = 22, data }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [animT, setAnimT] = useState(0);
   const rafRef = useRef<number | null>(null);
   const startRef = useRef<number | null>(null);
 
-  const curve = seededCurve(name);
-  const minV = Math.min(...curve);
-  const maxV = Math.max(...curve);
+  // Use real data if provided, otherwise show empty placeholder
+  const curve = data || [];
+  const hasData = curve.length > 0;
+  
+  const minV = hasData ? Math.min(...curve) : 0;
+  const maxV = hasData ? Math.max(...curve) : 0;
   const range = maxV - minV || 1;
-  const isPositive = curve[curve.length - 1] >= curve[0];
+  const isPositive = hasData ? curve[curve.length - 1] >= curve[0] : false;
   const color = selected ? '#00E5FF' : isPositive ? '#00FF88' : '#FF3B5C';
   const dim = selected ? 1 : 0.55;
 
@@ -41,7 +40,7 @@ export function StrategySpark({ name, selected, width = 48, height = 22 }: Props
     rafRef.current = requestAnimationFrame(go);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
    
-  }, [name]);
+  }, [name, hasData]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -53,6 +52,19 @@ export function StrategySpark({ name, selected, width = 48, height = 22 }: Props
     canvas.height = height * dpr;
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, width, height);
+
+    // Show placeholder when no data available
+    if (!hasData) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 2]);
+      ctx.beginPath();
+      ctx.moveTo(2, height / 2);
+      ctx.lineTo(width - 2, height / 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      return;
+    }
 
     const pad = 2;
     const W = width - pad * 2;
@@ -105,7 +117,7 @@ export function StrategySpark({ name, selected, width = 48, height = 22 }: Props
       ctx.globalAlpha = 1;
       ctx.fill();
     }
-  }, [animT, color, dim, curve, minV, range, width, height]);
+  }, [animT, color, dim, curve, minV, range, width, height, hasData]);
 
   return <canvas ref={canvasRef} style={{ width, height, display: 'block' }} />;
 }

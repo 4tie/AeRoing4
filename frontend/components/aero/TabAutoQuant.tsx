@@ -13,49 +13,20 @@ type AQMode = 'legacy' | 'aering4';
 
 const ALL_PAIRS = ['BTC/USDT','ETH/USDT','SOL/USDT','BNB/USDT','AVAX/USDT','MATIC/USDT','ADA/USDT'];
 
-const STAGE_LOGS: Record<number, string[]> = {
-  1: ['[INFO] Fetching OHLCV data from exchange...', '[INFO] Loaded 4096 candles for BTC/USDT', '[INFO] Loaded 4096 candles for ETH/USDT', '[OK] Data validation passed'],
-  2: ['[INFO] Computing baseline metrics...', '[INFO] BTC/USDT → Profit: +12.4%, DD: -8.2%', '[INFO] ETH/USDT → Profit: +9.1%, DD: -11.3%', '[OK] Baseline complete'],
-  3: ['[INFO] Starting WFA hyperopt (100 epochs)...', '[INFO] Epoch 1/100: loss=0.847', '[INFO] Epoch 25/100: loss=0.623', '[INFO] Epoch 50/100: loss=0.441', '[INFO] Epoch 75/100: loss=0.312', '[OK] Hyperopt finished — best params found'],
-  4: ['[INFO] Running overfit detection...', '[INFO] Checking stoploss parameter... PASS', '[INFO] Checking roi.0 parameter... PASS', '[INFO] Checking ema_period parameter... PASS', '[WARN] roi.30 shows overfit signal — review recommended', '[OK] Detection complete'],
-  5: ['[INFO] Stress testing on 5 market scenarios...', '[INFO] Bear market 2022: -18% (within threshold)', '[INFO] Flash crash June 2023: -6.2%', '[INFO] Bull run 2021: +44.7%', '[OK] All stress tests passed'],
-  6: ['[INFO] Computing final risk score...', '[INFO] Sharpe: 1.24 | Sortino: 1.87 | Calmar: 0.91', '[INFO] Portfolio correlation: LOW', '[OK] Risk assessment complete — Score: 82/100'],
-};
-
 export function TabAutoQuant() {
   const [mode, setMode] = useState<AQMode>('aering4');
-  const { pipelineRun, setPipelineRun, updateStage, appendLog, pipelineRunning, setPipelineRunning, selectedPairs, setSelectedPairs } = useAeroStore();
+  const { pipelineRun, setPipelineRun, pipelineRunning, setPipelineRunning, selectedPairs, setSelectedPairs } = useAeroStore();
   const [expandedStage, setExpandedStage] = useState<number | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
-  const simRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const allLogs = pipelineRun?.stages.flatMap(s => s.logs.map(l => `[S${s.id}] ${l}`)) ?? [];
 
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [allLogs.length]);
 
-  const simulateStage = (stageId: number) => {
-    const logs = STAGE_LOGS[stageId] ?? [];
-    let li = 0, prog = 0;
-    updateStage(stageId, { status: 'running', progress: 0 });
-    const tick = () => {
-      prog = Math.min(100, prog + Math.random() * 18 + 5);
-      if (li < logs.length) appendLog(stageId, logs[li++]);
-      if (prog < 100) { simRef.current = setTimeout(tick, 350 + Math.random() * 300); }
-      else {
-        updateStage(stageId, { status: 'done', progress: 100 });
-        if (stageId < 6) setTimeout(() => simulateStage(stageId + 1), 500);
-        else { setPipelineRunning(false); setPipelineRun({ ...pipelineRun!, status: 'done', currentStage: 6 }); }
-      }
-    };
-    simRef.current = setTimeout(tick, 400);
-  };
-
   const handleStart = async () => {
-    if (simRef.current) clearTimeout(simRef.current);
     setPipelineRunning(true);
     const run = await startPipelineRun(selectedPairs);
     setPipelineRun(run);
-    simulateStage(1);
   };
 
   const togglePair = (p: string) => setSelectedPairs(selectedPairs.includes(p) ? selectedPairs.filter(x => x !== p) : [...selectedPairs, p]);
@@ -133,7 +104,7 @@ export function TabAutoQuant() {
               isLast={idx === pipelineRun.stages.length - 1}
               extra={
                 stage.id === 5 && (stage.status === 'running' || stage.status === 'done')
-                  ? <StressTestHeatmap active={expandedStage === 5 && (stage.status === 'running' || stage.status === 'done')} />
+                  ? <StressTestHeatmap active={expandedStage === 5 && (stage.status === 'running' || stage.status === 'done')} data={undefined} />
                   : stage.id === 6 && (stage.status === 'running' || stage.status === 'done')
                     ? <RiskScoreGauge active={expandedStage === 6 && (stage.status === 'running' || stage.status === 'done')} />
                     : undefined

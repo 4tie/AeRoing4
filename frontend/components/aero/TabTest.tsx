@@ -1,9 +1,28 @@
 'use client';
-import { useState } from 'react';
-import { runBacktest, BacktestResult } from '@/lib/api';
+import { useState, useEffect } from 'react';
+import { runBacktest, BacktestResult, getStrategies } from '@/lib/api';
 import { Play, Download } from 'lucide-react';
 
-const ALL_PAIRS = ['BTC/USDT','ETH/USDT','SOL/USDT','BNB/USDT','AVAX/USDT','MATIC/USDT','ADA/USDT','DOT/USDT'];
+const ALL_PAIRS = [
+  'BTC/USDT','ETH/USDT','BNB/USDT','SOL/USDT','ADA/USDT','AVAX/USDT','DOT/USDT','MATIC/USDT',
+  'LINK/USDT','UNI/USDT','ATOM/USDT','LTC/USDT','XRP/USDT','DOGE/USDT','NEAR/USDT','APE/USDT',
+  'FTM/USDT','ALGO/USDT','ICP/USDT','ETC/USDT','SAND/USDT','MANA/USDT','CRV/USDT','AAVE/USDT',
+  'SUSHI/USDT','FIL/USDT','TRX/USDT','XLM/USDT','BCH/USDT','EOS/USDT','XTZ/USDT','VET/USDT',
+  'THETA/USDT','IOTA/USDT','HBAR/USDT','XMR/USDT','DASH/USDT','ZEC/USDT','KAVA/USDT','RUNE/USDT',
+  'AXS/USDT','SAND/USDT','MANA/USDT','GALA/USDT','ENJ/US','CHZ/USDT','SNX/USDT','MKR/USDT',
+  'COMP/USDT','YFI/USDT','UMA/USDT','BAND/USDT','REN/USDT','KNC/USDT','BAL/USDT','CRV/USDT'
+];
+const TIMEFRAMES = ['1m', '5m', '15m', '1h', '4h', '1d'];
+
+const TIMERANGE_PRESETS = [
+  { label: '7 days', value: '20240101-20240108' },
+  { label: '30 days', value: '20231202-20240101' },
+  { label: '3 months', value: '20231001-20240101' },
+  { label: '6 months', value: '20230701-20240101' },
+  { label: '1 year', value: '20230101-20240101' },
+  { label: '2 years', value: '20220101-20240101' },
+  { label: 'Custom', value: '' },
+];
 
 const Panel = ({ label, children, className = '' }: { label: string; children: React.ReactNode; className?: string }) => (
   <div className={`t-card ${className}`}>
@@ -16,19 +35,31 @@ const Panel = ({ label, children, className = '' }: { label: string; children: R
 );
 
 export function TabTest() {
+  const [strategies, setStrategies] = useState<string[]>([]);
+  const [strategy, setStrategy] = useState('');
+  const [timeframe, setTimeframe] = useState('5m');
+  const [timerangePreset, setTimerangePreset] = useState('20230101-20240101');
+  const [timerangeCustom, setTimerangeCustom] = useState('');
+  const [maxOpenTrades, setMaxOpenTrades] = useState(5);
   const [pairs, setPairs] = useState(['BTC/USDT','ETH/USDT']);
-  const [timerange, setTimerange] = useState('20230101-20240101');
   const [stakeAmount, setStakeAmount] = useState(100);
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<BacktestResult | null>(null);
 
+  const timerange = timerangePreset || timerangeCustom;
+
+  useEffect(() => {
+    getStrategies().then(strats => setStrategies(strats.map(s => s.name))).catch(() => setStrategies([]));
+  }, []);
+
   const togglePair = (p: string) => setPairs(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
 
   const start = async () => {
+    if (!strategy) return;
     setRunning(true); setResult(null); setProgress(0);
     const iv = setInterval(() => setProgress(p => { if (p >= 95) { clearInterval(iv); return 95; } return p + Math.random() * 12; }), 200);
-    const r = await runBacktest({ pairs, timerange, stakeAmount });
+    const r = await runBacktest({ strategy, timeframe, pairs, timerange, stakeAmount, maxOpenTrades });
     clearInterval(iv); setProgress(100);
     setTimeout(() => { setResult(r); setRunning(false); }, 300);
   };
@@ -53,8 +84,29 @@ export function TabTest() {
         <div className="space-y-4">
           <Panel label="CONFIGURATION">
             <div className="space-y-3">
+              <div>
+                <span className="t-label block mb-1">STRATEGY</span>
+                <select value={strategy} onChange={e => setStrategy(e.target.value)}
+                  className="w-full px-3 py-2 text-xs font-mono t-focus"
+                  style={{ background: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)', outline: 'none' }}>
+                  <option value="">Select strategy...</option>
+                  {strategies.map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <span className="t-label block mb-1">TIMEFRAME</span>
+                <select value={timeframe} onChange={e => setTimeframe(e.target.value)}
+                  className="w-full px-3 py-2 text-xs font-mono t-focus"
+                  style={{ background: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)', outline: 'none' }}>
+                  {TIMEFRAMES.map(tf => (
+                    <option key={tf} value={tf}>{tf}</option>
+                  ))}
+                </select>
+              </div>
               {[
-                { label: 'TIMERANGE', value: timerange, set: setTimerange, type: 'text' },
+                { label: 'MAX OPEN TRADES', value: String(maxOpenTrades), set: (v: string) => setMaxOpenTrades(Number(v)), type: 'number' },
                 { label: 'STAKE AMOUNT (USDT)', value: String(stakeAmount), set: (v: string) => setStakeAmount(Number(v)), type: 'number' },
               ].map(({ label, value, set, type }) => (
                 <div key={label}>
@@ -64,6 +116,22 @@ export function TabTest() {
                     style={{ background: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)', outline: 'none' }} />
                 </div>
               ))}
+              <div>
+                <span className="t-label block mb-1">TIMERANGE</span>
+                <select value={timerangePreset} onChange={e => setTimerangePreset(e.target.value)}
+                  className="w-full px-3 py-2 text-xs font-mono t-focus mb-2"
+                  style={{ background: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)', outline: 'none' }}>
+                  {TIMERANGE_PRESETS.map(preset => (
+                    <option key={preset.value} value={preset.value}>{preset.label}</option>
+                  ))}
+                </select>
+                {!timerangePreset && (
+                  <input type="text" value={timerangeCustom} onChange={e => setTimerangeCustom(e.target.value)}
+                    placeholder="YYYYMMDD-YYYYMMDD"
+                    className="w-full px-3 py-2 text-xs font-mono t-focus"
+                    style={{ background: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)', outline: 'none' }} />
+                )}
+              </div>
             </div>
           </Panel>
 
@@ -80,7 +148,7 @@ export function TabTest() {
             ))}
           </Panel>
 
-          <button onClick={start} disabled={running || pairs.length === 0}
+          <button onClick={start} disabled={running || pairs.length === 0 || !strategy}
             className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-mono font-bold transition-all disabled:opacity-40"
             style={{ background: 'rgba(0,229,255,0.08)', border: '1px solid var(--t-border-hi)', color: 'var(--t-cyan)' }}
             onMouseEnter={e => !running && (e.currentTarget.style.background = 'rgba(0,229,255,0.15)')}

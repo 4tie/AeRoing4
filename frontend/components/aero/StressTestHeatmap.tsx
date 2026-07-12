@@ -5,13 +5,13 @@ import { useEffect, useState, useRef } from 'react';
 const SCENARIOS = ['Bear 2022', "Flash Jun'23", 'Bull 2021', 'Flat 2023', "Crash Mar'20"];
 const METRICS   = ['Profit %', 'Drawdown', 'Win Rate', 'Sharpe', 'Recovery'];
 
-// Final target values — positive = green, negative = red
+// Empty data - will be populated from backend when available
 const TARGET: number[][] = [
-  [-18.4, -11.2, +44.7, +2.8, -9.3],   // Bear 2022
-  [ -6.2,  -4.1, +38.2, +1.4, -3.7],   // Flash Jun'23
-  [+44.7,  -8.6, +62.1, +2.9, +12.4],  // Bull 2021
-  [ +3.1,  -2.2, +51.4, +1.8,  +1.9],  // Flat 2023
-  [-29.8, -17.3, +28.4, +0.7, -22.1],  // Crash Mar'20
+  [0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0],
 ];
 
 function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
@@ -27,10 +27,13 @@ function textColor(val: number) {
   return val >= 0 ? '#00FF88' : '#FF3B5C';
 }
 
-export function StressTestHeatmap({ active }: { active: boolean }) {
+export function StressTestHeatmap({ active, data }: { active: boolean; data?: number[][] }) {
+  // Use provided data or empty placeholder
+  const heatmapData = data || TARGET;
+  
   // animatedT[row][col] goes from 0 → 1 with staggered delays
   const [animT, setAnimT] = useState<number[][]>(
-    () => TARGET.map((row) => row.map(() => 0))
+    () => heatmapData.map((row) => row.map(() => 0))
   );
   const rafRef = useRef<number | null>(null);
   const startRef = useRef<number | null>(null);
@@ -40,7 +43,7 @@ export function StressTestHeatmap({ active }: { active: boolean }) {
 
   useEffect(() => {
     if (!active) {
-      setAnimT(TARGET.map((row) => row.map(() => 0)));
+      setAnimT(heatmapData.map((row) => row.map(() => 0)));
       startRef.current = null;
       return;
     }
@@ -50,7 +53,7 @@ export function StressTestHeatmap({ active }: { active: boolean }) {
       const elapsed = now - startRef.current;
 
       setAnimT(
-        TARGET.map((row, ri) =>
+        heatmapData.map((row, ri) =>
           row.map((_, ci) => {
             const cellStart = (ri * METRICS.length + ci) * STAGGER;
             const cellElapsed = elapsed - cellStart;
@@ -67,7 +70,9 @@ export function StressTestHeatmap({ active }: { active: boolean }) {
 
     rafRef.current = requestAnimationFrame(animate);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [active]);
+  }, [active, heatmapData]);
+
+  const hasData = heatmapData.some(row => row.some(val => val !== 0));
 
   return (
     <div className="space-y-3">
@@ -81,56 +86,64 @@ export function StressTestHeatmap({ active }: { active: boolean }) {
         )}
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs border-collapse font-mono">
-          <thead>
-            <tr>
-              <th className="text-left pr-3 pb-2 font-medium w-28" style={{ color: 'rgba(255,255,255,0.15)' }}>Scenario</th>
-              {METRICS.map((m) => (
-                <th key={m} className="pb-2 text-center font-medium px-1 min-w-[72px]" style={{ color: 'var(--t-muted)' }}>{m}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {TARGET.map((row, ri) => (
-              <tr key={ri}>
-                <td className="pr-3 py-1 font-mono whitespace-nowrap" style={{ color: 'var(--t-muted)' }}>{SCENARIOS[ri]}</td>
-                {row.map((val, ci) => {
-                  const t = animT[ri]?.[ci] ?? 0;
-                  const displayed = val * t;
-                  return (
-                    <td key={ci} className="px-1 py-1">
-                      <div
-                        className="rounded-md px-1.5 py-1.5 text-center font-mono font-semibold transition-all duration-75 min-w-[64px]"
-                        style={{
-                          background: cellColor(val, t),
-                          color: t > 0.1 ? textColor(val) : '#334155',
-                          transform: `scale(${0.92 + t * 0.08})`,
-                          opacity: 0.3 + t * 0.7,
-                        }}
-                      >
-                        {t > 0.05
-                          ? `${val >= 0 ? '+' : ''}${displayed.toFixed(1)}${METRICS[ci].includes('%') || ci === 0 || ci === 4 ? '%' : ci === 1 ? '%' : ''}`
-                          : '···'}
-                      </div>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Legend */}
-      <div className="flex items-center gap-4 pt-1">
-        {[['rgba(0,255,136,0.4)','Positive'],['rgba(255,59,92,0.4)','Negative'],['rgba(255,59,92,0.7)','Critical (<-15%)']].map(([bg, label]) => (
-          <div key={label} className="flex items-center gap-1.5 text-[10px] font-mono" style={{ color: 'var(--t-muted)' }}>
-            <span className="w-2.5 h-2.5 inline-block" style={{ background: bg }} />
-            {label}
+      {!hasData ? (
+        <div className="text-xs font-mono py-8 text-center" style={{ color: 'var(--t-muted)' }}>
+          No stress test data available. Run a stress test to populate this matrix.
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border-collapse font-mono">
+              <thead>
+                <tr>
+                  <th className="text-left pr-3 pb-2 font-medium w-28" style={{ color: 'rgba(255,255,255,0.15)' }}>Scenario</th>
+                  {METRICS.map((m) => (
+                    <th key={m} className="pb-2 text-center font-medium px-1 min-w-[72px]" style={{ color: 'var(--t-muted)' }}>{m}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {heatmapData.map((row, ri) => (
+                  <tr key={ri}>
+                    <td className="pr-3 py-1 font-mono whitespace-nowrap" style={{ color: 'var(--t-muted)' }}>{SCENARIOS[ri]}</td>
+                    {row.map((val, ci) => {
+                      const t = animT[ri]?.[ci] ?? 0;
+                      const displayed = val * t;
+                      return (
+                        <td key={ci} className="px-1 py-1">
+                          <div
+                            className="rounded-md px-1.5 py-1.5 text-center font-mono font-semibold transition-all duration-75 min-w-[64px]"
+                            style={{
+                              background: cellColor(val, t),
+                              color: t > 0.1 ? textColor(val) : '#334155',
+                              transform: `scale(${0.92 + t * 0.08})`,
+                              opacity: 0.3 + t * 0.7,
+                            }}
+                          >
+                            {t > 0.05
+                              ? `${val >= 0 ? '+' : ''}${displayed.toFixed(1)}${METRICS[ci].includes('%') || ci === 0 || ci === 4 ? '%' : ci === 1 ? '%' : ''}`
+                              : '···'}
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ))}
-      </div>
+
+          {/* Legend */}
+          <div className="flex items-center gap-4 pt-1">
+            {[['rgba(0,255,136,0.4)','Positive'],['rgba(255,59,92,0.4)','Negative'],['rgba(255,59,92,0.7)','Critical (<-15%)']].map(([bg, label]) => (
+              <div key={label} className="flex items-center gap-1.5 text-[10px] font-mono" style={{ color: 'var(--t-muted)' }}>
+                <span className="w-2.5 h-2.5 inline-block" style={{ background: bg }} />
+                {label}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -75,6 +75,65 @@ async def list_strategies(services=Depends(get_services)) -> dict:
     }
 
 
+@router.get(
+    "/{strategy_name}/latest-backtest",
+    summary="Get latest backtest results for a strategy",
+    description="Returns the most recent backtest results including equity curve data for a strategy.",
+)
+async def get_latest_backtest(strategy_name: str, services=Depends(get_services)) -> dict:
+    """Get the latest backtest run for a strategy including equity curve."""
+    try:
+        # Get latest run for this strategy
+        runs = services.run_repository.list_runs(strategy_name=strategy_name)
+        if not runs:
+            return {"found": False, "reason": "No backtest runs found for this strategy"}
+        
+        latest_run = runs[0]  # Already sorted by created_at descending
+        run_dir = services.run_repository.run_dir(strategy_name, latest_run.run_id)
+        
+        # Load charts.json for equity curve
+        from ...utils import read_json
+        charts_raw = read_json(run_dir / "charts.json")
+        
+        if not charts_raw:
+            return {"found": False, "reason": "No chart data found in latest backtest"}
+        
+        # Convert equity curve to frontend format
+        equity_curve = charts_raw.get("equity_curve", [])
+        equity_points = []
+        for point in equity_curve:
+            ts = point.get("ts")
+            equity = point.get("equity")
+            if ts is not None and equity is not None:
+                from datetime import datetime
+                time_str = datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M")
+                equity_points.append({"time": time_str, "value": equity})
+        
+        # Load trades for recent trades display
+        trades_raw = read_json(run_dir / "trades.json", default=[]) or []
+        recent_trades = []
+        for trade in trades_raw[:14]:  # Last 14 trades
+            if isinstance(trade, dict):
+                profit_abs = trade.get("profit_abs", 0)
+                profit_pct = trade.get("profit_ratio", 0) * 100 if trade.get("profit_ratio") else 0
+                duration = trade.get("trade_duration", "")
+                recent_trades.append({
+                    "pair": trade.get("pair", "UNKNOWN"),
+                    "side": "short" if trade.get("is_short") else "long",
+                    "profit": profit_pct,
+                    "duration": str(duration) if duration else "",
+                })
+        
+        return {
+            "found": True,
+            "run_id": latest_run.run_id,
+            "equity": equity_points,
+            "trades": recent_trades,
+        }
+    except Exception as exc:
+        return {"found": False, "reason": f"Error loading backtest: {str(exc)}"}
+
+
 # ── file-system endpoints ─────────────────────────────────────────────────────
 
 
