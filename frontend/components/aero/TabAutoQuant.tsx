@@ -475,10 +475,10 @@ export function TabAutoQuant() {
               <div>Max Open Trades: {developRunDebug.maxOpenTrades as number}</div>
               <div>Mode: {developRunDebug.mode as string}</div>
               <div>Pair Discovery: {developRunDebug.enable_pair_discovery ? 'enabled' : 'disabled'}</div>
-              {developRunDebug.run_id && <div>Run ID: {String(developRunDebug.run_id)}</div>}
-              {developRunDebug.current_status && <div>Status: {String(developRunDebug.current_status)}</div>}
-              {developRunDebug.outcome && <div>Outcome: {String(developRunDebug.outcome)}</div>}
-              {developRunDebug.error && <div style={{ color: 'var(--t-red)' }}>Error: {String(developRunDebug.error)}</div>}
+              {(developRunDebug.run_id as string | undefined) && <div>Run ID: {String(developRunDebug.run_id)}</div>}
+              {(developRunDebug.current_status as string | undefined) && <div>Status: {String(developRunDebug.current_status)}</div>}
+              {(developRunDebug.outcome as string | undefined) && <div>Outcome: {String(developRunDebug.outcome)}</div>}
+              {(developRunDebug.error as string | undefined) && <div style={{ color: 'var(--t-red)' }}>Error: {String(developRunDebug.error)}</div>}
             </div>
           )}
         </div>
