@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 
 interface Props { 
   name: string; 
@@ -16,7 +16,7 @@ export function StrategySpark({ name, selected, width = 48, height = 22, data }:
   const startRef = useRef<number | null>(null);
 
   // Use real data if provided, otherwise show empty placeholder
-  const curve = data || [];
+  const curve = useMemo(() => data || [], [data]);
   const hasData = curve.length > 0;
   
   const minV = hasData ? Math.min(...curve) : 0;
@@ -83,10 +83,16 @@ export function StrategySpark({ name, selected, width = 48, height = 22, data }:
     grad.addColorStop(1, `${color}00`);
 
     ctx.beginPath();
-    pts.forEach((v, i) => {
-      const x = px(i); const y = py(v);
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    });
+    for (let i = 0; i < pts.length; i++) {
+      const v = pts[i];
+      const x = px(i);
+      const y = py(v);
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
     // Close fill down to baseline
     ctx.lineTo(px(pts.length - 1), pad + H);
     ctx.lineTo(px(0), pad + H);
@@ -97,10 +103,16 @@ export function StrategySpark({ name, selected, width = 48, height = 22, data }:
 
     // Line stroke
     ctx.beginPath();
-    pts.forEach((v, i) => {
-      const x = px(i); const y = py(v);
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    });
+    for (let i = 0; i < pts.length; i++) {
+      const v = pts[i];
+      const x = px(i);
+      const y = py(v);
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
     ctx.strokeStyle = color;
     ctx.lineWidth = 1.5;
     ctx.lineJoin = 'round';

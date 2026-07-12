@@ -245,6 +245,41 @@ export const DEFAULT_DISCOVERY_UNIVERSE: string[] = [
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
+/** Retry wrapper for GET requests with exponential backoff */
+async function fetchWithRetry(url: string, options: RequestInit = {}, maxRetries = 3): Promise<Response> {
+  const RETRY_DELAYS = [2000, 4000, 8000]; // 2s, 4s, 8s
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      
+      // Retry on network errors or 5xx server errors
+      if (response.ok || attempt === maxRetries) {
+        return response;
+      }
+      
+      if (response.status >= 500) {
+        console.warn(`GET request failed (attempt ${attempt + 1}/${maxRetries + 1}): ${response.status}`);
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[attempt] || 8000));
+          continue;
+        }
+      }
+      
+      return response;
+    } catch (error) {
+      console.warn(`GET request network error (attempt ${attempt + 1}/${maxRetries + 1}):`, error);
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[attempt] || 8000));
+        continue;
+      }
+      throw error;
+    }
+  }
+  
+  throw new Error('Max retries exceeded');
+}
+
 function mapBackendStatus(s: string): 'pending' | 'running' | 'done' | 'error' {
   if (s === 'completed' || s === 'passed') return 'done';
   if (s === 'failed' || s === 'cancelled') return 'error';
@@ -390,8 +425,8 @@ export async function getStrategies(): Promise<Strategy[]> {
   try {
     // Files list gives us the real file stems (e.g. "sample_strategy")
     const [filesRes, metaRes] = await Promise.all([
-      fetch(`${API_BASE_URL}/api/strategies/files`),
-      fetch(`${API_BASE_URL}/api/strategies`),
+      fetchWithRetry(`${API_BASE_URL}/api/strategies/files`),
+      fetchWithRetry(`${API_BASE_URL}/api/strategies`),
     ]);
     const filesData = filesRes.ok
       ? (await filesRes.json() as { strategies?: Array<Record<string, unknown>> })
@@ -428,9 +463,9 @@ export async function getStrategyDetail(name: string): Promise<StrategyDetail> {
   if (!name) return { name: '', timeframe: '5m', stoploss: -0.10, roi: [], indicators: [], trades: [], equity: [] };
   try {
     const [filesRes, contentRes, backtestRes] = await Promise.all([
-      fetch(`${API_BASE_URL}/api/strategies/files/${encodeURIComponent(name)}`),
-      fetch(`${API_BASE_URL}/api/strategies/content?filename=${encodeURIComponent(name)}.py`),
-      fetch(`${API_BASE_URL}/api/strategies/${encodeURIComponent(name)}/latest-backtest`),
+      fetchWithRetry(`${API_BASE_URL}/api/strategies/files/${encodeURIComponent(name)}`),
+      fetchWithRetry(`${API_BASE_URL}/api/strategies/content?filename=${encodeURIComponent(name)}.py`),
+      fetchWithRetry(`${API_BASE_URL}/api/strategies/${encodeURIComponent(name)}/latest-backtest`),
     ]);
 
     // Parse JSON params (ROI, stoploss)
@@ -529,7 +564,7 @@ export async function uploadStrategy(file: File): Promise<{ ok: boolean; name: s
 export async function getRiskMetrics(strategyName: string): Promise<RiskMetrics> {
   try {
     // Try to pull from existing AeRoing4 runs for this strategy
-    const runsRes = await fetch(`${API_BASE_URL}/api/aeroing4/runs?limit=10`);
+    const runsRes = await fetchWithRetry(`${API_BASE_URL}/api/aeroing4/runs?limit=10`);
     if (runsRes.ok) {
       const runsData = await runsRes.json() as { runs?: Array<Record<string, unknown>> };
       const match = (runsData.runs ?? []).find(
@@ -760,7 +795,7 @@ export async function startAeRoing4Run(
 
 /** Poll backend for a run's current state. */
 export async function getAeRoing4Run(runId: string): Promise<AeRoing4RunState> {
-  const res = await fetch(`${API_BASE_URL}/api/aeroing4/runs/${runId}`);
+  const res = await fetchWithRetry(`${API_BASE_URL}/api/aeroing4/runs/${runId}`);
   if (!res.ok) throw new Error(`Poll failed: ${res.status}`);
   const data = await res.json() as Record<string, unknown>;
   return mapBackendRun(data);
@@ -768,26 +803,26 @@ export async function getAeRoing4Run(runId: string): Promise<AeRoing4RunState> {
 
 /** List all AeRoing4 runs from the backend. */
 export async function listAeRoing4Runs(): Promise<AeRoing4RunState[]> {
-  const res = await fetch(`${API_BASE_URL}/api/aeroing4/runs`, { cache: 'no-store' });
+  const res = await fetchWithRetry(`${API_BASE_URL}/api/aeroing4/runs`, { cache: 'no-store' });
   if (!res.ok) throw new Error(`List runs failed: ${res.status}`);
   const data = await res.json() as Record<string, unknown>[];
   return data.map(run => mapBackendRun(run));
 }
 
 export async function getStrategyLibraryScan(): Promise<StrategyLibraryScan> {
-  const res = await fetch(`${API_BASE_URL}/api/aeroing4/strategy-library`, { cache: 'no-store' });
+  const res = await fetchWithRetry(`${API_BASE_URL}/api/aeroing4/strategy-library`, { cache: 'no-store' });
   if (!res.ok) throw new Error(`Strategy library scan failed: ${res.status}`);
   return await res.json() as StrategyLibraryScan;
 }
 
 export async function getLatestAutoQuantFlow(): Promise<AutoQuantFlowResponse> {
-  const res = await fetch(`${API_BASE_URL}/api/aeroing4/candidate-flow/latest`, { cache: 'no-store' });
+  const res = await fetchWithRetry(`${API_BASE_URL}/api/aeroing4/candidate-flow/latest`, { cache: 'no-store' });
   if (!res.ok) throw new Error(`Candidate flow load failed: ${res.status}`);
   return await res.json() as AutoQuantFlowResponse;
 }
 
 export async function getAutoQuantFlowForRun(runId: string): Promise<AutoQuantFlowResponse> {
-  const res = await fetch(`${API_BASE_URL}/api/aeroing4/runs/${runId}/candidate-flow`, { cache: 'no-store' });
+  const res = await fetchWithRetry(`${API_BASE_URL}/api/aeroing4/runs/${runId}/candidate-flow`, { cache: 'no-store' });
   if (!res.ok) throw new Error(`Candidate flow load failed: ${res.status}`);
   return await res.json() as AutoQuantFlowResponse;
 }
@@ -849,7 +884,7 @@ export interface BackendHealth {
 /** Load the active backend settings from the FastAPI settings store. */
 export async function getBackendSettings(): Promise<BackendSettings | null> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/settings`);
+    const res = await fetchWithRetry(`${API_BASE_URL}/api/settings`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json() as { settings: BackendSettings };
     return data.settings ?? null;
@@ -881,7 +916,7 @@ export async function saveBackendSettings(
 /** Ping the backend health endpoint. */
 export async function checkBackendHealth(): Promise<BackendHealth> {
   try {
-    const res = await fetch(`${API_BASE_URL}/health`, { cache: 'no-store' });
+    const res = await fetchWithRetry(`${API_BASE_URL}/health`, { cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json() as BackendHealth;
     return { ok: true, services: data.services, message: data.message ?? 'ok' };

@@ -22,14 +22,13 @@ const ALL_PAIRS = [
 ];
 
 export function TabAutoQuant() {
-  const { strategies, aering4StrategyName, setAering4StrategyName, setActiveTab } = useAeroStore();
+  const { strategies, aering4StrategyName, setAering4StrategyName, setActiveTab, aering4Running } = useAeroStore();
   const [selectedStrategy, setSelectedStrategy] = useState<StrategyLibraryItem | null>(null);
   const [timeframe, setTimeframe] = useState('5m');
   const [timerangePreset, setTimerangePreset] = useState('20230101-20240101');
   const [timerangeCustom, setTimerangeCustom] = useState('');
   const [maxOpenTrades, setMaxOpenTrades] = useState(5);
   const [pairs, setPairs] = useState(['BTC/USDT','ETH/USDT']);
-  const [loading] = useState(false);
 
   // Load selected strategy details
   useEffect(() => {
@@ -196,14 +195,14 @@ export function TabAutoQuant() {
       {/* Step 3: Run */}
       <div className="flex items-center gap-3">
         <button 
-          disabled={!aering4StrategyName || pairs.length === 0}
+          disabled={!aering4StrategyName || pairs.length === 0 || aering4Running}
           className="flex items-center gap-2 px-5 py-2.5 text-sm font-mono font-bold transition-all disabled:opacity-40"
           style={{ background: 'rgba(0,229,255,0.08)', border: '1px solid var(--t-border-hi)', color: 'var(--t-cyan)' }}
-          onMouseEnter={e => !loading && (e.currentTarget.style.background = 'rgba(0,229,255,0.15)')}
-          onMouseLeave={e => !loading && (e.currentTarget.style.background = 'rgba(0,229,255,0.08)')}
+          onMouseEnter={e => !aering4Running && (e.currentTarget.style.background = 'rgba(0,229,255,0.15)')}
+          onMouseLeave={e => !aering4Running && (e.currentTarget.style.background = 'rgba(0,229,255,0.08)')}
         >
-          {loading ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
-          {loading ? 'RUNNING...' : 'RUN DEVELOP TEST'}
+          {aering4Running ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
+          {aering4Running ? 'RUNNING...' : 'RUN DEVELOP TEST'}
         </button>
         <button 
           className="flex items-center gap-2 px-4 py-2.5 text-sm font-mono transition-all"

@@ -200,7 +200,7 @@ export function TabSettings() {
   return (
     <div className="space-y-4 max-w-3xl">
       <div className="mb-4">
-        <span className="t-label block mb-1">TAB 06 · SETTINGS</span>
+        <span className="t-label block mb-1">TAB 05 · SETTINGS</span>
         <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--t-text)', letterSpacing: '-0.02em' }}>Settings</h1>
         <span className="text-xs font-mono" style={{ color: 'var(--t-muted)' }}>Backend configuration, paths, Ollama &amp; research pipeline</span>
       </div>

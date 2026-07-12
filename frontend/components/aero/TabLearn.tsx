@@ -71,7 +71,7 @@ export function TabLearn() {
     <div className="space-y-4 max-w-7xl">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
-          <span className="t-label block mb-1">TAB 02 · LEARN</span>
+          <span className="t-label block mb-1">TAB 01 · LEARN</span>
           <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--t-text)', letterSpacing: '-0.02em' }}>{detail.name}</h1>
           <span className="text-xs font-mono" style={{ color: 'var(--t-muted)' }}>Strategy breakdown &amp; risk analysis</span>
         </div>
