@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useAeroStore } from '@/lib/aeroStore';
-import { Play, Loader2, BookOpen, AlertCircle, ChevronDown, ChevronRight, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Play, Loader2, BookOpen, AlertCircle, ChevronDown, ChevronUp, ChevronRight, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { getStrategyLibraryScan, startAeRoing4Run, getAeRoing4Run, type StrategyLibraryItem, type AeRoing4RunState } from '@/lib/api';
 
 const TIMEFRAMES = ['1m', '5m', '15m', '1h', '4h', '1d'];
@@ -19,9 +19,6 @@ const ALL_PAIRS = [
   'BTC/USDT','ETH/USDT','BNB/USDT','SOL/USDT','ADA/USDT','AVAX/USDT','DOT/USDT','MATIC/USDT',
   'LINK/USDT','UNI/USDT','ATOM/USDT','LTC/USDT','XRP/USDT','DOGE/USDT','NEAR/USDT','APE/USDT'
 ];
-
-// Module-level flag for immediate duplicate-click prevention (outside React component)
-let _isClickBlocked = false;
 
 export function TabAutoQuant() {
   const { strategies, aering4StrategyName, setAering4StrategyName, setActiveTab, aering4Running, setAering4Run, setAering4Running } = useAeroStore();
@@ -70,6 +67,14 @@ export function TabAutoQuant() {
 
   // Handle RUN DEVELOP TEST button click
   const handleRunDevelopTest = async () => {
+    // IMMEDIATE synchronous check using ref (no React state updates)
+    if (isDevelopRunStartingRef.current) {
+      return; // Already starting, ignore duplicate click
+    }
+    
+    // Set ref immediately (synchronous, no React batching)
+    isDevelopRunStartingRef.current = true;
+    
     // Set loading state immediately to disable button
     setIsStartingDevelopRun(true);
     setValidationError(null);
@@ -78,7 +83,7 @@ export function TabAutoQuant() {
     // Prevent duplicate clicks using state
     if (isStartingDevelopRun || aering4Running) {
       setIsStartingDevelopRun(false);
-      _isClickBlocked = false;
+      isDevelopRunStartingRef.current = false;
       return;
     }
 
@@ -86,32 +91,32 @@ export function TabAutoQuant() {
     if (!aering4StrategyName) {
       setValidationError('Please select a strategy');
       setIsStartingDevelopRun(false);
-      _isClickBlocked = false;
+      isDevelopRunStartingRef.current = false;
       return;
     }
     if (pairs.length === 0) {
       setValidationError('Select at least one pair before running a DEVELOP test.');
       setIsStartingDevelopRun(false);
-      _isClickBlocked = false;
+      isDevelopRunStartingRef.current = false;
       return;
     }
     if (!timeframe) {
       setDevelopRunError('Please select a timeframe');
       setIsStartingDevelopRun(false);
-      _isClickBlocked = false;
+      isDevelopRunStartingRef.current = false;
       return;
     }
     const timerange = getTimerange();
     if (!timerange) {
       setDevelopRunError('Please select a timerange');
       setIsStartingDevelopRun(false);
-      _isClickBlocked = false;
+      isDevelopRunStartingRef.current = false;
       return;
     }
     if (maxOpenTrades < 1) {
       setDevelopRunError('Max open trades must be at least 1');
       setIsStartingDevelopRun(false);
-      _isClickBlocked = false;
+      isDevelopRunStartingRef.current = false;
       return;
     }
 
@@ -145,12 +150,12 @@ export function TabAutoQuant() {
           } else {
             setAering4Running(false);
             setIsStartingDevelopRun(false);
-            _isClickBlocked = false;
+            isDevelopRunStartingRef.current = false;
           }
         } catch (e) {
           setAering4Running(false);
           setIsStartingDevelopRun(false);
-          _isClickBlocked = false;
+          isDevelopRunStartingRef.current = false;
           setDevelopRunError(e instanceof Error ? e.message : 'Polling failed');
         }
       };
@@ -158,24 +163,24 @@ export function TabAutoQuant() {
       pollRef.current = setTimeout(poll, 2000);
     } catch (e) {
       setIsStartingDevelopRun(false);
-      _isClickBlocked = false;
+      isDevelopRunStartingRef.current = false;
       setDevelopRunError(e instanceof Error ? e.message : 'Failed to start run');
     }
   };
 
-  // Synchronous wrapper that uses module-level flag for immediate duplicate-click prevention
+  // Synchronous wrapper that uses ref for immediate duplicate-click prevention
   const handleRunDevelopTestSync = (e: React.MouseEvent) => {
-    // IMMEDIATE synchronous check using module-level flag (outside React component)
-    if (_isClickBlocked) {
+    // IMMEDIATE synchronous check using ref (no React state updates)
+    if (isDevelopRunStartingRef.current) {
       e.preventDefault();
       e.stopPropagation();
       return; // Already starting, ignore duplicate click
     }
     
-    // Set module-level flag immediately (synchronous, no React batching)
-    _isClickBlocked = true;
+    // Set ref immediately (synchronous, no React batching)
+    isDevelopRunStartingRef.current = true;
     
-    // Disable button immediately at DOM level
+    // Disable button immediately at DOM level BEFORE any async operations
     if (developRunButtonRef.current) {
       developRunButtonRef.current.disabled = true;
     }
@@ -358,16 +363,87 @@ export function TabAutoQuant() {
                 </button>
               ))}
             </div>
-            <div className="p-3" style={{ background: 'rgba(0,229,255,0.03)', border: '1px solid var(--t-border)' }}>
-              <span className="text-xs font-semibold" style={{ color: 'var(--t-text)' }}>Effective pairs for this run:</span>
-              <div className="mt-1 text-sm font-mono" style={{ color: 'var(--t-cyan)' }}>
-                {pairs.length > 0 ? pairs.join(', ') : 'None selected'}
+            {/* Market & Pairs Clarity Box */}
+            <div className="p-4" style={{ background: 'rgba(0,229,255,0.03)', border: '1px solid var(--t-border)' }}>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-sm font-bold" style={{ color: 'var(--t-cyan)' }}>Effective pairs</span>
               </div>
-              {pairs.length > 1 && (
+              <div className="space-y-2">
+                {pairs.length > 0 ? (
+                  <div className="space-y-1">
+                    {pairs.map(p => (
+                      <div key={p} className="px-3 py-2 text-sm font-mono" style={{ background: 'rgba(0,229,255,0.05)', color: 'var(--t-cyan)' }}>
+                        {p}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="px-3 py-2 text-sm" style={{ color: 'var(--t-muted)' }}>No pairs selected</div>
+                )}
+                <div className="mt-3 text-xs font-semibold" style={{ color: 'var(--t-text)' }}>
+                  {pairs.length} pair{pairs.length !== 1 ? 's' : ''} selected
+                </div>
                 <div className="mt-2 text-xs" style={{ color: 'var(--t-muted)' }}>
-                  Note: Smoke backtest will run on all selected pairs. Pair discovery will evaluate the full discovery universe.
+                  These exact pairs will be sent to the backend.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Time Settings Clarity Box */}
+          <div className="p-4" style={{ background: 'rgba(0,229,255,0.03)', border: '1px solid var(--t-border)' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-sm font-bold" style={{ color: 'var(--t-cyan)' }}>Time Settings</span>
+            </div>
+            <div className="space-y-2 text-sm font-mono">
+              <div className="flex justify-between">
+                <span style={{ color: 'var(--t-muted)' }}>Preset:</span>
+                <span style={{ color: 'var(--t-text)' }}>{TIMERANGE_PRESETS.find(p => p.value === timerangePreset)?.label || 'Custom'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span style={{ color: 'var(--t-muted)' }}>Resolved timerange:</span>
+                <span style={{ color: 'var(--t-cyan)' }}>{getTimerange()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span style={{ color: 'var(--t-muted)' }}>Timeframe:</span>
+                <span style={{ color: 'var(--t-text)' }}>{timeframe}</span>
+              </div>
+              {selectedStrategy && (
+                <div className="flex justify-between">
+                  <span style={{ color: 'var(--t-muted)' }}>Strategy default:</span>
+                  <span style={{ color: 'var(--t-text)' }}>{selectedStrategy.timeframe || '-'}</span>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Risk / Execution Clarity Box */}
+          <div className="p-4" style={{ background: 'rgba(0,229,255,0.03)', border: '1px solid var(--t-border)' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-sm font-bold" style={{ color: 'var(--t-cyan)' }}>Risk / Execution</span>
+            </div>
+            <div className="space-y-2 text-sm font-mono">
+              <div className="flex justify-between">
+                <span style={{ color: 'var(--t-muted)' }}>Mode:</span>
+                <span style={{ color: 'var(--t-cyan)' }}>DEVELOP</span>
+              </div>
+              <div className="flex justify-between">
+                <span style={{ color: 'var(--t-muted)' }}>Max open trades:</span>
+                <span style={{ color: 'var(--t-text)' }}>{maxOpenTrades}</span>
+              </div>
+              <div className="flex justify-between">
+                <span style={{ color: 'var(--t-muted)' }}>Wallet:</span>
+                <span style={{ color: 'var(--t-text)' }}>1000 USDT</span>
+              </div>
+              <div className="flex justify-between">
+                <span style={{ color: 'var(--t-muted)' }}>Pair discovery:</span>
+                <span style={{ color: 'var(--t-text)' }}>Disabled</span>
+              </div>
+            </div>
+            <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--t-border)' }}>
+              <div className="text-xs" style={{ color: 'var(--t-muted)' }}>
+                This run performs a test only. It will not promote or deploy the strategy.
+              </div>
             </div>
           </div>
         </div>
@@ -380,6 +456,77 @@ export function TabAutoQuant() {
           <span className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>3. RUN CONTROL</span>
         </div>
         <div className="p-4 space-y-4">
+          {/* Final Run Preview Box */}
+          {aering4StrategyName && pairs.length > 0 && (
+            <div className="p-4" style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid var(--t-cyan)' }}>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-sm font-bold" style={{ color: 'var(--t-cyan)' }}>Ready to run</span>
+              </div>
+              <div className="space-y-1 text-sm font-mono">
+                <div className="flex justify-between">
+                  <span style={{ color: 'var(--t-muted)' }}>Strategy:</span>
+                  <span style={{ color: 'var(--t-text)' }}>{aering4StrategyName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span style={{ color: 'var(--t-muted)' }}>Pairs:</span>
+                  <span style={{ color: 'var(--t-text)' }}>{pairs.join(', ')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span style={{ color: 'var(--t-muted)' }}>Timeframe:</span>
+                  <span style={{ color: 'var(--t-text)' }}>{timeframe}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span style={{ color: 'var(--t-muted)' }}>Timerange:</span>
+                  <span style={{ color: 'var(--t-text)' }}>{getTimerange()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span style={{ color: 'var(--t-muted)' }}>Max open trades:</span>
+                  <span style={{ color: 'var(--t-text)' }}>{maxOpenTrades}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span style={{ color: 'var(--t-muted)' }}>Mode:</span>
+                  <span style={{ color: 'var(--t-cyan)' }}>DEVELOP</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Request Payload Preview Box */}
+          <div className="p-4" style={{ background: 'rgba(0,229,255,0.03)', border: '1px solid var(--t-border)' }}>
+            <button
+              onClick={() => setExpandedSection(expandedSection === 'payload' ? null : 'payload')}
+              className="flex items-center justify-between w-full"
+            >
+              <span className="text-sm font-bold" style={{ color: 'var(--t-cyan)' }}>View backend request</span>
+              {expandedSection === 'payload' ? <ChevronUp size={16} style={{ color: 'var(--t-cyan)' }} /> : <ChevronDown size={16} style={{ color: 'var(--t-cyan)' }} />}
+            </button>
+            {expandedSection === 'payload' && (
+              <div className="mt-3 p-3 text-xs font-mono overflow-auto" style={{ background: 'var(--t-bg)', maxHeight: '200px' }}>
+                <pre style={{ color: 'var(--t-muted)' }}>
+{JSON.stringify({
+  strategy_name: aering4StrategyName,
+  timeframe,
+  smoke_timerange: getTimerange(),
+  smoke_pairs: pairs,
+  max_open_trades: maxOpenTrades,
+  dry_run_wallet: 1000,
+  enable_pair_discovery: false,
+  discovery_pairs: undefined,
+  discovery_timerange: undefined,
+}, null, 2)}
+                </pre>
+              </div>
+            )}
+          </div>
+
+          {/* Validation Error */}
+          {validationError && (
+            <div className="p-3 flex items-start gap-2" style={{ background: 'rgba(255,100,100,0.1)', border: '1px solid rgba(255,100,100,0.3)' }}>
+              <AlertCircle size={16} className="shrink-0 mt-0.5" style={{ color: 'rgba(255,100,100,1)' }} />
+              <span className="text-sm" style={{ color: 'rgba(255,100,100,1)' }}>{validationError}</span>
+            </div>
+          )}
+
           <div className="flex items-center gap-3">
             <button
               ref={developRunButtonRef}
