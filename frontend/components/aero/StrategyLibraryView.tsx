@@ -15,13 +15,50 @@ import {
 } from '@/lib/api';
 
 const EMPTY_FLOW_STEPS: AutoQuantFlowStep[] = [
-  { name: 'Source Strategy', status: 'pending', paths: {}, message: 'Waiting for a candidate run.', technical_details: {} },
-  { name: 'Candidate Copy', status: 'pending', paths: {}, message: 'Waiting for a candidate run.', technical_details: {} },
-  { name: 'Freqtrade Execution', status: 'pending', paths: {}, message: 'Waiting for a candidate run.', technical_details: {} },
-  { name: 'Metrics Parsing', status: 'pending', paths: {}, message: 'Waiting for a candidate run.', technical_details: {} },
-  { name: 'Decision', status: 'pending', paths: {}, message: 'Waiting for a candidate run.', technical_details: {} },
-  { name: 'Next Action', status: 'pending', paths: {}, message: 'Waiting for a candidate run.', technical_details: {} },
+  { name: 'Source Strategy', status: 'pending', paths: {}, message: 'Official strategies are read from user_data/strategies.', technical_details: {} },
+  { name: 'Candidate Copy', status: 'pending', paths: {}, message: 'Candidate tests use copied strategy files in the run folder.', technical_details: {} },
+  { name: 'Freqtrade Execution', status: 'pending', paths: {}, message: 'Freqtrade runs the copied candidate with --strategy-path.', technical_details: {} },
+  { name: 'Metrics Parsing', status: 'pending', paths: {}, message: 'Metrics appear after candidate output artifacts are parsed.', technical_details: {} },
+  { name: 'Decision', status: 'pending', paths: {}, message: 'Decisions are based on metrics and reason codes.', technical_details: {} },
+  { name: 'Next Action', status: 'pending', paths: {}, message: 'Start a DEVELOP test to populate this flow.', technical_details: {} },
 ];
+
+const EMPTY_FLOW_MESSAGE = 'No candidate has been created yet. Select a strategy and start a DEVELOP test to populate this flow.';
+
+const WARNING_COPY: Record<string, string> = {
+  MISSING_JSON: 'This strategy is missing its JSON sidecar file.',
+  CLASS_FILE_MISMATCH: 'The Python class name does not match the strategy file name.',
+  JSON_STRATEGY_NAME_MISMATCH: 'The JSON strategy_name does not match the Python strategy class.',
+  EMPTY_JSON_BUY_SELL_WITH_PYTHON_PARAMS: 'The JSON buy/sell parameter blocks are empty, but the Python file defines tunable parameters.',
+  PARAMS_NOT_RUNTIME_EXECUTABLE: 'Some detected parameters cannot be changed safely through the JSON sidecar yet.',
+  PYTHON_ONLY_PARAMS: 'These parameters exist in the Python strategy but are missing from the JSON sidecar.',
+  JSON_ONLY_PARAMS: 'These JSON runtime parameters do not have matching Python declarations.',
+  PYTHON_PARSE_ERROR: 'The Python strategy file could not be parsed.',
+  JSON_PARSE_ERROR: 'The JSON sidecar could not be parsed.',
+};
+
+export function readableStrategyWarning(warning: StrategyLibraryWarning): string {
+  return WARNING_COPY[warning.code] ?? warning.message;
+}
+
+function stepSentence(step: AutoQuantFlowStep): string {
+  switch (step.name) {
+    case 'Source Strategy':
+      return 'Official .py and .json files come from user_data/strategies.';
+    case 'Candidate Copy':
+      return 'AutoQuant tests copied candidate files, never the official files.';
+    case 'Freqtrade Execution':
+      return 'Freqtrade must use --strategy-path so it runs the candidate copy.';
+    case 'Metrics Parsing':
+      return 'Parsed artifacts become metrics for the decision.';
+    case 'Decision':
+      return 'The final label follows metrics plus reason codes.';
+    case 'Next Action':
+      return 'The next action explains what should happen after the decision.';
+    default:
+      return step.message || 'Step details are available below.';
+  }
+}
 
 export function StrategyLibraryView() {
   const [scan, setScan] = useState<StrategyLibraryScan | null>(null);
@@ -46,8 +83,41 @@ export function StrategyLibraryView() {
 
   return (
     <div className="space-y-4">
+      <SourceTruthNotice />
       <StrategyLibraryTable scan={scan} error={error} />
       <CandidateExecutionTimeline flow={flow?.candidate ?? null} message={flow?.message ?? null} />
+    </div>
+  );
+}
+
+function SourceTruthNotice() {
+  return (
+    <section className="t-card p-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-[11px] font-mono" data-testid="source-truth-notice">
+      <SourceTruthItem
+        label="Official strategy source"
+        value="user_data/strategies"
+        detail="The library is the source of truth and is not mutated by candidate tests."
+      />
+      <SourceTruthItem
+        label="Temporary candidate source"
+        value="user_data/aeroing4/runs/<run_id>/candidates/<candidate_id>"
+        detail="AutoQuant tests copied .py and .json files from the run folder."
+      />
+      <SourceTruthItem
+        label="Execution rule"
+        value="freqtrade --strategy-path"
+        detail="Decisions use parsed metrics plus reason codes from the candidate run."
+      />
+    </section>
+  );
+}
+
+function SourceTruthItem({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return (
+    <div className="space-y-1 min-w-0">
+      <span className="t-label block">{label}</span>
+      <span className="block truncate" title={value} style={{ color: 'var(--t-cyan)' }}>{value}</span>
+      <p className="text-[10px] leading-relaxed" style={{ color: 'var(--t-muted)' }}>{detail}</p>
     </div>
   );
 }
@@ -80,9 +150,9 @@ export function StrategyLibraryTable({ scan, error }: { scan: StrategyLibrarySca
         <div className="min-w-[980px]">
           <div className="grid grid-cols-[1.35fr_70px_70px_1fr_1fr_90px_110px_120px] gap-2 px-3 py-2 text-[10px] font-mono" style={{ color: 'var(--t-label)', borderBottom: '1px solid var(--t-border)' }}>
             <span>STRATEGY</span>
-            <span>.PY</span>
-            <span>.JSON</span>
-            <span>CLASS</span>
+            <span>.PY FILE</span>
+            <span>.JSON SIDECAR</span>
+            <span>CLASS NAME</span>
             <span>JSON NAME</span>
             <span>TIMEFRAME</span>
             <span>PY PARAMS</span>
@@ -91,7 +161,7 @@ export function StrategyLibraryTable({ scan, error }: { scan: StrategyLibrarySca
           {strategies.length === 0 ? (
             <div className="px-3 py-8 text-center text-xs font-mono" style={{ color: 'var(--t-muted)' }}>No strategy files found.</div>
           ) : strategies.map((item) => (
-            <StrategyLibraryRow key={item.strategy_name} item={item} />
+            <StrategyLibraryRow key={item.strategy_name} item={item} sourceDir={scan?.strategies_dir ?? 'user_data/strategies'} />
           ))}
         </div>
       </div>
@@ -99,7 +169,7 @@ export function StrategyLibraryTable({ scan, error }: { scan: StrategyLibrarySca
   );
 }
 
-function StrategyLibraryRow({ item }: { item: StrategyLibraryItem }) {
+function StrategyLibraryRow({ item, sourceDir }: { item: StrategyLibraryItem; sourceDir: string }) {
   const warningCodes = item.warnings.map((w) => w.code);
   return (
     <details data-testid="strategy-library-row" className="group" style={{ borderBottom: '1px solid var(--t-border)' }}>
@@ -119,9 +189,12 @@ function StrategyLibraryRow({ item }: { item: StrategyLibraryItem }) {
       </summary>
       <div className="px-3 pb-3 grid grid-cols-1 lg:grid-cols-3 gap-3 text-[11px] font-mono" style={{ background: 'rgba(0,0,0,0.18)' }}>
         <div className="space-y-2">
-          <span className="t-label block">FILES</span>
-          <PathLine label="py" value={item.python_path} />
-          <PathLine label="json" value={item.json_path} />
+          <span className="t-label block">Source: Official Library</span>
+          <PathLine label="library" value={sourceDir} />
+          <PathLine label=".py file" value={item.python_path} />
+          <PathLine label=".json sidecar" value={item.json_path} />
+          <PathLine label="class name" value={item.class_name} />
+          <PathLine label="timeframe" value={item.timeframe} />
           <WarningList warnings={item.warnings} />
         </div>
         <div className="space-y-2">
@@ -142,6 +215,7 @@ function StrategyLibraryRow({ item }: { item: StrategyLibraryItem }) {
 export function CandidateExecutionTimeline({ flow, message }: { flow: AutoQuantCandidateFlow | null; message?: string | null }) {
   const steps = flow?.steps?.length ? flow.steps : EMPTY_FLOW_STEPS;
   const metrics = useMemo(() => Object.entries(flow?.parsed_metrics ?? {}), [flow]);
+  const reasonCodes = flow ? flow.reason_codes : [];
 
   return (
     <section className="t-card overflow-hidden" data-testid="candidate-flow-view">
@@ -154,12 +228,29 @@ export function CandidateExecutionTimeline({ flow, message }: { flow: AutoQuantC
         <DecisionBadge decision={flow?.decision ?? 'INCONCLUSIVE'} faded={!flow} />
       </div>
 
+      <div className="px-3 py-2 grid grid-cols-1 md:grid-cols-3 gap-2 text-[10px] font-mono" style={{ borderBottom: '1px solid var(--t-border)' }}>
+        <FlowFact label="Official source" value="user_data/strategies" />
+        <FlowFact label="Candidate copy" value="user_data/aeroing4/runs/<run_id>/candidates/<candidate_id>" />
+        <FlowFact label="Execution" value="Freqtrade uses --strategy-path for the candidate copy." />
+      </div>
+
+      {!flow && (
+        <div className="px-3 py-3 text-xs font-mono" data-testid="candidate-flow-empty-state" style={{ color: 'var(--t-yellow)', borderBottom: '1px solid var(--t-border)' }}>
+          {EMPTY_FLOW_MESSAGE}
+          {message ? <span className="block mt-1 text-[10px]" style={{ color: 'var(--t-muted)' }}>Backend: {message}</span> : null}
+        </div>
+      )}
+
       {flow && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-px text-[10px] font-mono" style={{ background: 'var(--t-border)', borderBottom: '1px solid var(--t-border)' }}>
           <SummaryCell label="OFFICIAL PY" value={flow.official_source_strategy_path} />
           <SummaryCell label="OFFICIAL JSON" value={flow.official_source_json_path} />
           <SummaryCell label="CANDIDATE DIR" value={flow.candidate_directory} />
+          <SummaryCell label="CANDIDATE PY" value={flow.copied_candidate_py} />
+          <SummaryCell label="CANDIDATE JSON" value={flow.copied_candidate_json} />
+          <SummaryCell label="STRATEGY PATH" value={flow.strategy_path_argument} />
           <SummaryCell label="OUTPUT ZIP" value={flow.output_zip_path} />
+          <SummaryCell label="DECISION" value={flow.decision} />
         </div>
       )}
 
@@ -170,7 +261,7 @@ export function CandidateExecutionTimeline({ flow, message }: { flow: AutoQuantC
       </div>
 
       {flow && (
-        <div className="px-3 pb-3 grid grid-cols-1 lg:grid-cols-3 gap-3 text-[11px] font-mono">
+        <div className="px-3 pb-3 grid grid-cols-1 lg:grid-cols-4 gap-3 text-[11px] font-mono">
           <div className="space-y-1">
             <span className="t-label block">COMMAND</span>
             <code className="block p-2 whitespace-pre-wrap break-all" style={{ color: 'var(--t-muted)', background: 'var(--t-bg)', border: '1px solid var(--t-border)' }}>
@@ -193,9 +284,29 @@ export function CandidateExecutionTimeline({ flow, message }: { flow: AutoQuantC
               </div>
             )) : <span style={{ color: 'var(--t-muted)' }}>No parsed metrics.</span>}
           </div>
+          <div className="space-y-1">
+            <span className="t-label block">DECISION REASONS</span>
+            <DecisionBadge decision={flow.decision} />
+            {reasonCodes.length ? (
+              <div className="flex flex-wrap gap-1 pt-1">
+                {reasonCodes.map((code) => (
+                  <span key={code} className="px-1.5 py-0.5" style={{ border: '1px solid var(--t-border)', color: 'var(--t-label)' }}>{code}</span>
+                ))}
+              </div>
+            ) : <span style={{ color: 'var(--t-muted)' }}>No reason codes captured.</span>}
+          </div>
         </div>
       )}
     </section>
+  );
+}
+
+function FlowFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <span className="t-label block">{label}</span>
+      <span className="block truncate" title={value} style={{ color: 'var(--t-muted)' }}>{value}</span>
+    </div>
   );
 }
 
@@ -204,6 +315,8 @@ function FlowStepCard({ step, index }: { step: AutoQuantFlowStep; index: number 
   const color = status === 'done' ? 'var(--t-green)' : status === 'error' ? 'var(--t-red)' : 'var(--t-muted)';
   const Icon = status === 'done' ? CheckCircle2 : status === 'error' ? XCircle : Clock;
   const paths = Object.entries(step.paths ?? {}).filter(([, value]) => value);
+  const sentence = stepSentence(step);
+  const technicalDetails = { message: step.message, ...(step.technical_details ?? {}) };
 
   return (
     <details data-testid="candidate-flow-step-card" className="group" style={{ border: '1px solid var(--t-border)', background: 'var(--t-bg)' }}>
@@ -213,9 +326,9 @@ function FlowStepCard({ step, index }: { step: AutoQuantFlowStep; index: number 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono font-semibold" style={{ color: 'var(--t-text)' }}>{step.name.toUpperCase()}</span>
-            <span className="text-[10px] font-mono" style={{ color }}>{String(step.status).toUpperCase()}</span>
+            <StatusBadge status={step.status} />
           </div>
-          <p className="text-[10px] font-mono truncate" style={{ color: 'var(--t-muted)' }}>{step.message}</p>
+          <p className="text-[10px] font-mono truncate" style={{ color: 'var(--t-muted)' }}>{sentence}</p>
         </div>
       </summary>
       <div className="px-3 pb-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] font-mono">
@@ -226,11 +339,25 @@ function FlowStepCard({ step, index }: { step: AutoQuantFlowStep; index: number 
         <div className="space-y-1">
           <span className="t-label block">TECHNICAL DETAILS</span>
           <code className="block p-2 whitespace-pre-wrap break-all" style={{ color: 'var(--t-muted)', background: '#050505', border: '1px solid var(--t-border)' }}>
-            {JSON.stringify(step.technical_details ?? {}, null, 2)}
+            {JSON.stringify(technicalDetails, null, 2)}
           </code>
         </div>
       </div>
     </details>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const normalized = status === 'done' ? 'done' : status === 'error' ? 'error' : status === 'warning' ? 'warning' : 'pending';
+  const color =
+    normalized === 'done' ? 'var(--t-green)' :
+    normalized === 'error' ? 'var(--t-red)' :
+    normalized === 'warning' ? 'var(--t-yellow)' :
+    'var(--t-muted)';
+  return (
+    <span className="px-1.5 py-0.5 text-[10px] font-mono" style={{ color, border: `1px solid ${color}` }}>
+      {String(status).toUpperCase()}
+    </span>
   );
 }
 
@@ -262,7 +389,12 @@ function WarningList({ warnings }: { warnings: StrategyLibraryWarning[] }) {
       {warnings.map((warning) => (
         <div key={`${warning.code}-${warning.message}`} className="flex gap-2">
           <AlertTriangle size={11} className="shrink-0 mt-0.5" style={{ color: warning.severity === 'error' ? 'var(--t-red)' : 'var(--t-yellow)' }} />
-          <span style={{ color: warning.severity === 'error' ? 'var(--t-red)' : 'var(--t-yellow)' }}>{warning.code}: {warning.message}</span>
+          <span style={{ color: warning.severity === 'error' ? 'var(--t-red)' : 'var(--t-yellow)' }}>
+            <span className="font-semibold">{warning.code}</span>: {readableStrategyWarning(warning)}
+            {warning.message && warning.message !== readableStrategyWarning(warning) ? (
+              <span className="block text-[10px]" style={{ color: 'var(--t-muted)' }}>{warning.message}</span>
+            ) : null}
+          </span>
         </div>
       ))}
     </div>
