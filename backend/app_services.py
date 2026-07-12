@@ -74,7 +74,7 @@ class AppServices:
             self.paths.data_downloads_root,
         )
         self.bias_check_runner = BiasCheckRunner(
-            freqtrade_path=".venv/Scripts/freqtrade" # Using a default path, should be configurable but works for windows environments using local venv
+            freqtrade_path=self.settings.freqtrade_executable_path
         )
         self.backtest_runner = BacktestRunner(
             self.settings_store,
@@ -122,11 +122,6 @@ class AppServices:
             pair_selector=self.pair_selector,
             data_download_runner=self.data_download_runner,
         )
-        
-        # AeRoing4 orchestrator
-        from .services.aeroing4.orchestrator import AeRoing4Orchestrator
-        aeroing4_runs_root = self.root_dir / "user_data" / "aeroing4" / "runs"
-        self.aeroing4_orchestrator = AeRoing4Orchestrator(self, aeroing4_runs_root)
         
         self.maintenance_service = MaintenanceService(
             root_dir=self.root_dir,

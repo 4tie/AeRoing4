@@ -1,6 +1,7 @@
 """settings_store.py contains backend logic for settings store."""
 
 from __future__ import annotations
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -18,11 +19,29 @@ class SettingsStore(ISettingsStore):
         self.settings_file = root_dir / "data" / "strategy_lab_settings.json"
 
     def defaults(self) -> SettingsModel:
+        # Read paths from environment variables if available, otherwise use relative paths
+        freqtrade_executable_path = os.getenv("AERO_FREQTRADE_EXECUTABLE_PATH", "py -m freqtrade")
+        
+        strategies_directory_path = os.getenv(
+            "AERO_STRATEGIES_DIRECTORY_PATH",
+            str(self.root_dir / "user_data" / "strategies")
+        )
+        
+        user_data_directory_path = os.getenv(
+            "AERO_USER_DATA_DIRECTORY_PATH",
+            str(self.root_dir / "user_data")
+        )
+        
+        default_config_file_path = os.getenv(
+            "AERO_DEFAULT_CONFIG_FILE_PATH",
+            str(self.root_dir / "user_data" / "config.json")
+        )
+        
         return SettingsModel(
-            freqtrade_executable_path="py -m freqtrade",
-            strategies_directory_path=str(self.root_dir / "user_data" / "strategies"),
-            user_data_directory_path=str(self.root_dir / "user_data"),
-            default_config_file_path=str(self.root_dir / "user_data" / "config.json"),
+            freqtrade_executable_path=freqtrade_executable_path,
+            strategies_directory_path=strategies_directory_path,
+            user_data_directory_path=user_data_directory_path,
+            default_config_file_path=default_config_file_path,
             ollama_api_url="http://localhost:11434",
             ollama_model="",
             ollama_provider="local",
