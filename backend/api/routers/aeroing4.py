@@ -10,6 +10,9 @@ POST /api/aeroing4/runs/{run_id}/cancel - Cancel an active run
 
 from __future__ import annotations
 
+import time
+import threading
+from collections import OrderedDict
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
@@ -24,6 +27,15 @@ from ...services.aeroing4.strategy_library import (
 from ..dependencies import get_services
 
 router = APIRouter(prefix="/api/aeroing4", tags=["AeRoing4"])
+
+# Idempotency cache: client_request_id -> (run_id, timestamp)
+# Limited to 1000 entries, evicts oldest
+_idempotency_cache: OrderedDict[str, tuple[str, float]] = OrderedDict()
+_IDEMPOTENCY_CACHE_MAX = 1000
+_IDEMPOTENTIALY_WINDOW_SECONDS = 300  # 5 minutes
+
+# Threading lock for idempotency cache to prevent race conditions
+_idempotency_lock = threading.Lock()
 
 
 class AeRoing4RunRequest(BaseModel):
@@ -57,6 +69,9 @@ class AeRoing4RunRequest(BaseModel):
 
     # PROMPT 9: Focused Hyperopt + Sensitivity (strict opt-in, after KEEP champion).
     enable_focused_hyperopt: bool = False
+
+    # Idempotency key for duplicate request prevention
+    client_request_id: str | None = None
 
 
 class AeRoing4RunResponse(BaseModel):
@@ -227,6 +242,43 @@ async def start_run(
     try:
         orchestrator = services.aeroing4_orchestrator
 
+        # Idempotency check: if same client_request_id seen recently, return existing run
+        if body.client_request_id:
+            current_time = time.time()
+            
+            with _idempotency_lock:
+                # Clean up expired entries
+                expired_ids = [
+                    cid for cid, (_, ts) in _idempotency_cache.items()
+                    if current_time - ts > _IDEMPOTENTIALY_WINDOW_SECONDS
+                ]
+                for cid in expired_ids:
+                    del _idempotency_cache[cid]
+                
+                # Check for existing request
+                if body.client_request_id in _idempotency_cache:
+                    existing_run_id, _ = _idempotency_cache[body.client_request_id]
+                    existing_run = orchestrator.get_run(existing_run_id)
+                    
+                    if existing_run:
+                        # Return existing run instead of creating duplicate
+                        return StartRunResponse(
+                            run_id=existing_run_id,
+                            status=existing_run.status.value,
+                            message=(
+                                f"Request deduplicated: returning existing run {existing_run_id}. "
+                                f"A matching run is already starting or active."
+                            ),
+                        )
+                
+                # Store idempotency mapping BEFORE creating run to prevent race condition
+                # Use a placeholder run_id that will be updated after creation
+                _idempotency_cache[body.client_request_id] = (None, time.time())
+                
+                # Enforce cache size limit
+                if len(_idempotency_cache) > _IDEMPOTENCY_CACHE_MAX:
+                    _idempotency_cache.popitem(last=False)
+
         # Create run
         run = orchestrator.create_run(
             strategy_name=body.strategy_name,
@@ -246,6 +298,11 @@ async def start_run(
             enable_research_loop=body.enable_research_loop,
             enable_focused_hyperopt=body.enable_focused_hyperopt,
         )
+
+        # Update idempotency mapping with actual run_id
+        if body.client_request_id:
+            with _idempotency_lock:
+                _idempotency_cache[body.client_request_id] = (run.run_id, time.time())
 
         # Start execution
         await orchestrator.start_run(run.run_id)

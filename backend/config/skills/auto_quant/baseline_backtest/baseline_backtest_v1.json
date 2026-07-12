@@ -1,0 +1,56 @@
+{
+  "id": "baseline_backtest_v1",
+  "name": "Baseline Backtest and Evaluation",
+  "version": "1.0.0",
+  "description": "Runs a reproducible unoptimized baseline backtest on the Stage 2 approved pair universe, calculates performance and risk metrics, detects result-quality problems, and decides whether Stage 4 may begin. Does not optimize parameters or modify strategy source.",
+  "enabled": true,
+  "applies_to": {
+    "stages": ["stage3_baseline"],
+    "gates": ["post_pair_discovery"]
+  },
+  "config": {
+    "type": "object",
+    "required": ["stage1_result", "stage2_result", "strategy_path", "strategy_name", "strategy_fingerprint", "configuration_fingerprint", "exchange", "trading_mode", "stake_currency", "approved_pairs", "main_timeframe", "timerange", "startup_candle_count", "data_directory"],
+    "properties": {
+      "stage1_result": { "type": "object" },
+      "stage2_result": { "type": "object" },
+      "strategy_path": { "type": "string" },
+      "strategy_name": { "type": "string" },
+      "strategy_fingerprint": { "type": "string" },
+      "configuration_fingerprint": { "type": "string" },
+      "exchange": { "type": "string" },
+      "trading_mode": { "type": "string" },
+      "stake_currency": { "type": "string" },
+      "approved_pairs": { "type": "array", "items": { "type": "string" } },
+      "main_timeframe": { "type": "string" },
+      "informative_timeframes": { "type": "array", "items": { "type": "string" } },
+      "timerange": { "type": "string" },
+      "startup_candle_count": { "type": "integer", "minimum": 1 },
+      "data_directory": { "type": "string" },
+      "initial_balance": { "type": "number" },
+      "stake_amount": { "type": "number" },
+      "max_open_trades": { "type": "integer", "minimum": 1 },
+      "fee": { "type": "number" },
+      "slippage_assumption": { "type": "number" },
+      "position_stacking": { "type": "boolean" },
+      "enable_protections": { "type": "boolean" },
+      "dry_run_wallet": { "type": "number" },
+      "minimum_trade_count": { "type": "integer", "minimum": 1 },
+      "minimum_active_days": { "type": "integer", "minimum": 1 },
+      "minimum_pair_coverage": { "type": "number", "minimum": 0, "maximum": 1 },
+      "maximum_runtime_seconds": { "type": "integer", "minimum": 1 }
+    }
+  },
+  "tags": ["baseline", "backtest", "stage3", "evaluation"],
+  "author": "AutoQuant",
+  "dependencies": [],
+  "preconditions": [],
+  "rollback": { "enabled": false, "max_attempts": 0 },
+  "timeout_seconds": 900,
+  "permissions": {
+    "read_results": true,
+    "write_artifacts": true,
+    "modify_strategy": false
+  },
+  "docs": "backend/config/skills/auto_quant/baseline_backtest/baseline_backtest_v1.md"
+}

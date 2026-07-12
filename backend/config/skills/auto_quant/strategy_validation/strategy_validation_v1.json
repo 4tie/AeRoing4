@@ -1,0 +1,38 @@
+{
+  "id": "strategy_validation_v1",
+  "name": "Strategy Validation",
+  "version": "1.0.0",
+  "description": "Validates strategy syntax, Freqtrade loadability, required methods, timeframe and startup candle requirements, pair/data availability, and a small smoke backtest. Distinguishes hard failure, soft failure, warning, and pass. Zero-trade results are diagnosed, not automatically rejected.",
+  "enabled": true,
+  "applies_to": {
+    "stages": ["stage1_validation"],
+    "gates": ["initial"]
+  },
+  "config": {
+    "type": "object",
+    "required": ["strategy_path", "strategy_name", "user_data_dir"],
+    "properties": {
+      "strategy_path": { "type": "string" },
+      "strategy_name": { "type": "string" },
+      "user_data_dir":  { "type": "string" },
+      "timeframe":      { "type": "string" },
+      "timerange":      { "type": "string" },
+      "pairs":          { "type": "array", "items": { "type": "string" } },
+      "startup_candle_count": { "type": "integer", "minimum": 1 },
+      "max_backtest_days": { "type": "integer", "minimum": 1 },
+      "smoke_pairs_limit": { "type": "integer", "minimum": 1 }
+    }
+  },
+  "tags": ["validation", "smoke", "stage1"],
+  "author": "AutoQuant",
+  "dependencies": [],
+  "preconditions": [],
+  "rollback": { "enabled": false, "max_attempts": 0 },
+  "timeout_seconds": 900,
+  "permissions": {
+    "read_results": true,
+    "write_artifacts": true,
+    "modify_strategy": false
+  },
+  "docs": "backend/config/skills/auto_quant/strategy_validation/strategy_validation_v1.md"
+}

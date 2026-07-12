@@ -1,0 +1,33 @@
+{
+  "status": "soft_failure",
+  "errors": [],
+  "warnings": [
+    "Smoke backtest produced zero trades.",
+    "Dataset or timerange may be too narrow.",
+    "Entry and exit conditions may be incompatible on tested pairs.",
+    "Startup candles may be consuming all available bars."
+  ],
+  "diagnostics": [
+    "Python syntax parse succeeded.",
+    "Module import succeeded.",
+    "Strategy loaded into Freqtrade interface.",
+    "Detected timeframe from strategy.",
+    "Startup candle count accepted.",
+    "Smoke backtest completed with zero trades."
+  ],
+  "detected": {
+    "timeframe": "1h",
+    "startup_candle_count": 40,
+    "strategy_class": "MyStrategy",
+    "methods_found": [
+      "populate_indicators",
+      "populate_entry_trend",
+      "populate_exit_trend"
+    ],
+    "legacy_methods_found": [],
+    "data_pairs_checked": ["BTC/USDT"],
+    "data_pairs_available": ["BTC/USDT"],
+    "smoke_run_trades": 0
+  },
+  "recommended_next_action": "adjust_pairs"
+}

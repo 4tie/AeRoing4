@@ -1,0 +1,176 @@
+{
+  "skill_id": "baseline_backtest_v1",
+  "skill_version": "1.0.0",
+  "run_id": "example-successful-baseline",
+  "status": "pass",
+  "errors": [],
+  "warnings": [],
+  "diagnostics": [
+    "Stage 1 and Stage 2 handoffs accepted.",
+    "Strategy and configuration fingerprints matched.",
+    "Baseline backtest completed successfully.",
+    "Reproducibility record populated.",
+    "No blocking result-quality problem detected."
+  ],
+  "stage1_reference": {
+    "status": "pass",
+    "run_id": "stage1-example"
+  },
+  "stage2_reference": {
+    "status": "pass",
+    "run_id": "stage2-example",
+    "stage3_allowed": true
+  },
+  "strategy": {
+    "path": "strategies/MyStrategy.py",
+    "name": "MyStrategy",
+    "fingerprint": "abc123"
+  },
+  "strategy_fingerprint": "abc123",
+  "configuration_fingerprint": "cfg-001",
+  "environment": {
+    "freqtrade_version": "2024.10",
+    "python_version": "3.11.9",
+    "exchange": "binance",
+    "trading_mode": "spot",
+    "stake_currency": "USDT"
+  },
+  "execution_settings": {
+    "initial_balance": 10000,
+    "stake_amount": "unlimited",
+    "max_open_trades": 3,
+    "fee": 0.001,
+    "slippage_assumption": 0.001,
+    "position_stacking": false,
+    "enable_protections": false,
+    "dry_run_wallet": 10000
+  },
+  "approved_pairs": ["BTC/USDT", "ETH/USDT"],
+  "main_timeframe": "5m",
+  "informative_timeframes": ["1h"],
+  "timerange": "20230101-20231231",
+  "data_snapshot": {
+    "data_directory": "user_data/data/binance",
+    "startup_candle_count": 20,
+    "source": "local_ohlcv"
+  },
+  "process_result": {
+    "status": "completed",
+    "runtime_seconds": 124,
+    "started_at": "2024-01-01T10:00:00Z",
+    "completed_at": "2024-01-01T10:02:04Z",
+    "command": "freqtrade backtesting --strategy MyStrategy --pairs BTC/USDT,ETH/USDT --timerange 20230101-20231231"
+  },
+  "activity_metrics": {
+    "total_trades": 120,
+    "winning_trades": 72,
+    "losing_trades": 45,
+    "draw_trades": 3,
+    "win_rate": 0.6,
+    "average_trades_per_day": 0.33,
+    "active_trading_days": 365,
+    "average_trade_duration_minutes": 240,
+    "long_trade_count": 80,
+    "short_trade_count": 0,
+    "rejected_entry_signals": 24
+  },
+  "return_metrics": {
+    "starting_balance": 10000,
+    "ending_balance": 10580,
+    "absolute_profit": 580,
+    "total_profit_percent": 5.8,
+    "average_profit_per_trade": 4.83,
+    "median_profit_per_trade": 3.90,
+    "best_trade_profit_percent": 18.2,
+    "worst_trade_profit_percent": -8.4,
+    "profit_by_pair": {
+      "BTC/USDT": 320,
+      "ETH/USDT": 260
+    },
+    "profit_by_direction": {
+      "long": 580,
+      "short": 0
+    },
+    "profit_by_exit_reason": {
+      "roi": 340,
+      "stop_loss": 180,
+      "sell_signal": 60
+    }
+  },
+  "risk_metrics": {
+    "max_absolute_drawdown": 320,
+    "max_relative_drawdown": 3.1,
+    "drawdown_start": "2023-07-10",
+    "drawdown_end": "2023-07-18",
+    "drawdown_duration_days": 8,
+    "exposure": 0.78,
+    "losing_streak": 4,
+    "winning_streak": 6,
+    "daily_return_variability": 0.012,
+    "downside_deviation": 0.018
+  },
+  "quality_metrics": {
+    "profit_factor": 1.35,
+    "expectancy": 1.24,
+    "expectancy_ratio": 0.18,
+    "sharpe_ratio": 0.64,
+    "sortino_ratio": 0.97,
+    "calmar_ratio": 0.72,
+    "risk_to_reward": 1.45,
+    "break_even_win_rate": 0.41
+  },
+  "pair_metrics": {
+    "pair_trade_counts": {
+      "BTC/USDT": 65,
+      "ETH/USDT": 55
+    },
+    "pair_profit_percent": {
+      "BTC/USDT": 3.1,
+      "ETH/USDT": 2.7
+    }
+  },
+  "direction_metrics": {
+    "long_count": 80,
+    "short_count": 0,
+    "long_profit_percent": 5.8,
+    "short_profit_percent": 0
+  },
+  "exit_reason_metrics": {
+    "roi_count": 72,
+    "stop_loss_count": 39,
+    "sell_signal_count": 9
+  },
+  "time_distribution": {
+    "first_trade": "2023-01-03",
+    "last_trade": "2023-12-29",
+    "peak_trade_month": "2023-03"
+  },
+  "concentration_analysis": {
+    "top_pair_profit_share": 0.55,
+    "top_direction_profit_share": 1.0,
+    "top_exit_reason_profit_share": 0.59,
+    "concentration_ok": true
+  },
+  "zero_trade_analysis": {
+    "zero_trades": false,
+    "likely_causes": [],
+    "additional_review_required": false
+  },
+  "result_integrity": {
+    "reproducible": true,
+    "missing_fee_or_slippage": false,
+    "data_gaps_detected": false,
+    "startup_candle_contamination_suspected": false,
+    "lookahead_bias_warning": false,
+    "unstable_indicator_warning": false,
+    "open_trades_at_end": 0,
+    "artifacts_match_recorded_inputs": true
+  },
+  "artifacts": {
+    "result_summary": "user_data/backtest_results/baseline_MyStrategy.json",
+    "trade_list": "user_data/backtest_results/baseline_MyStrategy_trades.json",
+    "log": "user_data/logs/baseline_MyStrategy.log"
+  },
+  "recommended_next_action": "continue",
+  "stage4_allowed": true
+}

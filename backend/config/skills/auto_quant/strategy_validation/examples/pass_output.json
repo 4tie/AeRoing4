@@ -1,0 +1,30 @@
+{
+  "status": "pass",
+  "errors": [],
+  "warnings": [],
+  "diagnostics": [
+    "Python syntax parse succeeded.",
+    "Module import succeeded.",
+    "Strategy loaded into Freqtrade interface.",
+    "Detected timeframe from strategy.",
+    "Startup candle count accepted.",
+    "Smoke backtest completed with trades."
+  ],
+  "detected": {
+    "timeframe": "5m",
+    "startup_candle_count": 20,
+    "strategy_class": "MyStrategy",
+    "methods_found": [
+      "populate_indicators",
+      "populate_entry_trend",
+      "populate_exit_trend",
+      "stoploss",
+      "minimal_roi"
+    ],
+    "legacy_methods_found": [],
+    "data_pairs_checked": ["BTC/USDT", "ETH/USDT"],
+    "data_pairs_available": ["BTC/USDT", "ETH/USDT"],
+    "smoke_run_trades": 2
+  },
+  "recommended_next_action": "continue"
+}

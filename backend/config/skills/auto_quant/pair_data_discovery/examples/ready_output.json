@@ -1,0 +1,34 @@
+{
+  "status": "pass",
+  "errors": [],
+  "warnings": [],
+  "diagnostics": [
+    "Stage 1 handoff accepted.",
+    "Exchange and trading mode resolved.",
+    "Candidate pair universe built.",
+    "Market filters applied deterministically.",
+    "Required main and informative timeframes confirmed available.",
+    "Local OHLCV data inspection succeeded.",
+    "No blocking data gaps detected."
+  ],
+  "exchange": "binance",
+  "trading_mode": "spot",
+  "stake_currency": "USDT",
+  "main_timeframe": "5m",
+  "required_timeframes": ["5m", "1h"],
+  "required_informative_pairs": ["BTC/USDT:1h", "ETH/USDT:1h"],
+  "candidate_pairs": ["BTC/USDT", "ETH/USDT", "SOL/USDT"],
+  "eligible_pairs": ["BTC/USDT", "ETH/USDT"],
+  "excluded_pairs": ["SOL/USDT"],
+  "exclusion_reasons": {
+    "SOL/USDT": ["insufficient_history"]
+  },
+  "data_ready_pairs": ["BTC/USDT", "ETH/USDT"],
+  "data_missing_pairs": [],
+  "data_gaps": [],
+  "required_timerange": "20230101-20231231",
+  "startup_buffer": 20,
+  "download_plan": [],
+  "recommended_next_action": "continue",
+  "stage3_allowed": true
+}

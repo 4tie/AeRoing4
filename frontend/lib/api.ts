@@ -809,6 +809,43 @@ function _buildStages(
 
 // ── AeRoing4 API ──────────────────────────────────────────────────────────────
 
+// Module-level lock for immediate deduplication (outside React event system)
+let _isStartingRun = false;
+let _lastRunStartTime = 0;
+const _RUN_DEBOUNCE_MS = 2000; // 2 second debounce
+
+// Single-flight request deduplication for run creation
+const inFlightRunRequests = new Map<string, Promise<AeRoing4RunState & { _runId: string }>>();
+
+function stableRunKey(req: AeRoing4RunRequest & {
+  timeframe?: string;
+  smoke_timerange?: string;
+  smoke_pairs?: string[];
+}): string {
+  return JSON.stringify({
+    strategy_name: req.strategy_name,
+    timeframe: req.timeframe ?? '5m',
+    smoke_timerange: req.smoke_timerange ?? '20240101-20240131',
+    smoke_pairs: [...(req.smoke_pairs ?? ['BTC/USDT', 'ETH/USDT', 'BNB/USDT'])].sort(),
+    max_open_trades: req.max_open_trades ?? 4,
+    dry_run_wallet: req.dry_run_wallet ?? 1000,
+    config_file: req.config_file ?? 'config.json',
+    enable_pair_discovery: req.enable_pair_discovery ?? true,
+  });
+}
+
+// Generate stable client_request_id from payload key
+function stableClientId(key: string): string {
+  // Use hash of the key as stable client id
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    const char = key.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return `develop-${Math.abs(hash).toString(36)}`;
+}
+
 /** Start an AeRoing4 run against the real backend. Returns the initial run state. */
 export async function startAeRoing4Run(
   req: AeRoing4RunRequest & {
@@ -817,64 +854,108 @@ export async function startAeRoing4Run(
     smoke_pairs?: string[];
   },
 ): Promise<AeRoing4RunState & { _runId: string }> {
-  const res = await fetch(`${API_BASE_URL}/api/aeroing4/runs`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      strategy_name: req.strategy_name,
-      timeframe: req.timeframe ?? '5m',
-      smoke_timerange: req.smoke_timerange ?? '20240101-20240131',
-      smoke_pairs: req.smoke_pairs ?? ['BTC/USDT', 'ETH/USDT', 'BNB/USDT'],
-      enable_pair_discovery: req.enable_pair_discovery ?? true,
-      discovery_pairs: req.discovery_pairs ?? null,
-      discovery_timerange: req.discovery_timerange ?? null,
-      max_open_trades: req.max_open_trades ?? 4,
-      dry_run_wallet: req.dry_run_wallet ?? 1000,
-      config_file: req.config_file ?? 'config.json',
-    }),
-  });
+  // IMMEDIATE synchronous check using module-level lock
+  const now = Date.now();
+  if (_isStartingRun && (now - _lastRunStartTime < _RUN_DEBOUNCE_MS)) {
+    // If a run was started recently, wait for it to complete
+    // Find the in-flight request with matching key
+    const key = stableRunKey(req);
+    if (inFlightRunRequests.has(key)) {
+      return inFlightRunRequests.get(key)!;
+    }
+    // If no matching in-flight request, still block to prevent rapid-fire different requests
+    throw new Error('A run is already starting. Please wait.');
+  }
+  
+  // Set module-level lock
+  _isStartingRun = true;
+  _lastRunStartTime = now;
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: res.statusText })) as { detail?: string };
-    throw new Error(err.detail ?? `HTTP ${res.status}`);
+  const key = stableRunKey(req);
+  
+  // Check if request with same payload is already in-flight
+  if (inFlightRunRequests.has(key)) {
+    _isStartingRun = false;
+    return inFlightRunRequests.get(key)!;
   }
 
-  const data = await res.json() as Record<string, unknown>;
-  const runId = String(data.run_id ?? '');
+  // Generate stable client request id for idempotency (same for same payload)
+  const clientRequestId = stableClientId(key);
 
-  return {
-    _runId: runId,
-    id: runId,
-    created_at: new Date().toISOString(),
-    strategy_name: req.strategy_name,
-    strategy_timeframe: req.timeframe ?? '5m',
-    smoke_pairs: req.smoke_pairs ?? ['BTC/USDT', 'ETH/USDT', 'BNB/USDT'],
-    discovery_pairs: req.discovery_pairs ?? [],
-    discovery_timerange: req.discovery_timerange ?? '',
-    smoke_timerange: req.smoke_timerange ?? '20240101-20240131',
-    enable_pair_discovery: req.enable_pair_discovery ?? true,
-    status: 'running',
-    outcome: 'IN_PROGRESS',
-    smoke_outcome: null,
-    max_open_trades: req.max_open_trades ?? 4,
-    total_trades: null,
-    trades_per_pair: {},
-    backtest_run_id: null,
-    freqtrade_command: null,
-    strategy_path_argument: null,
-    output_result_path: null,
-    output_zip_path: null,
-    log_excerpt: null,
-    execution_error: null,
-    run_artifacts: null,
-    steps: [
-      { id: 'validation',       name: 'Strategy Validation', status: 'pending', progress: 0, logs: [] },
-      { id: 'data_preparation', name: 'Smoke Data Prep',      status: 'pending', progress: 0, logs: [] },
-      { id: 'smoke_backtest',   name: 'Smoke Backtest',       status: 'pending', progress: 0, logs: [] },
-      { id: 'pair_discovery',   name: 'Pair Discovery',       status: 'pending', progress: 0, logs: [] },
-    ],
-    discovery_result: null,
-  };
+  const promise = (async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/aeroing4/runs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          strategy_name: req.strategy_name,
+          timeframe: req.timeframe ?? '5m',
+          smoke_timerange: req.smoke_timerange ?? '20240101-20240131',
+          smoke_pairs: req.smoke_pairs ?? ['BTC/USDT', 'ETH/USDT', 'BNB/USDT'],
+          enable_pair_discovery: req.enable_pair_discovery ?? true,
+          discovery_pairs: req.discovery_pairs ?? null,
+          discovery_timerange: req.discovery_timerange ?? null,
+          max_open_trades: req.max_open_trades ?? 4,
+          dry_run_wallet: req.dry_run_wallet ?? 1000,
+          config_file: req.config_file ?? 'config.json',
+          client_request_id: clientRequestId,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText })) as { detail?: string };
+        throw new Error(err.detail ?? `HTTP ${res.status}`);
+      }
+
+      const data = await res.json() as Record<string, unknown>;
+      const runId = String(data.run_id ?? '');
+
+      return {
+        _runId: runId,
+        id: runId,
+        created_at: new Date().toISOString(),
+        strategy_name: req.strategy_name,
+        strategy_timeframe: req.timeframe ?? '5m',
+        smoke_pairs: req.smoke_pairs ?? ['BTC/USDT', 'ETH/USDT', 'BNB/USDT'],
+        discovery_pairs: req.discovery_pairs ?? [],
+        discovery_timerange: req.discovery_timerange ?? '',
+        smoke_timerange: req.smoke_timerange ?? '20240101-20240131',
+        enable_pair_discovery: req.enable_pair_discovery ?? true,
+        status: 'running' as const,
+        outcome: 'IN_PROGRESS',
+        smoke_outcome: null,
+        max_open_trades: req.max_open_trades ?? 4,
+        total_trades: null,
+        trades_per_pair: {},
+        backtest_run_id: null,
+        freqtrade_command: null,
+        strategy_path_argument: null,
+        output_result_path: null,
+        output_zip_path: null,
+        log_excerpt: null,
+        execution_error: null,
+        run_artifacts: null,
+        steps: [
+          { id: 'validation',       name: 'Strategy Validation', status: 'pending' as const, progress: 0, logs: [] },
+          { id: 'data_preparation', name: 'Smoke Data Prep',      status: 'pending' as const, progress: 0, logs: [] },
+          { id: 'smoke_backtest',   name: 'Smoke Backtest',       status: 'pending' as const, progress: 0, logs: [] },
+          { id: 'pair_discovery',   name: 'Pair Discovery',       status: 'pending' as const, progress: 0, logs: [] },
+        ],
+        discovery_result: null,
+      } as AeRoing4RunState & { _runId: string };
+    } finally {
+      // Release module-level lock
+      _isStartingRun = false;
+    }
+  })();
+
+  // Store promise IMMEDIATELY before async execution to prevent race condition
+  inFlightRunRequests.set(key, promise);
+  promise.finally(() => {
+    inFlightRunRequests.delete(key);
+  });
+
+  return promise;
 }
 
 /** Poll backend for a run's current state. */

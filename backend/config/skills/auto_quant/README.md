@@ -24,6 +24,11 @@ backend/config/skills/auto_quant/
   schema.json     <- JSON Schema for skill definitions
 ```
 
+Current static skill docs:
+- `strategy_validation/`
+- `pair_data_discovery/`
+- `baseline_backtest/`
+
 Later, when runtime loading is enabled, this folder may also contain:
 - `catalog/` - bundled default skill JSON files
 - `examples/` - reference skills

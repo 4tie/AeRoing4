@@ -1,0 +1,180 @@
+{
+  "skill_id": "baseline_backtest_v1",
+  "skill_version": "1.0.0",
+  "run_id": "example-weak-baseline",
+  "status": "warning",
+  "errors": [],
+  "warnings": [
+    "Baseline is unprofitable but technically valid.",
+    "Trade sample is limited but still usable.",
+    "Profit is concentrated in one pair."
+  ],
+  "diagnostics": [
+    "Stage 1 and Stage 2 handoffs accepted.",
+    "Strategy and configuration fingerprints matched.",
+    "Baseline backtest completed successfully.",
+    "Reproducibility record populated.",
+    "Result-quality problems are non-blocking."
+  ],
+  "stage1_reference": {
+    "status": "pass",
+    "run_id": "stage1-example"
+  },
+  "stage2_reference": {
+    "status": "pass",
+    "run_id": "stage2-example",
+    "stage3_allowed": true
+  },
+  "strategy": {
+    "path": "strategies/MyStrategy.py",
+    "name": "MyStrategy",
+    "fingerprint": "def456"
+  },
+  "strategy_fingerprint": "def456",
+  "configuration_fingerprint": "cfg-002",
+  "environment": {
+    "freqtrade_version": "2024.10",
+    "python_version": "3.11.9",
+    "exchange": "binance",
+    "trading_mode": "spot",
+    "stake_currency": "USDT"
+  },
+  "execution_settings": {
+    "initial_balance": 10000,
+    "stake_amount": "unlimited",
+    "max_open_trades": 3,
+    "fee": 0.001,
+    "slippage_assumption": 0.001,
+    "position_stacking": false,
+    "enable_protections": false,
+    "dry_run_wallet": 10000
+  },
+  "approved_pairs": ["BTC/USDT", "ETH/USDT"],
+  "main_timeframe": "1h",
+  "informative_timeframes": ["4h"],
+  "timerange": "20230101-20231231",
+  "data_snapshot": {
+    "data_directory": "user_data/data/binance",
+    "startup_candle_count": 40,
+    "source": "local_ohlcv"
+  },
+  "process_result": {
+    "status": "completed",
+    "runtime_seconds": 210,
+    "started_at": "2024-01-02T10:00:00Z",
+    "completed_at": "2024-01-02T10:03:30Z",
+    "command": "freqtrade backtesting --strategy MyStrategy --pairs BTC/USDT,ETH/USDT --timerange 20230101-20231231"
+  },
+  "activity_metrics": {
+    "total_trades": 38,
+    "winning_trades": 14,
+    "losing_trades": 24,
+    "draw_trades": 0,
+    "win_rate": 0.368,
+    "average_trades_per_day": 0.10,
+    "active_trading_days": 365,
+    "average_trade_duration_minutes": 390,
+    "long_trade_count": 38,
+    "short_trade_count": 0,
+    "rejected_entry_signals": 17
+  },
+  "return_metrics": {
+    "starting_balance": 10000,
+    "ending_balance": 9840,
+    "absolute_profit": -160,
+    "total_profit_percent": -1.6,
+    "average_profit_per_trade": -4.21,
+    "median_profit_per_trade": -2.80,
+    "best_trade_profit_percent": 8.1,
+    "worst_trade_profit_percent": -12.4,
+    "profit_by_pair": {
+      "BTC/USDT": -90,
+      "ETH/USDT": -70
+    },
+    "profit_by_direction": {
+      "long": -160,
+      "short": 0
+    },
+    "profit_by_exit_reason": {
+      "stop_loss": 120,
+      "sell_signal": 40,
+      "roi": 0
+    }
+  },
+  "risk_metrics": {
+    "max_absolute_drawdown": 480,
+    "max_relative_drawdown": 4.8,
+    "drawdown_start": "2023-05-02",
+    "drawdown_end": "2023-05-20",
+    "drawdown_duration_days": 18,
+    "exposure": 0.65,
+    "losing_streak": 6,
+    "winning_streak": 2,
+    "daily_return_variability": 0.021,
+    "downside_deviation": 0.024
+  },
+  "quality_metrics": {
+    "profit_factor": 0.74,
+    "expectancy": -4.21,
+    "expectancy_ratio": -0.18,
+    "sharpe_ratio": -0.31,
+    "sortino_ratio": null,
+    "calmar_ratio": null,
+    "risk_to_reward": 0.95,
+    "break_even_win_rate": 0.47
+  },
+  "pair_metrics": {
+    "pair_trade_counts": {
+      "BTC/USDT": 22,
+      "ETH/USDT": 16
+    },
+    "pair_profit_percent": {
+      "BTC/USDT": -1.0,
+      "ETH/USDT": -0.6
+    }
+  },
+  "direction_metrics": {
+    "long_count": 38,
+    "short_count": 0,
+    "long_profit_percent": -1.6,
+    "short_profit_percent": 0
+  },
+  "exit_reason_metrics": {
+    "roi_count": 0,
+    "stop_loss_count": 25,
+    "sell_signal_count": 13
+  },
+  "time_distribution": {
+    "first_trade": "2023-02-05",
+    "last_trade": "2023-11-18",
+    "peak_trade_month": "2023-07"
+  },
+  "concentration_analysis": {
+    "top_pair_profit_share": 0.56,
+    "top_direction_profit_share": 1.0,
+    "top_exit_reason_profit_share": 0.75,
+    "concentration_ok": false
+  },
+  "zero_trade_analysis": {
+    "zero_trades": false,
+    "likely_causes": [],
+    "additional_review_required": false
+  },
+  "result_integrity": {
+    "reproducible": true,
+    "missing_fee_or_slippage": false,
+    "data_gaps_detected": false,
+    "startup_candle_contamination_suspected": false,
+    "lookahead_bias_warning": false,
+    "unstable_indicator_warning": false,
+    "open_trades_at_end": 0,
+    "artifacts_match_recorded_inputs": true
+  },
+  "artifacts": {
+    "result_summary": "user_data/backtest_results/weak_baseline_MyStrategy.json",
+    "trade_list": "user_data/backtest_results/weak_baseline_MyStrategy_trades.json",
+    "log": "user_data/logs/weak_baseline_MyStrategy.log"
+  },
+  "recommended_next_action": "review_warnings",
+  "stage4_allowed": true
+}

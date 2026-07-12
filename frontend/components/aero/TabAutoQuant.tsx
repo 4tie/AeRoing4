@@ -36,9 +36,13 @@ export function TabAutoQuant() {
   const [isStartingDevelopRun, setIsStartingDevelopRun] = useState(false);
   const [developRunError, setDevelopRunError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const developRunButtonRef = useRef<HTMLButtonElement>(null);
-  const isProcessingRef = useRef(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  
+  // Button ref for immediate DOM manipulation
+  const developRunButtonRef = useRef<HTMLButtonElement>(null);
+  
+  // Ref for immediate duplicate-click prevention (synchronous)
+  const isDevelopRunStartingRef = useRef(false);
 
   // Load selected strategy details
   useEffect(() => {
@@ -62,16 +66,7 @@ export function TabAutoQuant() {
   };
 
   // Handle RUN DEVELOP TEST button click
-  const handleRunDevelopTest = async (e: React.MouseEvent) => {
-    // Prevent event propagation and default behavior
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Synchronously disable the button to prevent rapid clicks
-    if (developRunButtonRef.current) {
-      developRunButtonRef.current.disabled = true;
-    }
-
+  const handleRunDevelopTest = async () => {
     // Set loading state immediately to disable button
     setIsStartingDevelopRun(true);
     setValidationError(null);
@@ -80,9 +75,7 @@ export function TabAutoQuant() {
     // Prevent duplicate clicks using state
     if (isStartingDevelopRun || aering4Running) {
       setIsStartingDevelopRun(false);
-      if (developRunButtonRef.current) {
-        developRunButtonRef.current.disabled = false;
-      }
+      isDevelopRunStartingRef.current = false;
       return;
     }
 
@@ -90,42 +83,32 @@ export function TabAutoQuant() {
     if (!aering4StrategyName) {
       setValidationError('Please select a strategy');
       setIsStartingDevelopRun(false);
-      if (developRunButtonRef.current) {
-        developRunButtonRef.current.disabled = false;
-      }
+      isDevelopRunStartingRef.current = false;
       return;
     }
     if (pairs.length === 0) {
       setValidationError('Select at least one pair before running a DEVELOP test.');
       setIsStartingDevelopRun(false);
-      if (developRunButtonRef.current) {
-        developRunButtonRef.current.disabled = false;
-      }
+      isDevelopRunStartingRef.current = false;
       return;
     }
     if (!timeframe) {
       setDevelopRunError('Please select a timeframe');
       setIsStartingDevelopRun(false);
-      if (developRunButtonRef.current) {
-        developRunButtonRef.current.disabled = false;
-      }
+      isDevelopRunStartingRef.current = false;
       return;
     }
     const timerange = getTimerange();
     if (!timerange) {
       setDevelopRunError('Please select a timerange');
       setIsStartingDevelopRun(false);
-      if (developRunButtonRef.current) {
-        developRunButtonRef.current.disabled = false;
-      }
+      isDevelopRunStartingRef.current = false;
       return;
     }
     if (maxOpenTrades < 1) {
       setDevelopRunError('Max open trades must be at least 1');
       setIsStartingDevelopRun(false);
-      if (developRunButtonRef.current) {
-        developRunButtonRef.current.disabled = false;
-      }
+      isDevelopRunStartingRef.current = false;
       return;
     }
 
@@ -138,7 +121,7 @@ export function TabAutoQuant() {
         smoke_pairs: pairs,
         max_open_trades: maxOpenTrades,
         dry_run_wallet: 1000,
-        enable_pair_discovery: false, // Key difference: no discovery
+        enable_pair_discovery: false,
         discovery_pairs: undefined,
         discovery_timerange: undefined,
       });
@@ -159,10 +142,12 @@ export function TabAutoQuant() {
           } else {
             setAering4Running(false);
             setIsStartingDevelopRun(false);
+            isDevelopRunStartingRef.current = false;
           }
         } catch (e) {
           setAering4Running(false);
           setIsStartingDevelopRun(false);
+          isDevelopRunStartingRef.current = false;
           setDevelopRunError(e instanceof Error ? e.message : 'Polling failed');
         }
       };
@@ -170,27 +155,36 @@ export function TabAutoQuant() {
       pollRef.current = setTimeout(poll, 2000);
     } catch (e) {
       setIsStartingDevelopRun(false);
-      if (developRunButtonRef.current) {
-        developRunButtonRef.current.disabled = false;
-      }
+      isDevelopRunStartingRef.current = false;
       setDevelopRunError(e instanceof Error ? e.message : 'Failed to start run');
     }
   };
 
-  // Synchronous wrapper to prevent duplicate clicks using ref-based boolean
+  // Synchronous wrapper that uses ref for immediate duplicate-click prevention
   const handleRunDevelopTestSync = (e: React.MouseEvent) => {
-    if (isProcessingRef.current) return;
-    isProcessingRef.current = true;
+    // IMMEDIATE synchronous check using ref (no React state updates)
+    if (isDevelopRunStartingRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      return; // Already starting, ignore duplicate click
+    }
     
-    // Immediately disable button via DOM for synchronous effect
+    // Set ref immediately (synchronous, no React batching)
+    isDevelopRunStartingRef.current = true;
+    
+    // Disable button immediately at DOM level
     if (developRunButtonRef.current) {
       developRunButtonRef.current.disabled = true;
     }
     
-    handleRunDevelopTest(e).finally(() => {
-      isProcessingRef.current = false;
-    });
+    // Prevent event propagation to stop other click handlers
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Call the async handler
+    handleRunDevelopTest();
   };
+
 
   return (
     <div className="space-y-6">
@@ -386,7 +380,7 @@ export function TabAutoQuant() {
           <div className="flex items-center gap-3">
             <button
               ref={developRunButtonRef}
-              disabled={!aering4StrategyName || pairs.length === 0 || aering4Running || isProcessingRef.current}
+              disabled={!aering4StrategyName || pairs.length === 0 || aering4Running || isStartingDevelopRun}
               onClick={handleRunDevelopTestSync}
               className="flex items-center gap-2 px-6 py-3 font-semibold transition-all"
               style={{

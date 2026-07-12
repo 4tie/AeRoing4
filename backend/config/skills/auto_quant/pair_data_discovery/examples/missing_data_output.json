@@ -1,0 +1,49 @@
+{
+  "status": "soft_failure",
+  "errors": [],
+  "warnings": [
+    "Some candidate pairs are missing required timeframe data.",
+    "History length is below minimum for one pair."
+  ],
+  "diagnostics": [
+    "Stage 1 handoff accepted.",
+    "Exchange and trading mode resolved.",
+    "Candidate pair universe built.",
+    "Market filters applied deterministically.",
+    "Local OHLCV data inspection found missing data."
+  ],
+  "exchange": "binance",
+  "trading_mode": "spot",
+  "stake_currency": "USDT",
+  "main_timeframe": "1h",
+  "required_timeframes": ["1h", "4h"],
+  "required_informative_pairs": ["BTC/USDT:4h"],
+  "candidate_pairs": ["BTC/USDT", "ETH/USDT", "SOL/USDT"],
+  "eligible_pairs": ["BTC/USDT", "ETH/USDT"],
+  "excluded_pairs": ["SOL/USDT"],
+  "exclusion_reasons": {
+    "SOL/USDT": ["missing_timeframe_data", "insufficient_history"]
+  },
+  "data_ready_pairs": ["BTC/USDT", "ETH/USDT"],
+  "data_missing_pairs": ["SOL/USDT"],
+  "data_gaps": [
+    {
+      "pair": "SOL/USDT",
+      "timeframe": "1h",
+      "missing_start": "20230501",
+      "missing_end": "20230601"
+    }
+  ],
+  "required_timerange": "20230101-20231231",
+  "startup_buffer": 40,
+  "download_plan": [
+    {
+      "pair": "SOL/USDT",
+      "timeframes": ["1h", "4h"],
+      "action": "download",
+      "reason": "Missing local OHLCV data for required evaluation window."
+    }
+  ],
+  "recommended_next_action": "download_data",
+  "stage3_allowed": false
+}

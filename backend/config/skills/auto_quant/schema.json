@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "AutoQuant Skill Definition",
-  "description": "Schema for skill definitions used by the AutoQuant skill system. This file is documentation-only for now and does not enable runtime skill loading.",
+  "title": "AeRoing4 Skill Definition",
+  "description": "Schema for skill definitions used by the AeRoing4 skill system. This file is documentation-only for now and does not enable runtime skill loading.",
   "type": "object",
   "additionalProperties": false,
   "required": [
