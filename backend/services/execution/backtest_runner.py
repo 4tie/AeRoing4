@@ -11,9 +11,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import shutil
 import subprocess
 import threading
 import zipfile
+from copy import deepcopy
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Callable
 
@@ -359,14 +362,39 @@ class BacktestRunner(IBacktestRunner):
             max_open_trades=max_open_trades,
             dry_run_wallet=dry_run_wallet,
         )
+        market_server = None
+        market_thread = None
+        local_market_base_url = None
+        execution_config_payload = self._build_execution_config_payload(
+            config_payload=config_payload,
+            pairs=effective_pairs,
+            timeframe=timeframe,
+            max_open_trades=max_open_trades,
+            dry_run_wallet=dry_run_wallet,
+        )
+        if self._should_use_local_binance_markets(config_payload, effective_pairs):
+            market_server, market_thread, local_market_base_url = (
+                self._start_local_binance_exchange_info_server(effective_pairs)
+            )
+            execution_config_payload = self._build_execution_config_payload(
+                config_payload=config_payload,
+                pairs=effective_pairs,
+                timeframe=timeframe,
+                max_open_trades=max_open_trades,
+                dry_run_wallet=dry_run_wallet,
+                market_base_url=local_market_base_url,
+            )
+        command_config_file = str(run_dir / "freqtrade_execution_config.json")
+        atomic_write_json(Path(command_config_file), execution_config_payload)
         config_snapshot = self._build_run_config_snapshot(
-            config_file, effective_pairs, max_open_trades,
-            timeframe, timerange, dry_run_wallet,
+            config_file, command_config_file, effective_pairs, max_open_trades,
+            timeframe, timerange, dry_run_wallet, config_payload,
+            execution_config_payload, local_market_base_url,
         )
         command = self._build_command(
             settings.freqtrade_executable_path,
             settings.user_data_directory_path,
-            config_file, strategy_name, run_dir, timerange, timeframe,
+            command_config_file, strategy_name, run_dir, timerange, timeframe,
             effective_pairs, max_open_trades, dry_run_wallet
         )
         cmd_str = subprocess.list2cmdline(command)
@@ -410,6 +438,7 @@ class BacktestRunner(IBacktestRunner):
         try:
             self._execute_sync(run_id, command, version_id, phase_callback=phase_callback)
         finally:
+            self._stop_local_market_server(market_server, market_thread)
             self._running = False
             self.active_process = None
             self.active_run_id = None
@@ -621,6 +650,52 @@ class BacktestRunner(IBacktestRunner):
                     pass
 
     def _collect_latest_freqtrade_result(self, run_dir: Path) -> None:
+        raw_result_path = run_dir / "raw_result.json"
+        if raw_result_path.exists():
+            return
+
+        for zip_candidate in sorted(
+            run_dir.glob("*.zip"),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        ):
+            if self._extract_freqtrade_zip_result(zip_candidate, run_dir):
+                return
+
+        ignored = {
+            "freqtrade_execution_config.json",
+            "metadata.json",
+            "params.json",
+            "parsed_summary.json",
+            "pair_results.json",
+            "progress.json",
+            "run_config.json",
+            "strategy_params.json",
+            "trades.json",
+            "trades_by_pair.json",
+            "advanced_metrics.json",
+            "charts.json",
+        }
+        json_candidates = sorted(
+            [
+                path for path in run_dir.glob("*.json")
+                if (
+                    path.name not in ignored
+                    and not path.name.startswith(".")
+                    and not path.name.endswith("_config.json")
+                    and not path.name.endswith(".meta.json")
+                )
+            ],
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+        for candidate in json_candidates:
+            try:
+                raw_result_path.write_bytes(candidate.read_bytes())
+                return
+            except Exception:
+                continue
+
         root = self.run_repository.backtest_results_root
         last_result_path = root / ".last_result.json"
         if not last_result_path.exists():
@@ -635,23 +710,31 @@ class BacktestRunner(IBacktestRunner):
         latest_zip = root / latest_name
         if not latest_zip.exists():
             return
+        self._extract_freqtrade_zip_result(latest_zip, run_dir)
+
+    def _extract_freqtrade_zip_result(self, zip_path: Path, run_dir: Path) -> bool:
         raw_result_path = run_dir / "raw_result.json"
         native_zip_path = run_dir / "freqtrade_native_result.zip"
         native_meta_path = run_dir / "freqtrade_native_result.meta.json"
-        native_zip_path.write_bytes(latest_zip.read_bytes())
-        meta_path = latest_zip.with_suffix(".meta.json")
-        if meta_path.exists():
-            native_meta_path.write_text(meta_path.read_text(encoding="utf-8"), encoding="utf-8")
-        with zipfile.ZipFile(latest_zip) as archive:
-            json_members = [
-                name for name in archive.namelist()
-                if name.endswith(".json") and not name.endswith("_config.json")
-            ]
-            if not json_members:
-                return
-            preferred = next((name for name in json_members if "_result" not in name), json_members[0])
-            with archive.open(preferred) as handle:
-                raw_result_path.write_bytes(handle.read())
+        try:
+            if zip_path.resolve() != native_zip_path.resolve():
+                native_zip_path.write_bytes(zip_path.read_bytes())
+            meta_path = zip_path.with_suffix(".meta.json")
+            if meta_path.exists():
+                native_meta_path.write_text(meta_path.read_text(encoding="utf-8"), encoding="utf-8")
+            with zipfile.ZipFile(zip_path) as archive:
+                json_members = [
+                    name for name in archive.namelist()
+                    if name.endswith(".json") and not name.endswith("_config.json")
+                ]
+                if not json_members:
+                    return False
+                preferred = next((name for name in json_members if "_result" not in name), json_members[0])
+                with archive.open(preferred) as handle:
+                    raw_result_path.write_bytes(handle.read())
+            return raw_result_path.exists()
+        except Exception:
+            return False
 
     def _next_run_id(self, strategy_name: str, version_id: str, timestamp) -> str:
         strategy_root = self.run_repository.strategy_root(strategy_name)
@@ -675,14 +758,21 @@ class BacktestRunner(IBacktestRunner):
         return RunType.CANDIDATE_CODE
 
     def _build_run_config_snapshot(
-        self, config_file: str, pairs: list[str],
+        self, source_config_file: str, command_config_file: str, pairs: list[str],
         max_open_trades: int, timeframe: str, timerange: str, dry_run_wallet: float,
+        source_config: dict, execution_config: dict, local_market_base_url: str | None,
     ) -> dict:
-        base_config = self._load_config_payload(config_file)
         return {
-            "config_file": config_file, "timerange": timerange, "timeframe": timeframe,
+            "config_file": command_config_file,
+            "source_config_file": source_config_file,
+            "timerange": timerange, "timeframe": timeframe,
             "pairs": pairs, "max_open_trades": max_open_trades,
-            "dry_run_wallet": dry_run_wallet, "config": base_config,
+            "dry_run_wallet": dry_run_wallet, "config": execution_config,
+            "source_config": source_config,
+            "local_market_metadata": {
+                "enabled": local_market_base_url is not None,
+                "base_url": local_market_base_url,
+            },
         }
 
     def _load_config_payload(self, config_file: str) -> dict:
@@ -713,6 +803,164 @@ class BacktestRunner(IBacktestRunner):
                 normalized.append(text)
         return list(dict.fromkeys(normalized))
 
+    def _build_execution_config_payload(
+        self,
+        *,
+        config_payload: dict,
+        pairs: list[str],
+        timeframe: str,
+        max_open_trades: int,
+        dry_run_wallet: float,
+        market_base_url: str | None = None,
+    ) -> dict:
+        payload = deepcopy(config_payload) if isinstance(config_payload, dict) else {}
+        payload["timeframe"] = timeframe
+        payload["dry_run"] = True
+        payload["max_open_trades"] = max_open_trades
+        payload["dry_run_wallet"] = dry_run_wallet
+        payload.setdefault("pairlists", [{"method": "StaticPairList"}])
+        payload["pairlists"] = [{"method": "StaticPairList"}]
+
+        exchange = payload.setdefault("exchange", {})
+        exchange["pair_whitelist"] = pairs
+        exchange.setdefault("key", "")
+        exchange.setdefault("secret", "")
+        exchange["skip_pair_validation"] = True
+        exchange["skip_open_order_update"] = True
+
+        if market_base_url:
+            payload["trading_mode"] = "spot"
+            payload["margin_mode"] = ""
+            ccxt_config = exchange.setdefault("ccxt_config", {})
+            options = ccxt_config.setdefault("options", {})
+            options["defaultType"] = "spot"
+            options["fetchMarkets"] = {"types": ["spot"]}
+            options["fetchCurrencies"] = False
+            ccxt_config["urls"] = {
+                "api": {
+                    "public": f"{market_base_url}/api/v3",
+                    "private": f"{market_base_url}/api/v3",
+                    "sapi": f"{market_base_url}/sapi/v1",
+                    "sapiV2": f"{market_base_url}/sapi/v2",
+                    "sapiV3": f"{market_base_url}/sapi/v3",
+                    "sapiV4": f"{market_base_url}/sapi/v4",
+                    "fapiPublic": f"{market_base_url}/fapi/v1",
+                    "fapiPrivate": f"{market_base_url}/fapi/v1",
+                    "dapiPublic": f"{market_base_url}/dapi/v1",
+                    "dapiPrivate": f"{market_base_url}/dapi/v1",
+                    "eapiPublic": f"{market_base_url}/eapi/v1",
+                    "eapiPrivate": f"{market_base_url}/eapi/v1",
+                    "papi": f"{market_base_url}/papi/v1",
+                }
+            }
+            async_config = exchange.setdefault("ccxt_async_config", {})
+            async_config["aiohttp_trust_env"] = False
+            async_config["enableRateLimit"] = False
+            async_config["use_asyncio_dns"] = False
+
+        return payload
+
+    def _should_use_local_binance_markets(self, config_payload: dict, pairs: list[str]) -> bool:
+        if not pairs:
+            return False
+        exchange = config_payload.get("exchange", {}) if isinstance(config_payload, dict) else {}
+        trading_mode = str(config_payload.get("trading_mode", "spot")).lower()
+        return str(exchange.get("name", "")).lower() == "binance" and trading_mode != "futures"
+
+    def _start_local_binance_exchange_info_server(
+        self, pairs: list[str]
+    ) -> tuple[ThreadingHTTPServer, threading.Thread, str]:
+        payload = json.dumps(self._exchange_info_payload(pairs)).encode("utf-8")
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                if self.path.split("?", 1)[0] != "/api/v3/exchangeInfo":
+                    self.send_response(404)
+                    self.end_headers()
+                    return
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+
+            def log_message(self, format, *args):
+                return
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base_url = f"http://127.0.0.1:{server.server_address[1]}"
+        return server, thread, base_url
+
+    def _stop_local_market_server(self, server, thread) -> None:
+        if server is None:
+            return
+        try:
+            server.shutdown()
+            server.server_close()
+        finally:
+            if thread is not None:
+                thread.join(timeout=5)
+
+    def _exchange_info_payload(self, pairs: list[str]) -> dict:
+        symbols = []
+        for pair in pairs:
+            spot_pair = pair.split(":", maxsplit=1)[0]
+            if "/" not in spot_pair:
+                continue
+            base, quote = spot_pair.split("/", maxsplit=1)
+            symbols.append({
+                "symbol": f"{base}{quote}",
+                "status": "TRADING",
+                "baseAsset": base,
+                "baseAssetPrecision": 8,
+                "quoteAsset": quote,
+                "quotePrecision": 8,
+                "baseCommissionPrecision": 8,
+                "quoteCommissionPrecision": 8,
+                "orderTypes": ["LIMIT", "LIMIT_MAKER", "MARKET"],
+                "icebergAllowed": True,
+                "ocoAllowed": True,
+                "quoteOrderQtyMarketAllowed": True,
+                "isSpotTradingAllowed": True,
+                "isMarginTradingAllowed": False,
+                "permissions": ["SPOT"],
+                "filters": [
+                    {
+                        "filterType": "PRICE_FILTER",
+                        "minPrice": "0.00000001",
+                        "maxPrice": "1000000.00000000",
+                        "tickSize": "0.00000001",
+                    },
+                    {
+                        "filterType": "LOT_SIZE",
+                        "minQty": "0.00000100",
+                        "maxQty": "1000000.00000000",
+                        "stepSize": "0.00000100",
+                    },
+                    {
+                        "filterType": "MIN_NOTIONAL",
+                        "minNotional": "0.00010000",
+                        "applyToMarket": True,
+                        "avgPriceMins": 5,
+                    },
+                    {
+                        "filterType": "MARKET_LOT_SIZE",
+                        "minQty": "0.00000000",
+                        "maxQty": "1000000.00000000",
+                        "stepSize": "0.00000000",
+                    },
+                ],
+            })
+        return {
+            "timezone": "UTC",
+            "serverTime": 1704067200000,
+            "rateLimits": [],
+            "exchangeFilters": [],
+            "symbols": symbols,
+        }
+
     def _build_strategy_sidecar_json(self, strategy_name: str, params) -> dict:
         payload: dict = {
             "strategy_name": strategy_name,
@@ -735,28 +983,45 @@ class BacktestRunner(IBacktestRunner):
     def _build_command(self, executable, user_data_dir, config_file, strategy_name,
                        run_dir, timerange, timeframe, pairs, max_open_trades,
                        dry_run_wallet) -> list[str]:
-        # Handle "py -m freqtrade" command by splitting it
-        if executable == "py -m freqtrade":
-            command = [
-                "py", "-m", "freqtrade", "backtesting", "--user-data-dir", user_data_dir,
-                "--config", config_file, "--strategy-path", str(run_dir),
-                "--strategy", strategy_name, "--timerange", timerange,
-                "--timeframe", timeframe,
-                "--dry-run-wallet", str(dry_run_wallet),
-                "--max-open-trades", str(max_open_trades),
-            ]
-        else:
-            command = [
-                executable, "backtesting", "--user-data-dir", user_data_dir,
-                "--config", config_file, "--strategy-path", str(run_dir),
-                "--strategy", strategy_name, "--timerange", timerange,
-                "--timeframe", timeframe,
-                "--dry-run-wallet", str(dry_run_wallet),
-                "--max-open-trades", str(max_open_trades),
-            ]
-        command.extend(["--export", "trades", "--export-filename", str(run_dir / "raw_result.json")])
+        command = [
+            *self._resolve_freqtrade_command(executable),
+            "backtesting", "--user-data-dir", user_data_dir,
+            "--config", config_file, "--strategy-path", str(run_dir),
+            "--strategy", strategy_name, "--timerange", timerange,
+            "--timeframe", timeframe,
+            "--dry-run-wallet", str(dry_run_wallet),
+            "--max-open-trades", str(max_open_trades),
+            "--export", "trades", "--backtest-directory", str(run_dir),
+        ]
         if pairs:
             # Deduplicate pairs to prevent Freqtrade configuration error
             unique_pairs = list(dict.fromkeys(pairs))  # Preserves order while removing duplicates
             command.extend(["--pairs", *unique_pairs])
         return command
+
+    def _resolve_freqtrade_command(self, executable: str) -> list[str]:
+        configured = str(executable or "").strip()
+        root_dir = Path(getattr(self.settings_store, "root_dir", Path.cwd())).resolve()
+
+        if configured == "py -m freqtrade":
+            for candidate in (
+                root_dir / "4t" / "Scripts" / "freqtrade.exe",
+                root_dir / ".venv" / "Scripts" / "freqtrade.exe",
+            ):
+                if candidate.is_file():
+                    return [str(candidate)]
+            freqtrade = shutil.which("freqtrade")
+            if freqtrade:
+                return [freqtrade]
+            if shutil.which("python"):
+                return ["python", "-m", "freqtrade"]
+            if shutil.which("py"):
+                return ["py", "-m", "freqtrade"]
+            return ["py", "-m", "freqtrade"]
+
+        exe_path = Path(configured)
+        if not exe_path.is_absolute():
+            rooted = root_dir / exe_path
+            if rooted.is_file():
+                return [str(rooted)]
+        return [configured]

@@ -115,11 +115,12 @@ class TestSmokeBacktestStep:
 
         # Mock run detail with zero trades
         mock_detail = Mock()
-        mock_detail.parsed_summary.total_trades = 0
+        mock_detail.parsed_summary.total_trades = None
         mock_detail.parsed_summary.net_profit_pct = 0.0
         mock_detail.parsed_summary.profit_factor = None
         mock_detail.parsed_summary.max_drawdown_pct = None
         mock_detail.pair_results = []
+        mock_detail.trades = []
         mock_services.run_repository.load_detail.return_value = mock_detail
 
         result = await smoke_backtest_step.execute(
@@ -170,7 +171,7 @@ class TestSmokeBacktestStep:
         assert result.data["execution_error"] == "Backtest failed"
 
     @pytest.mark.asyncio
-    async def test_run_status_failed(self, smoke_backtest_step, mock_services):
+    async def test_run_status_failed(self, smoke_backtest_step, mock_services, tmp_path):
         """Test smoke backtest when run status is FAILED."""
         # Mock strategy
         mock_strategy = Mock()
@@ -194,6 +195,17 @@ class TestSmokeBacktestStep:
         mock_metadata = Mock()
         mock_metadata.run_status = RunStatus.FAILED
         mock_services.run_repository.load_metadata.return_value = mock_metadata
+        run_dir = tmp_path / "run_123"
+        run_dir.mkdir()
+        (run_dir / "logs.txt").write_text(
+            "stderr: 2026-07-12 07:40:00,000 - freqtrade - ERROR - Could not load markets, therefore cannot start.\n",
+            encoding="utf-8",
+        )
+        mock_services.run_repository.find_run_dir.return_value = run_dir
+        mock_detail = Mock()
+        mock_detail.parsed_summary = None
+        mock_detail.pair_results = []
+        mock_services.run_repository.load_detail.return_value = mock_detail
 
         result = await smoke_backtest_step.execute(
             strategy_name="test_strategy",
@@ -205,6 +217,8 @@ class TestSmokeBacktestStep:
 
         assert result.status == AeRoing4StepStatus.FAILED
         assert result.data["outcome"] == SmokeBacktestOutcome.EXECUTION_FAILURE.value
+        assert result.data["execution_error"] == "Could not load markets, therefore cannot start."
+        assert result.error == "Could not load markets, therefore cannot start."
 
     @pytest.mark.asyncio
     async def test_no_accepted_version(self, smoke_backtest_step, mock_services):

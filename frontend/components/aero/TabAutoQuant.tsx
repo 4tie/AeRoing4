@@ -36,6 +36,12 @@ export function TabAutoQuant() {
   const [developRunDebug, setDevelopRunDebug] = useState<Record<string, unknown> | null>(null);
   const [showDebug, setShowDebug] = useState(false);
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const developRunInFlightRef = useRef(false);
+  const developRunButtonRef = useRef<HTMLButtonElement>(null);
+  const cooldownTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const CLICK_COOLDOWN_MS = 2000;
+  const isHandlerExecutingRef = useRef(false);
+  const debouncedClickRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load selected strategy details
   useEffect(() => {
@@ -60,34 +66,107 @@ export function TabAutoQuant() {
 
   // Handle RUN DEVELOP TEST button click
   const handleRunDevelopTest = async () => {
+    // Prevent handler re-entry at the outermost level
+    if (isHandlerExecutingRef.current) return;
+    isHandlerExecutingRef.current = true;
+
+    // Clear any existing cooldown timeout
+    if (cooldownTimeoutRef.current) {
+      clearTimeout(cooldownTimeoutRef.current);
+    }
+
+    // Clear any existing debounce timeout
+    if (debouncedClickRef.current) {
+      clearTimeout(debouncedClickRef.current);
+    }
+
+    // Immediate duplicate-click prevention using ref
+    if (developRunInFlightRef.current) {
+      isHandlerExecutingRef.current = false;
+      return;
+    }
+    developRunInFlightRef.current = true;
+
+    // Set cooldown to prevent any clicks for 2 seconds
+    cooldownTimeoutRef.current = setTimeout(() => {
+      developRunInFlightRef.current = false;
+      isHandlerExecutingRef.current = false;
+      cooldownTimeoutRef.current = null;
+    }, CLICK_COOLDOWN_MS);
+
+    // Synchronously disable the button to prevent rapid clicks
+    if (developRunButtonRef.current) {
+      developRunButtonRef.current.disabled = true;
+    }
+
+    // Set loading state immediately to disable button
+    setIsStartingDevelopRun(true);
+    setDevelopRunError(null);
+
+    // Prevent duplicate clicks using state
+    if (isStartingDevelopRun || aering4Running) {
+      developRunInFlightRef.current = false;
+      setIsStartingDevelopRun(false);
+      isHandlerExecutingRef.current = false;
+      if (developRunButtonRef.current) {
+        developRunButtonRef.current.disabled = false;
+      }
+      return;
+    }
+
     // Validation
     if (!aering4StrategyName) {
       setDevelopRunError('Please select a strategy');
+      setIsStartingDevelopRun(false);
+      developRunInFlightRef.current = false;
+      isHandlerExecutingRef.current = false;
+      if (developRunButtonRef.current) {
+        developRunButtonRef.current.disabled = false;
+      }
       return;
     }
     if (pairs.length === 0) {
       setDevelopRunError('Please select at least one pair');
+      setIsStartingDevelopRun(false);
+      developRunInFlightRef.current = false;
+      isHandlerExecutingRef.current = false;
+      if (developRunButtonRef.current) {
+        developRunButtonRef.current.disabled = false;
+      }
       return;
     }
     if (!timeframe) {
       setDevelopRunError('Please select a timeframe');
+      setIsStartingDevelopRun(false);
+      developRunInFlightRef.current = false;
+      isHandlerExecutingRef.current = false;
+      if (developRunButtonRef.current) {
+        developRunButtonRef.current.disabled = false;
+      }
       return;
     }
     const timerange = getTimerange();
     if (!timerange) {
       setDevelopRunError('Please select a timerange');
+      setIsStartingDevelopRun(false);
+      developRunInFlightRef.current = false;
+      isHandlerExecutingRef.current = false;
+      if (developRunButtonRef.current) {
+        developRunButtonRef.current.disabled = false;
+      }
       return;
     }
     if (maxOpenTrades < 1) {
       setDevelopRunError('Max open trades must be at least 1');
+      setIsStartingDevelopRun(false);
+      developRunInFlightRef.current = false;
+      isHandlerExecutingRef.current = false;
+      if (developRunButtonRef.current) {
+        developRunButtonRef.current.disabled = false;
+      }
       return;
     }
 
-    // Prevent duplicate clicks
-    if (isStartingDevelopRun || aering4Running) return;
-
-    setIsStartingDevelopRun(true);
-    setDevelopRunError(null);
     setDevelopRunDebug({
       endpoint: '/api/aeroing4/runs',
       method: 'POST',
@@ -107,6 +186,8 @@ export function TabAutoQuant() {
         timeframe,
         smoke_timerange: timerange,
         smoke_pairs: pairs,
+        max_open_trades: maxOpenTrades,
+        dry_run_wallet: 1000,
         enable_pair_discovery: false, // Key difference: no discovery
         discovery_pairs: undefined,
         discovery_timerange: undefined,
@@ -130,7 +211,7 @@ export function TabAutoQuant() {
           setDevelopRunDebug(prev => ({
             ...prev,
             current_status: updated.status,
-            outcome: updated.outcome,
+            outcome: updated.smoke_outcome === 'NO_SIGNAL_ACTIVITY' ? 'no_signal_activity' : updated.outcome,
           }));
 
           if (updated.status === 'running' || updated.status === 'pending') {
@@ -138,10 +219,12 @@ export function TabAutoQuant() {
           } else {
             setAering4Running(false);
             setIsStartingDevelopRun(false);
+            developRunInFlightRef.current = false;
           }
         } catch (e) {
           setAering4Running(false);
           setIsStartingDevelopRun(false);
+          developRunInFlightRef.current = false;
           setDevelopRunError(e instanceof Error ? e.message : 'Polling failed');
         }
       };
@@ -149,12 +232,28 @@ export function TabAutoQuant() {
       pollRef.current = setTimeout(poll, 2000);
     } catch (e) {
       setIsStartingDevelopRun(false);
+      developRunInFlightRef.current = false;
+      isHandlerExecutingRef.current = false;
+      if (developRunButtonRef.current) {
+        developRunButtonRef.current.disabled = false;
+      }
       setDevelopRunError(e instanceof Error ? e.message : 'Failed to start run');
       setDevelopRunDebug(prev => ({
         ...prev,
         error: e instanceof Error ? e.message : 'Unknown error',
       }));
     }
+  };
+
+  // Debounced click handler to prevent rapid clicks
+  const handleRunDevelopTestDebounced = () => {
+    if (debouncedClickRef.current) {
+      clearTimeout(debouncedClickRef.current);
+    }
+    debouncedClickRef.current = setTimeout(() => {
+      handleRunDevelopTest();
+      debouncedClickRef.current = null;
+    }, 100);
   };
 
   // Cleanup polling on unmount
@@ -315,9 +414,10 @@ export function TabAutoQuant() {
 
       {/* Step 3: Run */}
       <div className="flex items-center gap-3">
-        <button 
+        <button
+          ref={developRunButtonRef}
           disabled={!aering4StrategyName || pairs.length === 0 || aering4Running || isStartingDevelopRun}
-          onClick={handleRunDevelopTest}
+          onClick={handleRunDevelopTestDebounced}
           className="flex items-center gap-2 px-5 py-2.5 text-sm font-mono font-bold transition-all disabled:opacity-40"
           style={{ background: 'rgba(0,229,255,0.08)', border: '1px solid var(--t-border-hi)', color: 'var(--t-cyan)' }}
           onMouseEnter={e => !aering4Running && !isStartingDevelopRun && (e.currentTarget.style.background = 'rgba(0,229,255,0.15)')}

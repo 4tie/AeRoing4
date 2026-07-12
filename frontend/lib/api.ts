@@ -119,6 +119,7 @@ export interface WorkflowStep {
   status: WorkflowStepStatus;
   progress: number;
   logs: string[];
+  data?: Record<string, unknown>;
 }
 
 export type SmokeOutcome =
@@ -132,13 +133,25 @@ export interface AeRoing4RunState {
   created_at: string;
   strategy_name: string;
   strategy_timeframe: string;
+  smoke_pairs: string[];
   discovery_pairs: string[];
   discovery_timerange: string;
   smoke_timerange: string;
   enable_pair_discovery: boolean;
   status: 'pending' | 'running' | 'done' | 'error';
-  outcome: 'IN_PROGRESS' | 'SUCCESS' | 'NO_PAIR_CANDIDATES' | 'EXECUTION_FAILURE' | null;
+  outcome: 'IN_PROGRESS' | 'SUCCESS' | 'NO_PAIR_CANDIDATES' | 'NO_SIGNAL_ACTIVITY' | 'EXECUTION_FAILURE' | null;
   smoke_outcome: SmokeOutcome;
+  max_open_trades: number | null;
+  total_trades: number | null;
+  trades_per_pair: Record<string, number>;
+  backtest_run_id: string | null;
+  freqtrade_command: string | null;
+  strategy_path_argument: string | null;
+  output_result_path: string | null;
+  output_zip_path: string | null;
+  log_excerpt: string | null;
+  execution_error: string | null;
+  run_artifacts: Record<string, string> | null;
   steps: WorkflowStep[];
   discovery_result: PairDiscoveryResult | null;
 }
@@ -148,6 +161,9 @@ export interface AeRoing4RunRequest {
   discovery_pairs?: string[];
   discovery_timerange?: string;
   enable_pair_discovery?: boolean;
+  max_open_trades?: number;
+  dry_run_wallet?: number;
+  config_file?: string;
 }
 
 export interface StrategyLibraryWarning {
@@ -304,9 +320,40 @@ const STEP_DISPLAY_NAMES: Record<string, string> = {
   pair_discovery: 'Pair Discovery',
 };
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.map(item => String(item)) : [];
+}
+
+function nullableString(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+function stringRecord(value: unknown): Record<string, string> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const entries = Object.entries(value as Record<string, unknown>)
+    .filter(([, v]) => typeof v === 'string')
+    .map(([k, v]) => [k, String(v)]);
+  return entries.length > 0 ? Object.fromEntries(entries) : null;
+}
+
+function numberRecord(value: unknown): Record<string, number> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .map(([k, v]) => [k, Number(v)])
+      .filter(([, v]) => Number.isFinite(v)),
+  );
+}
+
 /** Convert the backend run shape to the frontend AeRoing4RunState. */
 function mapBackendRun(run: Record<string, unknown>): AeRoing4RunState {
-  const rawSteps = (run.steps ?? {}) as Record<string, Record<string, unknown>>;
+  const rawSteps = asRecord(run.steps) as Record<string, Record<string, unknown>>;
 
   // Ordered step list (backend fills steps progressively)
   const STEP_ORDER = ['validation', 'data_preparation', 'smoke_backtest', 'pair_discovery'];
@@ -314,9 +361,13 @@ function mapBackendRun(run: Record<string, unknown>): AeRoing4RunState {
     const s = rawSteps[id];
     if (!s) return { id, name: STEP_DISPLAY_NAMES[id] ?? id, status: 'pending', progress: 0, logs: [] };
     const status = mapStepStatus(String(s.status ?? 'PENDING'));
-    const stepData = (s.data ?? {}) as Record<string, unknown>;
+    const stepData = asRecord(s.data);
     const logs: string[] = [];
     if (stepData.outcome) logs.push(`[OK] outcome: ${stepData.outcome}`);
+    if (stepData.total_trades != null) logs.push(`[OK] total trades: ${stepData.total_trades}`);
+    if (stepData.backtest_run_id) logs.push(`[OK] backtest run: ${stepData.backtest_run_id}`);
+    if (stepData.freqtrade_command) logs.push('[OK] Freqtrade command captured');
+    if (stepData.execution_error) logs.push(`[ERR] ${stepData.execution_error}`);
     if (s.error) logs.push(`[ERR] ${s.error}`);
     return {
       id,
@@ -324,12 +375,13 @@ function mapBackendRun(run: Record<string, unknown>): AeRoing4RunState {
       status,
       progress: status === 'done' ? 100 : status === 'running' ? 50 : 0,
       logs,
+      data: stepData,
     };
   });
 
   // Extract smoke outcome
   const smokeStep = rawSteps.smoke_backtest;
-  const smokeData = (smokeStep?.data ?? {}) as Record<string, unknown>;
+  const smokeData = asRecord(smokeStep?.data);
   let smokeOutcome: SmokeOutcome = null;
   // Backend emits lowercase enum values (e.g. "pass_activity")
   const smokeOC = String(smokeData.outcome ?? '').toLowerCase();
@@ -340,7 +392,7 @@ function mapBackendRun(run: Record<string, unknown>): AeRoing4RunState {
   // Extract discovery result
   let discoveryResult: PairDiscoveryResult | null = null;
   const discStep = rawSteps.pair_discovery;
-  const discData = (discStep?.data ?? {}) as Record<string, unknown>;
+  const discData = asRecord(discStep?.data);
   const rawDr = discData.discovery_result as Record<string, unknown> | undefined;
   if (rawDr) {
     const allEvals = (rawDr.all_evaluations ?? rawDr.ranked_pairs ?? []) as Array<Record<string, unknown>>;
@@ -394,25 +446,42 @@ function mapBackendRun(run: Record<string, unknown>): AeRoing4RunState {
   if (backendStatus === 'running' || backendStatus === 'pending') {
     outcome = 'IN_PROGRESS';
   } else if (backendStatus === 'completed') {
-    if (discData.outcome === 'valid_candidates_found') outcome = 'SUCCESS';
+    if (smokeOutcome === 'EXECUTION_FAILURE') outcome = 'EXECUTION_FAILURE';
+    else if (smokeOutcome === 'NO_SIGNAL_ACTIVITY') outcome = 'NO_SIGNAL_ACTIVITY';
+    else if (discData.outcome === 'valid_candidates_found') outcome = 'SUCCESS';
     else if (discData.outcome === 'no_pair_candidates') outcome = 'NO_PAIR_CANDIDATES';
     else outcome = 'SUCCESS';
   } else if (backendStatus === 'failed') {
     outcome = 'EXECUTION_FAILURE';
   }
 
+  const smokePairs = asStringArray(run.smoke_pairs);
+  const totalTrades = smokeData.total_trades != null ? Number(smokeData.total_trades) : null;
+
   return {
     id: String(run.run_id ?? ''),
     created_at: String(run.created_at ?? new Date().toISOString()),
     strategy_name: String(run.strategy_name ?? ''),
     strategy_timeframe: String(run.timeframe ?? '5m'),
-    discovery_pairs: (run.discovery_pairs as string[]) ?? [],
+    smoke_pairs: smokePairs,
+    discovery_pairs: asStringArray(run.discovery_pairs),
     discovery_timerange: String(run.discovery_timerange ?? ''),
     smoke_timerange: String(run.smoke_timerange ?? ''),
     enable_pair_discovery: Boolean(run.enable_pair_discovery ?? false),
     status: mapBackendStatus(backendStatus),
     outcome,
     smoke_outcome: smokeOutcome,
+    max_open_trades: run.max_open_trades != null ? Number(run.max_open_trades) : null,
+    total_trades: Number.isFinite(totalTrades) ? totalTrades : null,
+    trades_per_pair: numberRecord(smokeData.trades_per_pair),
+    backtest_run_id: nullableString(smokeData.backtest_run_id),
+    freqtrade_command: nullableString(smokeData.freqtrade_command),
+    strategy_path_argument: nullableString(smokeData.strategy_path_argument),
+    output_result_path: nullableString(smokeData.output_result_path),
+    output_zip_path: nullableString(smokeData.output_zip_path),
+    log_excerpt: nullableString(smokeData.log_excerpt),
+    execution_error: nullableString(smokeData.execution_error),
+    run_artifacts: stringRecord(smokeData.artifacts),
     steps,
     discovery_result: discoveryResult,
   };
@@ -759,6 +828,9 @@ export async function startAeRoing4Run(
       enable_pair_discovery: req.enable_pair_discovery ?? true,
       discovery_pairs: req.discovery_pairs ?? null,
       discovery_timerange: req.discovery_timerange ?? null,
+      max_open_trades: req.max_open_trades ?? 4,
+      dry_run_wallet: req.dry_run_wallet ?? 1000,
+      config_file: req.config_file ?? 'config.json',
     }),
   });
 
@@ -776,13 +848,25 @@ export async function startAeRoing4Run(
     created_at: new Date().toISOString(),
     strategy_name: req.strategy_name,
     strategy_timeframe: req.timeframe ?? '5m',
-    discovery_pairs: req.discovery_pairs ?? DEFAULT_DISCOVERY_UNIVERSE,
+    smoke_pairs: req.smoke_pairs ?? ['BTC/USDT', 'ETH/USDT', 'BNB/USDT'],
+    discovery_pairs: req.discovery_pairs ?? [],
     discovery_timerange: req.discovery_timerange ?? '',
     smoke_timerange: req.smoke_timerange ?? '20240101-20240131',
     enable_pair_discovery: req.enable_pair_discovery ?? true,
     status: 'running',
     outcome: 'IN_PROGRESS',
     smoke_outcome: null,
+    max_open_trades: req.max_open_trades ?? 4,
+    total_trades: null,
+    trades_per_pair: {},
+    backtest_run_id: null,
+    freqtrade_command: null,
+    strategy_path_argument: null,
+    output_result_path: null,
+    output_zip_path: null,
+    log_excerpt: null,
+    execution_error: null,
+    run_artifacts: null,
     steps: [
       { id: 'validation',       name: 'Strategy Validation', status: 'pending', progress: 0, logs: [] },
       { id: 'data_preparation', name: 'Smoke Data Prep',      status: 'pending', progress: 0, logs: [] },
@@ -875,8 +959,24 @@ export interface BackendSettings {
   discord_notification_channel_id?: string | null;
 }
 
+export interface BackendHealthCheck {
+  check?: string;
+  label?: string;
+  ok: boolean;
+  detail?: string;
+  path?: string;
+  executable?: string;
+  configured_executable?: string;
+  resolved_executable?: string;
+  command?: string[];
+}
+
 export interface BackendHealth {
   ok: boolean;
+  reachable?: boolean;
+  elapsed_ms?: number;
+  checks?: BackendHealthCheck[];
+  log?: string;
   services?: string[];
   message?: string;
 }
@@ -916,11 +1016,11 @@ export async function saveBackendSettings(
 /** Ping the backend health endpoint. */
 export async function checkBackendHealth(): Promise<BackendHealth> {
   try {
-    const res = await fetchWithRetry(`${API_BASE_URL}/health`, { cache: 'no-store' });
+    const res = await fetchWithRetry(`${API_BASE_URL}/api/system/health`, { cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json() as BackendHealth;
-    return { ok: true, services: data.services, message: data.message ?? 'ok' };
+    return { ...data, reachable: true, message: data.message ?? (data.ok ? 'ok' : 'system checks need attention') };
   } catch (exc) {
-    return { ok: false, message: exc instanceof Error ? exc.message : 'offline' };
+    return { ok: false, reachable: false, message: exc instanceof Error ? exc.message : 'offline' };
   }
 }

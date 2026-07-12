@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useAeroStore } from '@/lib/aeroStore';
-import { getBackendSettings, saveBackendSettings, checkBackendHealth, BackendSettings } from '@/lib/api';
+import { getBackendSettings, saveBackendSettings, checkBackendHealth, BackendSettings, BackendHealth } from '@/lib/api';
 import { Sun, Moon, RotateCcw, Check, AlertCircle, Loader2, Activity, RefreshCw } from 'lucide-react';
 
 const Panel = ({ label, children }: { label: string; children: React.ReactNode }) => (
@@ -61,6 +61,7 @@ export function TabSettings() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
+  const [healthDetails, setHealthDetails] = useState<BackendHealth | null>(null);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const patch = (partial: Partial<BackendSettings>) => {
@@ -128,12 +129,14 @@ export function TabSettings() {
 
   const checkHealth = async () => {
     const h = await checkBackendHealth();
+    setHealthDetails(h);
+    const reachable = h.reachable ?? h.ok;
     const wasOffline = prevConnectedRef.current === false;
-    prevConnectedRef.current = h.ok;
-    setBackendConnected(h.ok);
-    setBackendStatus(h.ok ? 'CONNECTED' : 'OFFLINE');
+    prevConnectedRef.current = reachable;
+    setBackendConnected(reachable);
+    setBackendStatus(reachable ? 'CONNECTED' : 'OFFLINE');
     // Trigger settings reload only on true offline→online transition with no loaded settings
-    if (h.ok && wasOffline && !settingsLoadedRef.current) {
+    if (reachable && wasOffline && !settingsLoadedRef.current) {
       load(0);
     }
   };
@@ -197,6 +200,10 @@ export function TabSettings() {
     );
   }
 
+  const freqtradeCheck = healthDetails?.checks?.find(check => check.check === 'freqtrade_cli');
+  const resolvedFreqtrade = freqtradeCheck?.resolved_executable ?? freqtradeCheck?.executable ?? null;
+  const freqtradeAvailable = freqtradeCheck?.ok === true;
+
   return (
     <div className="space-y-4 max-w-3xl">
       <div className="mb-4">
@@ -250,6 +257,20 @@ export function TabSettings() {
       <Panel label="PATHS">
         <Field label="FREQTRADE EXECUTABLE" hint="Command used to invoke Freqtrade (e.g. py -m freqtrade).">
           <TInput value={settings.freqtrade_executable_path} onChange={v => patch({ freqtrade_executable_path: v })} />
+          <div className="mt-2 p-2 text-[10px] font-mono space-y-1" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--t-border)' }}>
+            <div style={{ color: 'var(--t-muted)' }}>
+              Configured value: <span style={{ color: 'var(--t-text)' }}>{freqtradeCheck?.configured_executable ?? settings.freqtrade_executable_path}</span>
+            </div>
+            <div style={{ color: 'var(--t-muted)' }}>
+              Resolved executable: <span style={{ color: 'var(--t-text)' }}>{resolvedFreqtrade ?? 'Run health check'}</span>
+            </div>
+            <div style={{ color: freqtradeCheck ? (freqtradeAvailable ? 'var(--t-green)' : 'var(--t-red)') : 'var(--t-muted)' }}>
+              Freqtrade: {freqtradeCheck ? (freqtradeAvailable ? 'available' : 'unavailable') : 'not checked yet'}
+            </div>
+            {freqtradeCheck?.detail && (
+              <div style={{ color: 'var(--t-muted)' }}>{freqtradeCheck.detail}</div>
+            )}
+          </div>
         </Field>
         <Field label="STRATEGIES DIRECTORY" hint="Directory where strategy .py files live.">
           <TInput value={settings.strategies_directory_path} onChange={v => patch({ strategies_directory_path: v })} />

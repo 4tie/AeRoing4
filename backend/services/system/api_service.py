@@ -11,25 +11,68 @@ from pathlib import Path
 from typing import Any
 
 
-def check_freqtrade(executable: str) -> dict[str, Any]:
+def resolve_freqtrade_command(executable: str, root_dir: Path | None = None) -> list[str]:
+    """Resolve the configured Freqtrade setting into an executable command."""
+    configured = str(executable or "").strip() or "freqtrade"
+    root = Path(root_dir or Path.cwd()).resolve()
+
+    if configured == "py -m freqtrade":
+        for candidate in (
+            root / "4t" / "Scripts" / "freqtrade.exe",
+            root / ".venv" / "Scripts" / "freqtrade.exe",
+        ):
+            if candidate.is_file():
+                return [str(candidate)]
+        freqtrade = shutil.which("freqtrade")
+        if freqtrade:
+            return [freqtrade]
+        python = shutil.which("python")
+        if python:
+            return [python, "-m", "freqtrade"]
+        py = shutil.which("py")
+        if py:
+            return [py, "-m", "freqtrade"]
+        return ["py", "-m", "freqtrade"]
+
+    exe_path = Path(configured)
+    if not exe_path.is_absolute():
+        rooted = root / exe_path
+        if rooted.is_file():
+            return [str(rooted)]
+    return [shutil.which(configured) or configured]
+
+
+def _command_executable_exists(command: list[str]) -> bool:
+    if not command:
+        return False
+    executable = command[0]
+    return bool(shutil.which(executable) or Path(executable).is_file())
+
+
+def check_freqtrade(executable: str, root_dir: Path | None = None) -> dict[str, Any]:
     """Run `freqtrade --version` and report the result."""
-    resolved = shutil.which(executable) or executable
+    command = resolve_freqtrade_command(executable, root_dir)
+    resolved = command[0] if command else str(executable)
     entry: dict[str, Any] = {
         "check": "freqtrade_cli",
         "label": "Freqtrade CLI",
+        "configured_executable": executable,
+        "resolved_executable": resolved,
         "executable": resolved,
+        "command": command,
         "ok": False,
         "detail": "",
     }
-    if not (shutil.which(executable) or Path(executable).is_file()):
-        entry["detail"] = f"Executable not found: '{executable}'"
+    if not _command_executable_exists(command):
+        entry["detail"] = f"Executable not found: '{resolved}'"
         return entry
     try:
         proc = subprocess.run(
-            [executable, "--version"],
+            [*command, "--version"],
             capture_output=True,
             text=True,
             timeout=15,
+            cwd=str(Path(root_dir).resolve()) if root_dir else None,
         )
         if proc.returncode == 0:
             version_line = (proc.stdout + proc.stderr).strip().splitlines()[0]
@@ -41,7 +84,7 @@ def check_freqtrade(executable: str) -> dict[str, Any]:
                 + (proc.stderr or proc.stdout).strip()[:200]
             )
     except FileNotFoundError:
-        entry["detail"] = f"Executable not found at path '{executable}'"
+        entry["detail"] = f"Executable not found at path '{resolved}'"
     except subprocess.TimeoutExpired:
         entry["detail"] = "Timed out after 15 s"
     except Exception as exc:
@@ -107,7 +150,7 @@ async def collect_health(settings, root_dir: Path) -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
 
     checks.append(
-        await asyncio.to_thread(check_freqtrade, settings.freqtrade_executable_path)
+        await asyncio.to_thread(check_freqtrade, settings.freqtrade_executable_path, root_dir)
     )
 
     dir_checks = [

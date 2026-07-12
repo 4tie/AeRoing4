@@ -7,6 +7,7 @@ its stdout/stderr. Threading is used internally for log piping.
 from __future__ import annotations
 
 import subprocess
+import shutil
 import threading
 from pathlib import Path
 from typing import Callable
@@ -34,6 +35,32 @@ class DataDownloadRunner:
             "error": None,
         }
         self.log_callback: Callable[[str], None] | None = None
+
+    def _resolve_freqtrade_command(self, executable: str) -> list[str]:
+        configured = str(executable or "").strip()
+        root_dir = Path(getattr(self.settings_store, "root_dir", Path.cwd())).resolve()
+        if configured == "py -m freqtrade":
+            for candidate in (
+                root_dir / "4t" / "Scripts" / "freqtrade.exe",
+                root_dir / ".venv" / "Scripts" / "freqtrade.exe",
+            ):
+                if candidate.is_file():
+                    return [str(candidate)]
+            freqtrade = shutil.which("freqtrade")
+            if freqtrade:
+                return [freqtrade]
+            if shutil.which("python"):
+                return ["python", "-m", "freqtrade"]
+            if shutil.which("py"):
+                return ["py", "-m", "freqtrade"]
+            return ["py", "-m", "freqtrade"]
+
+        exe_path = Path(configured)
+        if not exe_path.is_absolute():
+            rooted = root_dir / exe_path
+            if rooted.is_file():
+                return [str(rooted)]
+        return [configured]
 
     def is_busy(self) -> bool:
         return self._running
@@ -74,26 +101,14 @@ class DataDownloadRunner:
         self._running = True
 
         try:
-            # Build and run the freqtrade download-data command
-            # Handle "py -m freqtrade" command by splitting it
-            if settings.freqtrade_executable_path == "py -m freqtrade":
-                command = [
-                    "py", "-m", "freqtrade",
-                    "download-data",
-                    "--user-data-dir",
-                    settings.user_data_directory_path,
-                    "--config",
-                    request.config_file,
-                ]
-            else:
-                command = [
-                    settings.freqtrade_executable_path,
-                    "download-data",
-                    "--user-data-dir",
-                    settings.user_data_directory_path,
-                    "--config",
-                    request.config_file,
-                ]
+            command = [
+                *self._resolve_freqtrade_command(settings.freqtrade_executable_path),
+                "download-data",
+                "--user-data-dir",
+                settings.user_data_directory_path,
+                "--config",
+                request.config_file,
+            ]
             if request.timerange:
                 command.extend(["--timerange", request.timerange])
             if request.timeframes:

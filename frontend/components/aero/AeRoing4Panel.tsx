@@ -173,17 +173,26 @@ function ConfigPanel({ strategies, strategyName, setStrategyName, pairs, setPair
 // ── Outcome banner ────────────────────────────────────────────────────────────
 
 function OutcomeBanner({ outcome, result }: { outcome: string; result: PairDiscoveryResult | null }) {
+  const isNoSignal = outcome === 'NO_SIGNAL_ACTIVITY';
   const isSuccess = outcome === 'SUCCESS';
+  const color = isSuccess ? 'var(--t-green)' : isNoSignal ? 'var(--t-yellow)' : 'var(--t-red)';
+  const background = isSuccess ? 'rgba(0,255,136,0.06)' : isNoSignal ? 'rgba(255,184,0,0.06)' : 'rgba(255,59,92,0.06)';
+  const border = isSuccess ? 'rgba(0,255,136,0.25)' : isNoSignal ? 'rgba(255,184,0,0.25)' : 'rgba(255,59,92,0.25)';
   return (
     <div className="px-4 py-3 flex items-center gap-3"
-      style={{ background: isSuccess ? 'rgba(0,255,136,0.06)' : 'rgba(255,59,92,0.06)', border: `1px solid ${isSuccess ? 'rgba(0,255,136,0.25)' : 'rgba(255,59,92,0.25)'}` }}>
-      <span className="text-lg" style={{ color: isSuccess ? 'var(--t-green)' : 'var(--t-red)' }}>
-        {isSuccess ? '✓' : '✕'}
+      style={{ background, border: `1px solid ${border}` }}>
+      <span className="text-lg" style={{ color }}>
+        {isSuccess ? 'OK' : isNoSignal ? '!' : 'X'}
       </span>
       <div>
-        <span className="text-sm font-mono font-bold" style={{ color: isSuccess ? 'var(--t-green)' : 'var(--t-red)' }}>
-          {isSuccess ? 'DISCOVERY COMPLETE' : 'NO_PAIR_CANDIDATES'}
+        <span className="text-sm font-mono font-bold" style={{ color }}>
+          {isSuccess ? 'DISCOVERY COMPLETE' : isNoSignal ? 'no_signal_activity' : 'NO_PAIR_CANDIDATES'}
         </span>
+        {isNoSignal && (
+          <p className="text-[10px] font-mono mt-0.5" style={{ color: 'var(--t-muted)' }}>
+            The backtest completed successfully, but this strategy produced no trades for the selected pair, timeframe, and timerange. Try a longer timerange, another pair, or the strategy&apos;s default timeframe.
+          </p>
+        )}
         {result && (
           <p className="text-[10px] font-mono mt-0.5" style={{ color: 'var(--t-muted)' }}>
             {result.valid_candidates} valid candidate{result.valid_candidates !== 1 ? 's' : ''} from {result.universe_size} pairs evaluated

@@ -81,6 +81,33 @@ export function TabResults() {
     return date.toLocaleDateString();
   };
 
+  const noSignalMessage = "The backtest completed successfully, but this strategy produced no trades for the selected pair, timeframe, and timerange. Try a longer timerange, another pair, or the strategy's default timeframe.";
+
+  const displayStatus = (status: AeRoing4RunState['status']) => (
+    status === 'done' ? 'completed' : status
+  );
+
+  const displayOutcome = (run: AeRoing4RunState) => {
+    if (run.smoke_outcome === 'NO_SIGNAL_ACTIVITY' || run.outcome === 'NO_SIGNAL_ACTIVITY') return 'no_signal_activity';
+    if (run.smoke_outcome === 'EXECUTION_FAILURE' || run.outcome === 'EXECUTION_FAILURE') return 'execution_failure';
+    if (run.outcome === 'NO_PAIR_CANDIDATES') return 'no_pair_candidates';
+    if (run.outcome === 'SUCCESS') return 'success';
+    return run.outcome ? String(run.outcome).toLowerCase() : '-';
+  };
+
+  const displayPairs = (run: AeRoing4RunState) => {
+    const pairs = run.smoke_pairs.length > 0 ? run.smoke_pairs : run.discovery_pairs;
+    return pairs.length > 0 ? pairs.join(', ') : '-';
+  };
+
+  const displayTimerange = (run: AeRoing4RunState) => (
+    run.smoke_timerange || run.discovery_timerange || '-'
+  );
+
+  const isNoSignalRun = (run: AeRoing4RunState) => (
+    run.smoke_outcome === 'NO_SIGNAL_ACTIVITY' || run.outcome === 'NO_SIGNAL_ACTIVITY'
+  );
+
   // Status badge colors
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -259,20 +286,22 @@ export function TabResults() {
                           className="px-2 py-0.5 text-[10px] font-bold uppercase"
                           style={{ background: `${getStatusColor(run.status)}20`, color: getStatusColor(run.status) }}
                         >
-                          {run.status}
+                          {displayStatus(run.status)}
                         </span>
                       </td>
                       <td className="px-3 py-2" style={{ color: 'var(--t-text)' }}>{run.strategy_name}</td>
                       <td className="px-3 py-2" style={{ color: 'var(--t-muted)' }}>{formatDate(run.created_at)}</td>
                       <td className="px-3 py-2" style={{ color: 'var(--t-muted)' }}>
-                        {run.discovery_timerange || run.smoke_timerange || '-'}
+                        {displayTimerange(run)}
                       </td>
                       <td className="px-3 py-2" style={{ color: 'var(--t-muted)' }}>{run.strategy_timeframe}</td>
                       <td className="px-3 py-2" style={{ color: 'var(--t-muted)' }}>
-                        {run.discovery_pairs?.length || 0}
+                        {displayPairs(run)}
                       </td>
                       <td className="px-3 py-2" style={{ color: 'var(--t-muted)' }}>
-                        {run.outcome === 'SUCCESS' ? (
+                        {isNoSignalRun(run) ? (
+                          <span style={{ color: 'var(--t-yellow)' }}>NO SIGNAL</span>
+                        ) : run.outcome === 'SUCCESS' ? (
                           <span style={{ color: 'var(--t-green)' }}>KEEP</span>
                         ) : run.outcome === 'NO_PAIR_CANDIDATES' ? (
                           <span style={{ color: 'var(--t-yellow)' }}>DROP</span>
@@ -308,13 +337,46 @@ export function TabResults() {
                                 </div>
                                 <div>
                                   <span style={{ color: 'var(--t-muted)' }}>Status:</span>
-                                  <span style={{ color: 'var(--t-text)', marginLeft: '8px' }}>{run.status}</span>
+                                  <span style={{ color: 'var(--t-text)', marginLeft: '8px' }}>{displayStatus(run.status)}</span>
                                 </div>
                                 <div>
                                   <span style={{ color: 'var(--t-muted)' }}>Outcome:</span>
-                                  <span style={{ color: 'var(--t-text)', marginLeft: '8px' }}>{run.outcome || '-'}</span>
+                                  <span style={{ color: 'var(--t-text)', marginLeft: '8px' }}>{displayOutcome(run)}</span>
+                                </div>
+                                <div>
+                                  <span style={{ color: 'var(--t-muted)' }}>Strategy:</span>
+                                  <span style={{ color: 'var(--t-text)', marginLeft: '8px' }}>{run.strategy_name || '-'}</span>
+                                </div>
+                                <div>
+                                  <span style={{ color: 'var(--t-muted)' }}>Timeframe:</span>
+                                  <span style={{ color: 'var(--t-text)', marginLeft: '8px' }}>{run.strategy_timeframe || '-'}</span>
+                                </div>
+                                <div>
+                                  <span style={{ color: 'var(--t-muted)' }}>Timerange:</span>
+                                  <span style={{ color: 'var(--t-text)', marginLeft: '8px' }}>{displayTimerange(run)}</span>
+                                </div>
+                                <div>
+                                  <span style={{ color: 'var(--t-muted)' }}>Pair:</span>
+                                  <span style={{ color: 'var(--t-text)', marginLeft: '8px' }}>{displayPairs(run)}</span>
+                                </div>
+                                <div>
+                                  <span style={{ color: 'var(--t-muted)' }}>Max Open Trades:</span>
+                                  <span style={{ color: 'var(--t-text)', marginLeft: '8px' }}>{run.max_open_trades ?? '-'}</span>
+                                </div>
+                                <div>
+                                  <span style={{ color: 'var(--t-muted)' }}>Total Trades:</span>
+                                  <span style={{ color: 'var(--t-text)', marginLeft: '8px' }}>{run.total_trades ?? '-'}</span>
+                                </div>
+                                <div>
+                                  <span style={{ color: 'var(--t-muted)' }}>Backtest Run ID:</span>
+                                  <span style={{ color: 'var(--t-text)', marginLeft: '8px' }}>{run.backtest_run_id ?? '-'}</span>
                                 </div>
                               </div>
+                              {isNoSignalRun(run) && (
+                                <div className="mt-3 p-3 text-xs font-mono" style={{ background: 'rgba(255,184,0,0.06)', border: '1px solid rgba(255,184,0,0.25)', color: 'var(--t-yellow)' }}>
+                                  {noSignalMessage}
+                                </div>
+                              )}
                             </div>
 
                             {/* Candidate flow */}
@@ -352,10 +414,85 @@ export function TabResults() {
                                         </span>
                                       </div>
                                     )}
+                                    {candidate.freqtrade_command && (
+                                      <div>
+                                        <span style={{ color: 'var(--t-muted)' }}>Freqtrade Command:</span>
+                                        <span style={{ color: 'var(--t-text)', marginLeft: '8px', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                                          {candidate.freqtrade_command}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {candidate.strategy_path_argument && (
+                                      <div>
+                                        <span style={{ color: 'var(--t-muted)' }}>--strategy-path:</span>
+                                        <span style={{ color: 'var(--t-text)', marginLeft: '8px', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                                          {candidate.strategy_path_argument}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {candidate.output_zip_path && (
+                                      <div>
+                                        <span style={{ color: 'var(--t-muted)' }}>Output Result:</span>
+                                        <span style={{ color: 'var(--t-text)', marginLeft: '8px', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                                          {candidate.output_zip_path}
+                                        </span>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               );
                             })()}
+
+                            {(run.freqtrade_command || run.strategy_path_argument || run.output_result_path || run.output_zip_path || run.log_excerpt || run.execution_error) && (
+                              <div>
+                                <span className="t-label block mb-2">BACKTEST ARTIFACTS</span>
+                                <div className="space-y-1 text-xs">
+                                  {run.freqtrade_command && (
+                                    <div>
+                                      <span style={{ color: 'var(--t-muted)' }}>Freqtrade Command:</span>
+                                      <span style={{ color: 'var(--t-text)', marginLeft: '8px', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                                        {run.freqtrade_command}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {run.strategy_path_argument && (
+                                    <div>
+                                      <span style={{ color: 'var(--t-muted)' }}>--strategy-path:</span>
+                                      <span style={{ color: 'var(--t-text)', marginLeft: '8px', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                                        {run.strategy_path_argument}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {run.output_result_path && (
+                                    <div>
+                                      <span style={{ color: 'var(--t-muted)' }}>Output Result:</span>
+                                      <span style={{ color: 'var(--t-text)', marginLeft: '8px', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                                        {run.output_result_path}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {run.output_zip_path && (
+                                    <div>
+                                      <span style={{ color: 'var(--t-muted)' }}>Output Zip:</span>
+                                      <span style={{ color: 'var(--t-text)', marginLeft: '8px', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                                        {run.output_zip_path}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {run.execution_error && (
+                                    <div style={{ color: 'var(--t-red)' }}>
+                                      <span>Execution Error:</span>
+                                      <span style={{ marginLeft: '8px' }}>{run.execution_error}</span>
+                                    </div>
+                                  )}
+                                  {run.log_excerpt && (
+                                    <pre className="mt-2 p-2 whitespace-pre-wrap overflow-auto" style={{ maxHeight: 180, background: '#050505', border: '1px solid var(--t-border)', color: 'var(--t-muted)' }}>
+                                      {run.log_excerpt}
+                                    </pre>
+                                  )}
+                                </div>
+                              </div>
+                            )}
 
                             {/* Steps */}
                             {run.steps && run.steps.length > 0 && (

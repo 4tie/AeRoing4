@@ -2,11 +2,13 @@
 
 import asyncio
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from ....core.errors import BackendError
 from ....models.contracts import RunRequest
 from ....models.base import RunStatus
+from ....services.backtest.backtest_service import extract_freqtrade_error
 from ....services.execution.backtest_runner import BacktestRunner
 from ....services.storage.run_repository import RunRepository
 from ..models import (
@@ -121,7 +123,7 @@ class SmokeBacktestStep:
 
             # Extract additional metrics
             detail = self.services.run_repository.load_detail(run_id)
-            total_trades = detail.parsed_summary.total_trades if detail.parsed_summary else 0
+            total_trades = self._total_trades_from_detail(detail)
             trades_per_pair = {
                 pair_result.pair: pair_result.total_trades
                 for pair_result in detail.pair_results
@@ -129,6 +131,12 @@ class SmokeBacktestStep:
             net_profit = detail.parsed_summary.net_profit_pct if detail.parsed_summary else None
             profit_factor = detail.parsed_summary.profit_factor if detail.parsed_summary else None
             max_drawdown = detail.parsed_summary.max_drawdown_pct if detail.parsed_summary else None
+            execution_error = (
+                self._extract_execution_error(run_id)
+                if outcome == SmokeBacktestOutcome.EXECUTION_FAILURE
+                else None
+            )
+            artifact_details = self._artifact_details(run_id, detail)
 
             return StepResult(
                 step_name="smoke_backtest",
@@ -137,6 +145,7 @@ class SmokeBacktestStep:
                 else AeRoing4StepStatus.FAILED,
                 started_at=started_at,
                 completed_at=datetime.now(UTC),
+                error=execution_error,
                 data={
                     "outcome": outcome.value,
                     "backtest_run_id": run_id,
@@ -145,7 +154,8 @@ class SmokeBacktestStep:
                     "net_profit": net_profit,
                     "profit_factor": profit_factor,
                     "max_drawdown": max_drawdown,
-                    "execution_error": None,
+                    "execution_error": execution_error,
+                    **artifact_details,
                 },
             )
 
@@ -208,7 +218,7 @@ class SmokeBacktestStep:
         # Load detail to check trade count
         try:
             detail = self.services.run_repository.load_detail(run_id)
-            total_trades = detail.parsed_summary.total_trades if detail.parsed_summary else 0
+            total_trades = self._total_trades_from_detail(detail)
 
             if total_trades > 0:
                 return SmokeBacktestOutcome.PASS_ACTIVITY
@@ -218,3 +228,105 @@ class SmokeBacktestStep:
         except Exception:
             # If we can't load details, assume execution failure
             return SmokeBacktestOutcome.EXECUTION_FAILURE
+
+    def _extract_execution_error(self, run_id: str) -> str | None:
+        """Extract a concise Freqtrade error from the run artifacts."""
+        try:
+            run_dir = self.services.run_repository.find_run_dir(run_id)
+        except Exception:
+            return None
+        if not isinstance(run_dir, (str, bytes)):
+            try:
+                run_dir = str(run_dir)
+            except Exception:
+                return None
+        try:
+            return extract_freqtrade_error(Path(run_dir))
+        except Exception:
+            return None
+
+    def _total_trades_from_detail(self, detail) -> int:
+        parsed_summary = getattr(detail, "parsed_summary", None)
+        if parsed_summary is not None:
+            raw_total = getattr(parsed_summary, "total_trades", None)
+            if raw_total is not None:
+                try:
+                    return int(raw_total)
+                except (TypeError, ValueError):
+                    pass
+        trades = getattr(detail, "trades", None)
+        if isinstance(trades, list):
+            return len(trades)
+        return 0
+
+    def _artifact_details(self, run_id: str, detail) -> dict:
+        artifacts = getattr(detail, "artifacts", {}) or {}
+        if not isinstance(artifacts, dict):
+            artifacts = {}
+
+        command = getattr(detail, "freqtrade_command", None)
+        if not isinstance(command, str):
+            command = None
+
+        run_dir: Path | None = None
+        try:
+            found = self.services.run_repository.find_run_dir(run_id)
+            if isinstance(found, Path):
+                run_dir = found
+            elif isinstance(found, (str, bytes)):
+                run_dir = Path(found)
+        except Exception:
+            run_dir = None
+
+        logs_path = artifacts.get("logs.txt")
+        log_excerpt = None
+        if isinstance(logs_path, str):
+            log_excerpt = self._tail_text(Path(logs_path))
+        if log_excerpt is None and run_dir is not None:
+            log_excerpt = self._tail_text(run_dir / "logs.txt")
+
+        output_result_path = artifacts.get("raw_result.json")
+        output_zip_path = artifacts.get("freqtrade_native_result.zip")
+        if not output_zip_path:
+            output_zip_path = next(
+                (
+                    path
+                    for name, path in artifacts.items()
+                    if isinstance(name, str)
+                    and name.lower().endswith(".zip")
+                    and isinstance(path, str)
+                ),
+                None,
+            )
+
+        return {
+            "run_dir": str(run_dir) if run_dir is not None else None,
+            "freqtrade_command": command,
+            "strategy_path_argument": self._extract_strategy_path_argument(command),
+            "output_result_path": output_result_path,
+            "output_zip_path": output_zip_path,
+            "log_excerpt": log_excerpt,
+            "artifacts": artifacts,
+        }
+
+    def _tail_text(self, path: Path) -> str | None:
+        try:
+            if not path.exists() or not path.is_file():
+                return None
+            text = path.read_text(encoding="utf-8", errors="replace").strip()
+        except Exception:
+            return None
+        if not text:
+            return None
+        return text[-4000:]
+
+    def _extract_strategy_path_argument(self, command: str | None) -> str | None:
+        if not command or "--strategy-path" not in command:
+            return None
+        tail = command.split("--strategy-path", 1)[1].lstrip()
+        if not tail:
+            return None
+        if tail[0] == '"':
+            end = tail.find('"', 1)
+            return tail[1:end] if end != -1 else tail[1:]
+        return tail.split(maxsplit=1)[0]
