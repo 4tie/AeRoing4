@@ -10,6 +10,7 @@ To run explicitly:
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -38,6 +39,16 @@ from backend.services.aeroing4.research.confirmation import (
     ConfirmationExecutionStatus,
     ConfirmationResult,
 )
+
+
+def _load_generated_strategy(strategy_path: Path):
+    spec = importlib.util.spec_from_file_location(strategy_path.stem, strategy_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return getattr(module, strategy_path.stem)
+
+
 from backend.services.aeroing4.research.experiments import ExperimentDecision
 from backend.services.aeroing4.research.confirmation import _RunShim as _ConfirmationRunShim
 from backend.services.aeroing4.research.delivery import DeliveryService
@@ -3269,3 +3280,251 @@ def test_mean_reversion_exhaustion_sensitivity_grid(tmp_path):
     for pair_metrics in best_result["pair_data"]:
         pair_name = pair_metrics.get("pair", "unknown")
         print(f"  {pair_name}: trades={pair_metrics.get('trades')}, wins={pair_metrics.get('wins')}, losses={pair_metrics.get('losses')}, winrate={pair_metrics.get('winrate'):.3f}, profit_factor={pair_metrics.get('profit_factor'):.3f}, expectancy={pair_metrics.get('expectancy'):.4f}, profit_total={pair_metrics.get('profit_total'):.4f}")
+
+
+def test_breakout_retest_confirmation_template_real_smoke(tmp_path):
+    """B5: deterministic real Freqtrade smoke for BreakoutRetestConfirmation."""
+    _require_data()
+
+    from types import SimpleNamespace
+    from backend.services.aeroing4.research.strategy_templates import (
+        DEFAULT_BREAKOUT_RETEST_PARAMS,
+        BREAKOUT_RETEST_FAMILY,
+        BREAKOUT_RETEST_CLASS_NAME,
+        write_strategy_from_spec,
+    )
+
+    runner = _RealRunner(tmp_path)
+    request = SimpleNamespace(
+        timerange=ROBUST_DEVELOP_TIMERANGE,
+        pairs=REQUIRED_PAIRS,
+        timeframe=SMOKE_TIMEFRAME,
+    )
+
+    # Write strategy
+    artifact = write_strategy_from_spec({"family": BREAKOUT_RETEST_FAMILY}, tmp_path)
+
+    # Run backtest
+    execution_id = runner.run_candidate_backtest(
+        artifact.strategy_name,
+        "b5_breakout_retest",
+        request,
+        candidate_dir=tmp_path,
+    )
+
+    # Verify output zip contains generated .py and .json
+    backtest_results_dir = tmp_path / "backtest_results_b5_breakout_retest"
+    backtest_zips = list(backtest_results_dir.glob("backtest-result-*.zip"))
+    assert len(backtest_zips) > 0, f"No backtest zip found in {backtest_results_dir}"
+    
+    import zipfile
+    with zipfile.ZipFile(backtest_zips[0], 'r') as zf:
+        zip_contents = zf.namelist()
+        assert any(f"{BREAKOUT_RETEST_CLASS_NAME}.py" in name for name in zip_contents), "Strategy .py not in zip"
+        assert any(f"{BREAKOUT_RETEST_CLASS_NAME}.json" in name for name in zip_contents), "Strategy .json not in zip"
+
+    # Extract metrics
+    backtest_jsons = list(backtest_results_dir.glob("backtest-result-*.json"))
+    native_metrics = json.loads(backtest_jsons[0].read_text(encoding="utf-8"))
+    
+    # Strategy data is at top level, not nested under 'strategy'
+    strategy_data = native_metrics.get(BREAKOUT_RETEST_CLASS_NAME, {})
+
+    # Print smoke metrics
+    print(f"B5 BREAKOUT RETEST SMOKE METRICS:")
+    total_trades = strategy_data.get('total_trades')
+    if total_trades is None or total_trades == 0:
+        print(f"  total_trades: 0 (no trades generated)")
+        print(f"  Strategy may be too restrictive or parameters need adjustment")
+    else:
+        print(f"  total_trades: {total_trades}")
+        print(f"  wins: {strategy_data.get('wins')}")
+        print(f"  losses: {strategy_data.get('losses')}")
+        print(f"  draws: {strategy_data.get('draws')}")
+        print(f"  win_rate: {strategy_data.get('winrate')}")
+        print(f"  profit_factor: {strategy_data.get('profit_factor')}")
+        print(f"  expectancy: {strategy_data.get('expectancy')}")
+        print(f"  max_drawdown: {strategy_data.get('max_drawdown_account')}")
+
+    # Extract pair-level metrics
+    pair_data = strategy_data.get("results_per_pair", [])
+    print(f"B5 BREAKOUT RETEST PAIR-LEVEL METRICS:")
+    if not pair_data:
+        print(f"  No pair-level data available (no trades)")
+    else:
+        for pair_metrics in pair_data:
+            pair = pair_metrics.get('pair', 'unknown')
+            print(f"  {pair}: trades={pair_metrics.get('trades')}, winrate={pair_metrics.get('winrate')}, profit_factor={pair_metrics.get('profit_factor')}, expectancy={pair_metrics.get('expectancy')}, profit_total={pair_metrics.get('profit_total')}")
+
+
+def test_breakout_retest_signal_funnel_diagnostics(tmp_path):
+    """B5.1: signal funnel diagnostics to identify blocking condition."""
+    _require_data()
+
+    from types import SimpleNamespace
+    import pandas as pd
+    from backend.services.aeroing4.research.strategy_templates import (
+        BREAKOUT_RETEST_FAMILY,
+        BREAKOUT_RETEST_CLASS_NAME,
+        write_strategy_from_spec,
+    )
+
+    runner = _RealRunner(tmp_path)
+    request = SimpleNamespace(
+        timerange=ROBUST_DEVELOP_TIMERANGE,
+        pairs=REQUIRED_PAIRS,
+        timeframe=SMOKE_TIMEFRAME,
+    )
+
+    # Write strategy
+    artifact = write_strategy_from_spec({"family": BREAKOUT_RETEST_FAMILY}, tmp_path)
+
+    # Load the generated strategy to inspect diagnostic columns
+    strategy_class = _load_generated_strategy(artifact.strategy_path)
+    strategy = strategy_class(config={})
+
+    # Load data for one pair to inspect funnel
+    pair_data_path = Path(r'l:/M4tie/Documents/AeRoing4/user_data/data/binance/LTC_USDT-5m.feather')
+    if not pair_data_path.exists():
+        print(f"B5.1 WARNING: Data file not found at {pair_data_path}")
+        return
+
+    df = pd.read_feather(pair_data_path)
+    df = df[(df['date'] >= '2024-01-01') & (df['date'] <= '2024-06-30')]
+    df = strategy.populate_indicators(df, {"pair": "LTC/USDT"})
+    df = strategy.populate_entry_trend(df, {"pair": "LTC/USDT"})
+
+    print(f"B5.1 SIGNAL FUNNEL DIAGNOSTICS (LTC/USDT sample):")
+    print(f"  Total candles: {len(df)}")
+    print(f"  diag_resistance_available: {df['diag_resistance_available'].sum()}")
+    print(f"  diag_breakout_detected: {df['diag_breakout_detected'].sum()}")
+    print(f"  diag_prior_breakout: {df['diag_prior_breakout'].sum()}")
+    print(f"  diag_retest_touched: {df['diag_retest_touched'].sum()}")
+    print(f"  diag_hold_confirmed: {df['diag_hold_confirmed'].sum()}")
+    print(f"  diag_volume_confirmed: {df['diag_volume_confirmed'].sum()}")
+    print(f"  diag_atr_ok: {df['diag_atr_ok'].sum()}")
+    print(f"  diag_ema_ok: {df['diag_ema_ok'].sum()}")
+    print(f"  diag_atr_ready: {df['diag_atr_ready'].sum()}")
+    print(f"  enter_long: {df['enter_long'].sum()}")
+
+
+def test_breakout_retest_variant_b_lower_breakout_threshold(tmp_path):
+    """B5.1 Variant B: lower breakout_threshold to 0.01."""
+    _require_data()
+
+    from types import SimpleNamespace
+    import pandas as pd
+    from backend.services.aeroing4.research.strategy_templates import (
+        BREAKOUT_RETEST_FAMILY,
+        BREAKOUT_RETEST_CLASS_NAME,
+        write_strategy_from_spec,
+    )
+
+    runner = _RealRunner(tmp_path)
+    request = SimpleNamespace(
+        timerange=ROBUST_DEVELOP_TIMERANGE,
+        pairs=REQUIRED_PAIRS,
+        timeframe=SMOKE_TIMEFRAME,
+    )
+
+    # Write strategy
+    artifact = write_strategy_from_spec({"family": BREAKOUT_RETEST_FAMILY}, tmp_path)
+    
+    # Modify sidecar for Variant B
+    import json
+    sidecar = json.loads(artifact.sidecar_path.read_text(encoding="utf-8"))
+    sidecar["params"]["buy"]["breakout_threshold"] = 0.01
+    artifact.sidecar_path.write_text(json.dumps(sidecar, indent=2), encoding="utf-8")
+
+    # Run backtest
+    execution_id = runner.run_candidate_backtest(
+        artifact.strategy_name,
+        "b5_1_variant_b",
+        request,
+        candidate_dir=tmp_path,
+    )
+
+    # Extract metrics
+    backtest_results_dir = tmp_path / "backtest_results_b5_1_variant_b"
+    backtest_jsons = list(backtest_results_dir.glob("backtest-result-*.json"))
+    native_metrics = json.loads(backtest_jsons[0].read_text(encoding="utf-8"))
+    strategy_data = native_metrics.get(BREAKOUT_RETEST_CLASS_NAME, {})
+
+    print(f"B5.1 VARIANT B (breakout_threshold=0.01) METRICS:")
+    total_trades = strategy_data.get('total_trades')
+    if total_trades is None or total_trades == 0:
+        print(f"  total_trades: 0 (still no trades)")
+    else:
+        print(f"  total_trades: {total_trades}")
+        print(f"  wins: {strategy_data.get('wins')}")
+        print(f"  losses: {strategy_data.get('losses')}")
+        print(f"  win_rate: {strategy_data.get('winrate')}")
+        print(f"  profit_factor: {strategy_data.get('profit_factor')}")
+        print(f"  expectancy: {strategy_data.get('expectancy')}")
+        print(f"  max_drawdown: {strategy_data.get('max_drawdown_account')}")
+
+
+def test_breakout_retest_variant_e_combined_relaxation(tmp_path):
+    """B5.1 Variant E: combined minimal relaxation."""
+    _require_data()
+
+    from types import SimpleNamespace
+    import pandas as pd
+    from backend.services.aeroing4.research.strategy_templates import (
+        BREAKOUT_RETEST_FAMILY,
+        BREAKOUT_RETEST_CLASS_NAME,
+        write_strategy_from_spec,
+    )
+
+    runner = _RealRunner(tmp_path)
+    request = SimpleNamespace(
+        timerange=ROBUST_DEVELOP_TIMERANGE,
+        pairs=REQUIRED_PAIRS,
+        timeframe=SMOKE_TIMEFRAME,
+    )
+
+    # Write strategy
+    artifact = write_strategy_from_spec({"family": BREAKOUT_RETEST_FAMILY}, tmp_path)
+    
+    # Modify sidecar for Variant E
+    import json
+    sidecar = json.loads(artifact.sidecar_path.read_text(encoding="utf-8"))
+    sidecar["params"]["buy"]["breakout_threshold"] = 0.01
+    sidecar["params"]["buy"]["retest_tolerance_pct"] = 0.01
+    sidecar["params"]["buy"]["volume_confirmation_ratio"] = 1.1
+    sidecar["params"]["buy"]["hold_candles"] = 1
+    artifact.sidecar_path.write_text(json.dumps(sidecar, indent=2), encoding="utf-8")
+
+    # Run backtest
+    execution_id = runner.run_candidate_backtest(
+        artifact.strategy_name,
+        "b5_1_variant_e",
+        request,
+        candidate_dir=tmp_path,
+    )
+
+    # Extract metrics
+    backtest_results_dir = tmp_path / "backtest_results_b5_1_variant_e"
+    backtest_jsons = list(backtest_results_dir.glob("backtest-result-*.json"))
+    native_metrics = json.loads(backtest_jsons[0].read_text(encoding="utf-8"))
+    strategy_data = native_metrics.get(BREAKOUT_RETEST_CLASS_NAME, {})
+
+    print(f"B5.1 VARIANT E (combined relaxation) METRICS:")
+    total_trades = strategy_data.get('total_trades')
+    if total_trades is None or total_trades == 0:
+        print(f"  total_trades: 0 (still no trades)")
+    else:
+        print(f"  total_trades: {total_trades}")
+        print(f"  wins: {strategy_data.get('wins')}")
+        print(f"  losses: {strategy_data.get('losses')}")
+        print(f"  win_rate: {strategy_data.get('winrate')}")
+        print(f"  profit_factor: {strategy_data.get('profit_factor')}")
+        print(f"  expectancy: {strategy_data.get('expectancy')}")
+        print(f"  max_drawdown: {strategy_data.get('max_drawdown_account')}")
+        
+        # Pair-level metrics
+        pair_data = strategy_data.get("results_per_pair", [])
+        print(f"B5.1 VARIANT E PAIR-LEVEL METRICS:")
+        for pair_metrics in pair_data:
+            pair = pair_metrics.get('pair', 'unknown')
+            print(f"  {pair}: trades={pair_metrics.get('trades')}, winrate={pair_metrics.get('winrate')}, profit_factor={pair_metrics.get('profit_factor')}, expectancy={pair_metrics.get('expectancy')}, profit_total={pair_metrics.get('profit_total')}")

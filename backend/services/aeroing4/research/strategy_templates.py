@@ -22,6 +22,9 @@ TREND_PULLBACK_CLASS_NAME = "TrendPullbackContinuation"
 MEAN_REVERSION_FAMILY = "mean_reversion_exhaustion"
 MEAN_REVERSION_CLASS_NAME = "MeanReversionExhaustion"
 
+BREAKOUT_RETEST_FAMILY = "breakout_retest_confirmation"
+BREAKOUT_RETEST_CLASS_NAME = "BreakoutRetestConfirmation"
+
 
 @dataclass(frozen=True)
 class StrategyTemplateResult:
@@ -88,6 +91,18 @@ DEFAULT_MEAN_REVERSION_PARAMS: dict[str, Any] = {
     "adx_max": 40,
 }
 
+DEFAULT_BREAKOUT_RETEST_PARAMS: dict[str, Any] = {
+    "lookback_period": 20,
+    "breakout_threshold": 0.02,
+    "retest_tolerance_pct": 0.005,
+    "hold_candles": 2,
+    "volume_window": 20,
+    "volume_confirmation_ratio": 1.4,
+    "atr_period": 14,
+    "atr_max_expansion": 1.5,
+    "ema_guard_period": 50,
+}
+
 
 def write_strategy_from_spec(spec: dict[str, Any], output_dir: Path) -> StrategyTemplateResult:
     """Write deterministic strategy artifacts for a supported StrategySpec."""
@@ -103,6 +118,8 @@ def write_strategy_from_spec(spec: dict[str, Any], output_dir: Path) -> Strategy
         return write_trend_pullback_continuation(output_dir)
     elif family == MEAN_REVERSION_FAMILY:
         return write_mean_reversion_exhaustion(output_dir)
+    elif family == BREAKOUT_RETEST_FAMILY:
+        return write_breakout_retest_confirmation(output_dir)
     else:
         raise ValueError(f"unsupported deterministic strategy family: {family}")
 
@@ -241,6 +258,30 @@ def write_mean_reversion_exhaustion(output_dir: Path) -> StrategyTemplateResult:
     )
 
 
+def write_breakout_retest_confirmation(output_dir: Path) -> StrategyTemplateResult:
+    """Write the deterministic breakout retest confirmation template."""
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    strategy_name = BREAKOUT_RETEST_CLASS_NAME
+    strategy_path = output_dir / f"{strategy_name}.py"
+    sidecar_path = output_dir / f"{strategy_name}.json"
+
+    strategy_path.write_text(_breakout_retest_strategy_source(), encoding="utf-8")
+    sidecar_path.write_text(
+        json.dumps(_breakout_retest_sidecar(), indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    return StrategyTemplateResult(
+        family=BREAKOUT_RETEST_FAMILY,
+        strategy_name=strategy_name,
+        strategy_path=strategy_path,
+        sidecar_path=sidecar_path,
+        parameters=tuple(DEFAULT_BREAKOUT_RETEST_PARAMS),
+    )
+
+
 def _tracking_parameter(name: str, value: Any, kind: str, minimum: Any, maximum: Any) -> dict[str, Any]:
     return {
         "type": kind,
@@ -350,6 +391,40 @@ def _mean_reversion_sidecar() -> dict[str, Any]:
             "atr_period": _tracking_parameter("atr_period", params["atr_period"], "int", 7, 30),
             "adx_period": _tracking_parameter("adx_period", params["adx_period"], "int", 7, 30),
             "adx_max": _tracking_parameter("adx_max", params["adx_max"], "int", 25, 60),
+        },
+    }
+
+
+def _breakout_retest_sidecar(
+    *,
+    strategy_name: str = BREAKOUT_RETEST_CLASS_NAME,
+    params: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    params = params or DEFAULT_BREAKOUT_RETEST_PARAMS
+    return {
+        "strategy_name": strategy_name,
+        "family": BREAKOUT_RETEST_FAMILY,
+        "params": {
+            "buy": dict(params),
+            "sell": {},
+            "roi": {"0": 0.04, "90": 0.02, "240": 0.0},
+            "stoploss": {"stoploss": -0.05},
+            "trailing": {
+                "trailing_stop": False,
+                "trailing_stop_positive_offset": 0.0,
+                "trailing_only_offset_is_reached": False,
+            },
+        },
+        "parameters": {
+            "lookback_period": _tracking_parameter("lookback_period", params["lookback_period"], "int", 15, 30),
+            "breakout_threshold": _tracking_parameter("breakout_threshold", params["breakout_threshold"], "float", 0.015, 0.03),
+            "retest_tolerance_pct": _tracking_parameter("retest_tolerance_pct", params["retest_tolerance_pct"], "float", 0.003, 0.01),
+            "hold_candles": _tracking_parameter("hold_candles", params["hold_candles"], "int", 1, 3),
+            "volume_window": _tracking_parameter("volume_window", params["volume_window"], "int", 15, 30),
+            "volume_confirmation_ratio": _tracking_parameter("volume_confirmation_ratio", params["volume_confirmation_ratio"], "float", 1.2, 1.8),
+            "atr_period": _tracking_parameter("atr_period", params["atr_period"], "int", 10, 20),
+            "atr_max_expansion": _tracking_parameter("atr_max_expansion", params["atr_max_expansion"], "float", 1.2, 2.0),
+            "ema_guard_period": _tracking_parameter("ema_guard_period", params["ema_guard_period"], "int", 20, 100),
         },
     }
 
@@ -986,5 +1061,172 @@ class MeanReversionExhaustion(IStrategy):
             near_bb_mid | rsi_normalized | atr_stop | continued_fall,
             "exit_long",
         ] = 1
+        return dataframe
+"""
+
+
+def _breakout_retest_strategy_source() -> str:
+    return """from freqtrade.strategy import DecimalParameter, IntParameter, IStrategy
+from pandas import DataFrame
+import talib.abstract as ta
+
+
+class BreakoutRetestConfirmation(IStrategy):
+    INTERFACE_VERSION = 3
+
+    timeframe = "5m"
+
+    stoploss = -0.05
+    roi = {
+        "0": 0.04,
+        "90": 0.02,
+        "240": 0.0
+    }
+
+    # Entry parameters
+    lookback_period = IntParameter(15, 30, default=20, space="buy")
+    breakout_threshold = DecimalParameter(0.015, 0.03, default=0.02, decimals=3, space="buy")
+    retest_tolerance_pct = DecimalParameter(0.003, 0.01, default=0.005, decimals=4, space="buy")
+    hold_candles = IntParameter(1, 3, default=2, space="buy")
+    volume_window = IntParameter(15, 30, default=20, space="buy")
+    volume_confirmation_ratio = DecimalParameter(1.2, 1.8, default=1.4, decimals=1, space="buy")
+    atr_period = IntParameter(10, 20, default=14, space="buy")
+    atr_max_expansion = DecimalParameter(1.2, 2.0, default=1.5, decimals=1, space="buy")
+    ema_guard_period = IntParameter(20, 100, default=50, space="buy")
+
+    # Exit parameters
+    atr_multiplier_tp = DecimalParameter(1.5, 2.5, default=2.0, decimals=1, space="sell")
+    fail_threshold_pct = DecimalParameter(0.005, 0.015, default=0.01, decimals=4, space="sell")
+
+    def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
+        lookback = int(self.lookback_period.value)
+        breakout_thresh = float(self.breakout_threshold.value)
+        volume_win = int(self.volume_window.value)
+        atr_per = int(self.atr_period.value)
+        ema_guard = int(self.ema_guard_period.value)
+
+        # Rolling resistance high
+        dataframe["resistance_high"] = dataframe["high"].rolling(
+            lookback, min_periods=lookback
+        ).max()
+
+        # Breakout level
+        dataframe["breakout_level"] = dataframe["resistance_high"].shift(1)
+
+        # Detect breakout (price above resistance from prior candle)
+        dataframe["breakout_detected"] = (
+            dataframe["close"] > dataframe["breakout_level"] * (1 + breakout_thresh)
+        )
+
+        # Retest zone (tolerance around breakout level)
+        retest_tol = float(self.retest_tolerance_pct.value)
+        dataframe["retest_upper"] = dataframe["breakout_level"] * (1 + retest_tol)
+        dataframe["retest_lower"] = dataframe["breakout_level"] * (1 - retest_tol)
+
+        # Check if price is in retest zone
+        dataframe["in_retest_zone"] = (
+            (dataframe["close"] >= dataframe["retest_lower"])
+            & (dataframe["close"] <= dataframe["retest_upper"])
+        )
+
+        # Hold confirmation (price held above breakout for N candles)
+        hold_n = int(self.hold_candles.value)
+        dataframe["held_above_breakout"] = (
+            dataframe["close"] > dataframe["breakout_level"]
+        ).rolling(hold_n, min_periods=1).sum() == hold_n
+
+        # Volume indicators
+        dataframe["volume_mean"] = dataframe["volume"].rolling(
+            volume_win, min_periods=volume_win
+        ).mean()
+        dataframe["relative_volume"] = dataframe["volume"] / dataframe["volume_mean"]
+
+        # ATR indicators
+        dataframe["atr"] = ta.ATR(dataframe, timeperiod=atr_per)
+        dataframe["atr_mean"] = dataframe["atr"].rolling(
+            atr_per, min_periods=atr_per
+        ).mean()
+        dataframe["atr_expansion_ratio"] = dataframe["atr"] / dataframe["atr_mean"]
+
+        # EMA guard (regime filter)
+        dataframe["ema_guard"] = ta.EMA(dataframe, timeperiod=ema_guard)
+        dataframe["price_above_ema"] = dataframe["close"] > dataframe["ema_guard"]
+
+        # ATR-based take profit level
+        atr_tp_mult = float(self.atr_multiplier_tp.value)
+        dataframe["atr_tp_level"] = dataframe["close"] + (dataframe["atr"] * atr_tp_mult)
+
+        # Breakout failure level
+        fail_thresh = float(self.fail_threshold_pct.value)
+        dataframe["breakout_fail_level"] = dataframe["breakout_level"] * (1 - fail_thresh)
+
+        return dataframe
+
+    def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
+        # Prior breakout detected (using shift(1) to ensure prior candle)
+        prior_breakout = dataframe["breakout_detected"].shift(1).fillna(False)
+
+        # Not entering on first breakout candle (require at least 1 candle after breakout)
+        not_first_candle = ~dataframe["breakout_detected"]
+
+        # Price in retest zone
+        in_retest = dataframe["in_retest_zone"]
+
+        # Price held above breakout after retest
+        held_above = dataframe["held_above_breakout"]
+
+        # Volume confirmation
+        vol_conf = dataframe["relative_volume"] >= float(self.volume_confirmation_ratio.value)
+
+        # ATR not abnormally high
+        atr_max = float(self.atr_max_expansion.value)
+        atr_ok = dataframe["atr_expansion_ratio"] <= atr_max
+
+        # EMA guard (not in bearish regime)
+        ema_ok = dataframe["price_above_ema"]
+
+        # ATR available
+        atr_ready = dataframe["atr"].notna() & (dataframe["atr"] > 0)
+
+        # Diagnostic funnel counts
+        dataframe["diag_resistance_available"] = dataframe["resistance_high"].notna()
+        dataframe["diag_breakout_detected"] = dataframe["breakout_detected"]
+        dataframe["diag_prior_breakout"] = prior_breakout
+        dataframe["diag_retest_touched"] = in_retest
+        dataframe["diag_hold_confirmed"] = held_above
+        dataframe["diag_volume_confirmed"] = vol_conf
+        dataframe["diag_atr_ok"] = atr_ok
+        dataframe["diag_ema_ok"] = ema_ok
+        dataframe["diag_atr_ready"] = atr_ready
+
+        # Entry condition: prior breakout + retest + hold + volume + ATR + EMA
+        entry_condition = (
+            prior_breakout
+            & not_first_candle
+            & in_retest
+            & held_above
+            & vol_conf
+            & atr_ok
+            & ema_ok
+            & atr_ready
+        )
+
+        dataframe.loc[entry_condition, "enter_long"] = 1
+        return dataframe
+
+    def populate_exit_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
+        # Breakout failure: close below breakout level or failure threshold
+        breakout_fail = dataframe["close"] < dataframe["breakout_fail_level"]
+
+        # ATR-based take profit
+        atr_tp = dataframe["close"] >= dataframe["atr_tp_level"]
+
+        # Time-based failure: if price does not continue after hold (simplified as close below retest zone)
+        time_fail = dataframe["close"] < dataframe["retest_lower"]
+
+        # Exit on any failure condition
+        exit_condition = breakout_fail | atr_tp | time_fail
+
+        dataframe.loc[exit_condition, "exit_long"] = 1
         return dataframe
 """

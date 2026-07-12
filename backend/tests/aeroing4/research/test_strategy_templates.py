@@ -3,14 +3,18 @@ from __future__ import annotations
 import importlib.util
 import json
 import math
+import tempfile
 from pathlib import Path
 
 import pandas as pd
 
 from backend.services.aeroing4.research.strategy_templates import (
+    DEFAULT_BREAKOUT_RETEST_PARAMS,
     DEFAULT_MEAN_REVERSION_PARAMS,
     DEFAULT_TREND_PULLBACK_PARAMS,
     DEFAULT_VOLATILITY_COMPRESSION_PARAMS,
+    BREAKOUT_RETEST_CLASS_NAME,
+    BREAKOUT_RETEST_FAMILY,
     MEAN_REVERSION_CLASS_NAME,
     MEAN_REVERSION_FAMILY,
     TREND_PULLBACK_CLASS_NAME,
@@ -312,3 +316,125 @@ def test_trend_pullback_continuation_rejection_archive_exists():
     assert rejection_data["eligibility"]["focused_hyperopt"] is False
     assert rejection_data["eligibility"]["confirmation"] is False
     assert rejection_data["template_preserved"] is True
+
+
+def test_breakout_retest_confirmation_routing():
+    """B5: verify breakout_retest_confirmation family routes to deterministic template."""
+    spec = {"family": BREAKOUT_RETEST_FAMILY}
+    with tempfile.TemporaryDirectory() as tmpdir:
+        artifact = write_strategy_from_spec(spec, Path(tmpdir))
+        assert artifact.family == BREAKOUT_RETEST_FAMILY
+        assert artifact.strategy_name == BREAKOUT_RETEST_CLASS_NAME
+
+
+def test_breakout_retest_confirmation_files_exist():
+    """B5: verify generated .py and .json files exist."""
+    spec = {"family": BREAKOUT_RETEST_FAMILY}
+    with tempfile.TemporaryDirectory() as tmpdir:
+        artifact = write_strategy_from_spec(spec, Path(tmpdir))
+        assert artifact.strategy_path.exists()
+        assert artifact.sidecar_path.exists()
+        assert artifact.strategy_path.suffix == ".py"
+        assert artifact.sidecar_path.suffix == ".json"
+
+
+def test_breakout_retest_confirmation_naming_consistency():
+    """B5: verify class name, filename, and sidecar name match."""
+    spec = {"family": BREAKOUT_RETEST_FAMILY}
+    with tempfile.TemporaryDirectory() as tmpdir:
+        artifact = write_strategy_from_spec(spec, Path(tmpdir))
+        assert artifact.strategy_path.stem == BREAKOUT_RETEST_CLASS_NAME
+        assert artifact.sidecar_path.stem == BREAKOUT_RETEST_CLASS_NAME
+
+
+def test_breakout_retest_confirmation_sidecar_runtime_params():
+    """B5: verify sidecar contains runtime params.* shape."""
+    spec = {"family": BREAKOUT_RETEST_FAMILY}
+    with tempfile.TemporaryDirectory() as tmpdir:
+        artifact = write_strategy_from_spec(spec, Path(tmpdir))
+        sidecar = json.loads(artifact.sidecar_path.read_text(encoding="utf-8"))
+        assert "params" in sidecar
+        assert "buy" in sidecar["params"]
+        assert "sell" in sidecar["params"]
+        assert "roi" in sidecar["params"]
+        assert "stoploss" in sidecar["params"]
+        assert "trailing" in sidecar["params"]
+        # Verify buy params match DEFAULT_BREAKOUT_RETEST_PARAMS
+        for param_name in DEFAULT_BREAKOUT_RETEST_PARAMS:
+            assert param_name in sidecar["params"]["buy"]
+
+
+def test_breakout_retest_confirmation_no_future_looking():
+    """B5: verify generated code has no future-looking shift(-1)."""
+    spec = {"family": BREAKOUT_RETEST_FAMILY}
+    with tempfile.TemporaryDirectory() as tmpdir:
+        artifact = write_strategy_from_spec(spec, Path(tmpdir))
+        source = artifact.strategy_path.read_text(encoding="utf-8")
+        assert "shift(-1)" not in source
+
+
+def test_breakout_retest_confirmation_imports_compiles():
+    """B5: verify generated strategy imports and compiles."""
+    spec = {"family": BREAKOUT_RETEST_FAMILY}
+    with tempfile.TemporaryDirectory() as tmpdir:
+        artifact = write_strategy_from_spec(spec, Path(tmpdir))
+        strategy_class = _load_generated_strategy(artifact.strategy_path)
+        assert strategy_class is not None
+        assert hasattr(strategy_class, "INTERFACE_VERSION")
+
+
+def test_breakout_retest_confirmation_indicators_and_signal_columns_are_populated():
+    """B5: verify indicator/feature columns are populated and entry/exit columns generated."""
+    spec = {"family": BREAKOUT_RETEST_FAMILY}
+    with tempfile.TemporaryDirectory() as tmpdir:
+        artifact = write_strategy_from_spec(spec, Path(tmpdir))
+        strategy_class = _load_generated_strategy(artifact.strategy_path)
+        strategy = strategy_class(config={})
+
+        dataframe = _deterministic_candles()
+        dataframe = strategy.populate_indicators(dataframe, {"pair": "LTC/USDT"})
+
+        required_columns = [
+            "resistance_high",
+            "breakout_level",
+            "breakout_detected",
+            "retest_upper",
+            "retest_lower",
+            "in_retest_zone",
+            "held_above_breakout",
+            "volume_mean",
+            "relative_volume",
+            "atr",
+            "atr_mean",
+            "atr_expansion_ratio",
+            "ema_guard",
+            "price_above_ema",
+            "atr_tp_level",
+            "breakout_fail_level",
+        ]
+        for col in required_columns:
+            assert col in dataframe.columns, f"Missing column: {col}"
+
+        # Ensure columns are populated (not all NaN)
+        assert dataframe[list(required_columns)].tail(20).notna().all().all()
+
+        dataframe = strategy.populate_entry_trend(dataframe, {"pair": "LTC/USDT"})
+        dataframe = strategy.populate_exit_trend(dataframe, {"pair": "LTC/USDT"})
+        assert "enter_long" in dataframe.columns
+        assert "exit_long" in dataframe.columns
+        # Note: synthetic test data may not produce entries; real smoke test verifies trades
+
+
+def test_breakout_retest_confirmation_rejection_archive_exists():
+    """B5: verify MeanReversionExhaustion rejection archive was created."""
+    rejection_path = Path(r'l:\M4tie\Documents\AeRoing4\backend\tests\aeroing4\research\rejected_families\mean_reversion_exhaustion_rejection.json')
+    assert rejection_path.exists()
+    rejection_data = json.loads(rejection_path.read_text(encoding="utf-8"))
+    assert rejection_data["family"] == "mean_reversion_exhaustion"
+    assert rejection_data["status"] == "mechanically_verified_but_rejected_pair_dependent"
+    assert "rejection_reasons" in rejection_data
+    assert len(rejection_data["rejection_reasons"]) > 0
+    assert "true_baseline_metrics" in rejection_data
+    assert "corrected_pair_level_metrics" in rejection_data
+    assert rejection_data["eligibility"]["focused_hyperopt"] is False
+    assert rejection_data["eligibility"]["confirmation"] is False
