@@ -1,0 +1,194 @@
+{
+  "run_id": "4292ff65-957d-4340-aaa3-2ef0aac0486e",
+  "strategy_name": "AIStrategy",
+  "timeframe": "5m",
+  "smoke_pairs": [
+    "BTC/USDT",
+    "ETH/USDT",
+    "BNB/USDT"
+  ],
+  "smoke_timerange": "20240101-20240131",
+  "status": "failed",
+  "current_step": "bias_check",
+  "steps": {
+    "validation": {
+      "step_name": "validation",
+      "status": "passed",
+      "started_at": "2026-07-12T09:05:09.808958Z",
+      "completed_at": "2026-07-12T09:05:11.935494Z",
+      "error": null,
+      "data": {
+        "valid": true,
+        "class_name": "AIStrategy",
+        "errors": [],
+        "warnings": [],
+        "output_summary": "Python syntax OK\n\nFreqtrade list-strategies\nCommand: L:\\M4tie\\Documents\\AeRoing4\\4t\\Scripts\\freqtrade.exe list-strategies --user-data-dir l:\\M4tie\\Documents\\AeRoing4\\user_data --strategy-path L:\\M4tie\\Documents\\AeRoing4\\user_data\\strategies\n+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\n|                 Strategy name |                                Location |         Status | Hyperoptable | Buy-params | Sell-params | Protection-params | Custom-params |\n|-------------------------------+-----------------------------------------+----------------+--------------+------------+-------------+-------------------+---------------|\n|                    AIStrategy |                           AIStrategy.py | DUPLICATE NAME |          Yes |          2 |           2 |                 0 |               |\n|                    AIStrategy |           AIStrategy_baseline_backup.py | DUPLICATE NAME |          Yes |          2 |           2 |                 0 |               |\n|                    AIStrategy |                           AIStrategy.py | DUPLICATE NAME |          Yes |          2 |           2 |                 0 |               |\n|                    AIStrategy |           AIStrategy_baseline_backup.py | DUPLICATE NAME |          Yes |          2 |           2 |                 0 |               |\n|          AIStrategy_Optimized |                 AIStrategy_Optimized.py | DUPLICATE NAME |          Yes |          2 |           2 |                 0 |               |\n|          AIStrategy_Optimized |                 AIStrategy_Optimized.py | DUPLICATE NAME |          Yes |          2 |           2 |                 0 |               |\n|             AutoQuantRobustV1 |                    AutoQuantRobustV1.py | DUPLICATE NAME |          Yes |          7 |           5 |                 0 |               |\n|             AutoQuantRobustV1 |                    AutoQuantRobustV1.py | DUPLICATE NAME |          Yes |          7 |           5 |                 0 |               |\n|             AutoQuantRobustV2 |                    AutoQuantRobustV2.py | DUPLICATE NAME |          Yes |          5 |           1 |                 0 |               |\n|             AutoQuantRobustV2 |                    AutoQuantRobustV2.py | DUPLICATE NAME |          Yes |          5 |           1 |                 0 |               |\n|             AutoQuantRobustV3 |                    AutoQuantRobustV3.py | DUPLICATE NAME |          Yes |          2 |           2 |                 0 |               |\n|             AutoQuantRobustV3 |                    AutoQuantRobustV3.py | DUPLICATE NAME |          Yes |          2 |           2 |                 0 |               |\n|             AutoQuantRobustV4 |                    AutoQuantRobustV4.py | DUPLICATE NAME |          Yes |         10 |           1 |                 0 |   stoploss: 1 |\n|             AutoQuantRobustV4 |                    AutoQuantRobustV4.py | DUPLICATE NAME |          Yes |         10 |           1 |                 0 |   stoploss: 1 |\n|                    CatFactory |                           CatFactory.py | DUPLICATE NAME |          Yes |          1 |           0 |                 0 |               |\n|                    CatFactory |                           CatFactory.py | DUPLICATE NAME |          Yes |          1 |           0 |                 0 |               |\n|                       Diamond |                              Diamond.py | DUPLICATE NAME |          Yes |          4 |           4 |                 0 |               |\n|                       Diamond |                              Diamond.py | DUPLICATE NAME |          Yes |          4 |           4 |                 0 |               |\n|               EnsembleFactory |                      EnsembleFactory.py | DUPLICATE NAME |          Yes |          6 |           0 |                 0 |               |\n|               EnsembleFactory |                      EnsembleFactory.py | DUPLICATE NAME |          Yes |          6 |           0 |                 0 |               |\n|            HermesTestStrategy |                   HermesTestStrategy.py | DUPLICATE NAME |          Yes |         30 |           0 |                 0 |               |\n|            HermesTestStrategy |                   HermesTestStrategy.py | DUPLICATE NAME |          Yes |         30 |           0 |                 0 |               |\n|           IntradayAdaptive_v1 |                  IntradayAdaptive_v1.py | DUPLICATE NAME |          Yes |          5 |           0 |                 0 |               |\n|           IntradayAdaptive_v1 |                  IntradayAdaptive_v1.py | DUPLICATE NAME |          Yes |          5 |           0 |                 0 |               |\n|              IntradayBasic_v1 |                     IntradayBasic_v1.py | DUPLICATE NAME |          Yes |          1 |           0 |                 0 |               |\n|              IntradayBasic_v1 |                     IntradayBasic_v1.py | DUPLICATE NAME |          Yes |          1 |           0 |                 0 |               |\n|           IntradayMomentum_v1 |                  IntradayMomentum_v1.py | DUPLICATE NAME |          Yes |          3 |           0 |                 0 |               |\n|           IntradayMomentum_v1 |                  IntradayMomentum_v1.py | DUPLICATE NAME |          Yes |          3 |           0 |                 0 |               |\n|               IntradayOmni_v1 |                      IntradayOmni_v1.py | DUPLICATE NAME |          Yes |         19 |           0 |                 0 |               |\n|               IntradayOmni_v1 |                      IntradayOmni_v1.py | DUPLICATE NAME |          Yes |         19 |           0 |                 0 |               |\n|                MomentumRobust |                       MomentumRobust.py | DUPLICATE NAME |          Yes |          1 |           0 |                 0 |               |\n|                MomentumRobust |                       MomentumRobust.py | DUPLICATE NAME |          Yes |          1 |           0 |                 0 |               |\n|                       MultiMa |                              MultiMa.py | DUPLICATE NAME |          Yes |          2 |           2 |                 0 |               |\n|                       MultiMa |                              MultiMa.py | DUPLICATE NAME |          Yes |          2 |           2 |                 0 |               |\n|                      MultiMa2 |                             MultiMa2.py | DUPLICATE NAME |          Yes |          2 |           2 |                 0 |               |\n|                      MultiMa2 |                             MultiMa2.py | DUPLICATE NAME |          Yes |          2 |           2 |                 0 |               |\n|                    MultiMa_v2 |                           MultiMa_v2.py | DUPLICATE NAME |          Yes |          2 |           2 |                 0 |               |\n|                    MultiMa_v2 |                           MultiMa_v2.py | DUPLICATE NAME |          Yes |          2 |           2 |                 0 |               |\n|                    MultiMa_v3 |                           MultiMa_v3.py | DUPLICATE NAME |          Yes |          2 |           2 |                 0 |               |\n|                    MultiMa_v3 |                           MultiMa_v3.py | DUPLICATE NAME |          Yes |          2 |           2 |                 0 |               |\n|                     MultiMeee |                            MultiMeee.py | DUPLICATE NAME |          Yes |          2 |           2 |                 0 |               |\n|                     MultiMeee |                            MultiMeee.py | DUPLICATE NAME |          Yes |          2 |           2 |                 0 |               |\n|            PatternRecognition |                   PatternRecognition.py | DUPLICATE NAME |          Yes |          2 |           0 |                 0 |               |\n|            PatternRecognition |                   PatternRecognition.py | DUPLICATE NAME |          Yes |          2 |           0 |                 0 |               |\n|              ScalpMomentum_v1 |                     ScalpMomentum_v1.py | DUPLICATE NAME |          Yes |          3 |           0 |                 0 |               |\n|              ScalpMomentum_v1 |                     ScalpMomentum_v1.py | DUPLICATE NAME |          Yes |          3 |           0 |                 0 |               |\n|          TestStrat_1781099171 |                 TestStrat_1781099171.py | DUPLICATE NAME |          Yes |          1 |           0 |                 0 |               |\n|          TestStrat_1781099171 | TestStrat_1781099171_baseline_backup.py | DUPLICATE NAME |          Yes |          1 |           0 |                 0 |               |\n|          TestStrat_1781099171 |                 TestStrat_1781099171.py | DUPLICATE NAME |          Yes |          1 |           0 |                 0 |               |\n|          TestStrat_1781099171 | TestStrat_1781099171_baseline_backup.py | DUPLICATE NAME |          Yes |          1 |           0 |                 0 |               |\n| _stratlab_validate_AIStrategy |        _stratlab_validate_AIStrategy.py | DUPLICATE NAME |          Yes |          2 |           2 |                 0 |               |\n| _stratlab_validate_AIStrategy |        _stratlab_validate_AIStrategy.py | DUPLICATE NAME |          Yes |          2 |           2 |                 0 |               |\n|                       mabStra |                              mabStra.py | DUPLICATE NAME |          Yes |          5 |           5 |                 0 |               |\n|                       mabStra |                              mabStra.py | DUPLICATE NAME |          Yes |          5 |           5 |                 0 |               |\n+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+\n2026-07-12 12:05:09,982 - freqtrade - INFO - freqtrade 2026.6\n2026-07-12 12:05:11,542 - freqtrade.configuration.load_config - INFO - Using config: l:\\M4tie\\Documents\\AeRoing4\\user_data\\config.json ...\n2026-07-12 12:05:11,544 - freqtrade.loggers - INFO - Enabling colorized output.\n2026-07-12 12:05:11,544 - freqtrade.loggers - INFO - Logfile configured\n2026-07-12 12:05:11,544 - freqtrade.loggers - INFO - Verbosity set to 0\n2026-07-12 12:05:11,544 - freqtrade.configuration.configuration - INFO - Using additional Strategy lookup path: L:\\M4tie\\Documents\\AeRoing4\\user_data\\strategies\n2026-07-12 12:05:11,545 - freqtrade.configuration.configuration - INFO - Using user-data directory: l:\\M4tie\\Documents\\AeRoing4\\user_data ...\n2026-07-12 12:05:11,545 - freqtrade.configuration.configuration - INFO - Using data directory: l:\\M4tie\\Documents\\AeRoing4\\user_data\\data\\binance ...\n2026-07-12 12:05:11,546 - freqtrade.exchange.check_exchange - INFO - Checking exchange...\n2026-07-12 12:05:11,549 - freqtrade.exchange.check_exchange - INFO - Exchange \"binance\" is officially supported by the Freqtrade development team.\n2026-07-12 12:05:11,550 - freqtrade.configuration.configuration - INFO - Using pairlist from configuration.\n2026-07-12 12:05:11,551 - freqtrade.configuration.config_validation - INFO - Validating configuration ...\n\nFreqtrade structural validation passed"
+      }
+    },
+    "data_preparation": {
+      "step_name": "data_preparation",
+      "status": "passed",
+      "started_at": "2026-07-12T09:05:11.935494Z",
+      "completed_at": "2026-07-12T09:05:11.984262Z",
+      "error": null,
+      "data": {
+        "pairs_ready": {
+          "BTC/USDT": true,
+          "ETH/USDT": true,
+          "BNB/USDT": true
+        },
+        "missing_pairs_downloaded": [],
+        "download_errors": {},
+        "coverage_check_passed": true
+      }
+    },
+    "smoke_backtest": {
+      "step_name": "smoke_backtest",
+      "status": "passed",
+      "started_at": "2026-07-12T09:05:11.984877Z",
+      "completed_at": "2026-07-12T09:05:15.452340Z",
+      "error": null,
+      "data": {
+        "outcome": "pass_activity",
+        "backtest_run_id": "20260712T090511Z_AIStrategy_v001_bt001",
+        "total_trades": 6,
+        "trades_per_pair": {
+          "BTC/USDT": 1,
+          "BNB/USDT": 0,
+          "ETH/USDT": 5
+        },
+        "net_profit": -1.2802093049999999,
+        "profit_factor": 0.4212570212191614,
+        "max_drawdown": 1.713588566967062,
+        "execution_error": null,
+        "run_dir": "l:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001",
+        "freqtrade_command": "L:\\M4tie\\Documents\\AeRoing4\\4t\\Scripts\\freqtrade.exe backtesting --user-data-dir l:\\M4tie\\Documents\\AeRoing4\\user_data --config l:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\freqtrade_execution_config.json --strategy-path l:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001 --strategy AIStrategy --timerange 20240101-20240131 --timeframe 5m --dry-run-wallet 1000.0 --max-open-trades 1 --export trades --backtest-directory l:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001 --pairs BTC/USDT ETH/USDT BNB/USDT",
+        "strategy_path_argument": "l:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001",
+        "output_result_path": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\raw_result.json",
+        "output_zip_path": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\freqtrade_native_result.zip",
+        "log_excerpt": "y                               | 0 USDT                                    |\n\nstdout: | Worst day                              | -9.386 USDT                               |\n\nstdout: | Days win/draw/lose                     | 0 / 3 / 2                                 |\n\nstdout: | Min/Max/Avg. Duration Winners          | 0d 02:25 / 0d 02:25 / 0d 02:25            |\n\nstdout: | Min/Max/Avg. Duration Losers           | 0d 02:55 / 0d 03:30 / 0d 03:14            |\n\nstdout: | Max Consecutive Wins / Loss            | 2 / 3                                     |\n\nstdout: | Rejected Entry signals                 | 53                                        |\n\nstdout: | Entry/Exit Timeouts                    | 0 / 0                                     |\n\nstdout: |                                        |                                           |\n\nstdout: | Min/Max balance (closed trades)        | 987.198 USDT / 1004.409 USDT              |\n\nstdout: | Max % of account underwater            | 1.71%                                     |\n\nstdout: | Absolute drawdown                      | 17.211 USDT (1.71%)                       |\n\nstdout: | Drawdown duration                      | 4 days 07:15:00                           |\n\nstdout: | Profit at drawdown start               | 4.409 USDT                                |\n\nstdout: | Profit at drawdown end                 | -12.802 USDT                              |\n\nstdout: | Drawdown start                         | 2024-01-26 16:00:00                       |\n\nstdout: | Drawdown end                           | 2024-01-30 23:15:00                       |\n\nstdout: |                                        |                                           |\n\nstdout: | Wallet based Metrics                   |                                           |\n\nstdout: | Min/Max balance (wallet balance)       | 987.198 USDT / 1011.295 USDT              |\n\nstdout: | Min/Max balance dates (wallet balance) | 2024-01-30 23:20:00 / 2024-01-26 12:30:00 |\n\nstdout: | Max % of account underwater (balance)  | 2.38%                                     |\n\nstdout: | Absolute drawdown (wallet balance)     | 24.097 USDT (2.38%)                       |\n\nstdout: | Drawdown duration                      | 4 days 10:50:00                           |\n\nstdout: | Profit at drawdown start               | 11.295 USDT                               |\n\nstdout: | Profit at drawdown end                 | -12.802 USDT                              |\n\nstdout: | Drawdown start                         | 2024-01-26 12:30:00                       |\n\nstdout: | Drawdown end                           | 2024-01-30 23:20:00                       |\n\nstdout: | Sharpe (daily wallet balance)          | -4.60                                     |\n\nstdout: | Sortino (daily wallet balance)         | -2.72                                     |\n\nstdout: | Calmar (daily wallet balance)          | -35.39                                    |\n\nstdout: +------------------------------------------------------------------------------------+\n\nstdout: \n\nstdout: Backtested 2024-01-01 00:00:00 -> 2024-01-31 00:00:00 | Max open trades : 1\n\nstdout:                                                           STRATEGY SUMMARY                                                          \n\nstdout: +----------------------------------------------------------------------------------------------------------------------------------+\n\nstdout: |   Strategy | Trades | Avg Profit % | Tot Profit USDT | Tot Profit % | Avg Duration |  Win  Draw  Loss  Win% |           Drawdown |\n\nstdout: |------------+--------+--------------+-----------------+--------------+--------------+------------------------+--------------------|\n\nstdout: | AIStrategy |      6 |        -0.21 |         -12.802 |        -1.28 |      2:58:00 |    2     0     4  33.3 | 17.211 USDT  1.71% |\n\nstdout: +----------------------------------------------------------------------------------------------------------------------------------+",
+        "artifacts": {
+          ".last_result.json": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\.last_result.json",
+          "advanced_metrics.json": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\advanced_metrics.json",
+          "AIStrategy.json": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\AIStrategy.json",
+          "backtest-result-2026-07-12_12-05-14.meta.json": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\backtest-result-2026-07-12_12-05-14.meta.json",
+          "backtest-result-2026-07-12_12-05-14.zip": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\backtest-result-2026-07-12_12-05-14.zip",
+          "charts.json": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\charts.json",
+          "debug_info.txt": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\debug_info.txt",
+          "freqtrade_command.txt": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\freqtrade_command.txt",
+          "freqtrade_execution_config.json": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\freqtrade_execution_config.json",
+          "freqtrade_native_result.meta.json": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\freqtrade_native_result.meta.json",
+          "freqtrade_native_result.zip": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\freqtrade_native_result.zip",
+          "logs.txt": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\logs.txt",
+          "metadata.json": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\metadata.json",
+          "pair_results.json": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\pair_results.json",
+          "params.json": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\params.json",
+          "parsed_summary.json": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\parsed_summary.json",
+          "progress.json": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\progress.json",
+          "raw_result.json": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\raw_result.json",
+          "run_config.json": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\run_config.json",
+          "strategy.py": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\strategy.py",
+          "strategy_params.json": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\strategy_params.json",
+          "strategy_snapshot.py": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\strategy_snapshot.py",
+          "trades.json": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\trades.json",
+          "trades_by_pair.json": "L:\\M4tie\\Documents\\AeRoing4\\user_data\\backtest_results\\AIStrategy\\20260712T090511Z_AIStrategy_v001_bt001\\trades_by_pair.json"
+        }
+      }
+    },
+    "bias_check": {
+      "step_name": "bias_check",
+      "status": "failed",
+      "started_at": "2026-07-12T09:05:15.453461Z",
+      "completed_at": "2026-07-12T09:05:23.112135Z",
+      "error": "Bias execution failure",
+      "data": {
+        "outcome": "execution_failure",
+        "lookahead_result": {
+          "check_type": "lookahead",
+          "execution_status": "success",
+          "analytical_status": "parse_failure",
+          "decision_code": "EXECUTION_FAILURE",
+          "summary": "",
+          "evidence": [],
+          "warnings": [],
+          "failures": [
+            "Malformed or unrecognized lookahead analysis output"
+          ],
+          "command": ".venv/Scripts/freqtrade lookahead-analysis --strategy AIStrategy --timeframe 5m --timerange 20240101-20240131 --pairs BTC/USDT --pairs ETH/USDT --pairs BNB/USDT",
+          "exit_code": 0,
+          "stdout_artifact": null,
+          "stderr_artifact": null,
+          "duration_seconds": 4.3103859424591064
+        },
+        "recursive_result": {
+          "check_type": "recursive",
+          "execution_status": "success",
+          "analytical_status": "parse_failure",
+          "decision_code": "EXECUTION_FAILURE",
+          "summary": "",
+          "evidence": [],
+          "warnings": [],
+          "failures": [
+            "Malformed or unrecognized recursive analysis output"
+          ],
+          "command": ".venv/Scripts/freqtrade recursive-analysis --strategy AIStrategy --timeframe 5m --timerange 20240101-20240131 --pairs BTC/USDT --pairs ETH/USDT --pairs BNB/USDT",
+          "exit_code": 0,
+          "stdout_artifact": null,
+          "stderr_artifact": null,
+          "duration_seconds": 3.34677791595459
+        },
+        "checks_requested": [
+          "lookahead",
+          "recursive"
+        ],
+        "checks_executed": [
+          "lookahead",
+          "recursive"
+        ],
+        "checks_skipped": [],
+        "warnings": [],
+        "failures": [],
+        "execution_errors": [
+          "Malformed or unrecognized lookahead analysis output",
+          "Malformed or unrecognized recursive analysis output"
+        ],
+        "command_records": [
+          ".venv/Scripts/freqtrade lookahead-analysis --strategy AIStrategy --timeframe 5m --timerange 20240101-20240131 --pairs BTC/USDT --pairs ETH/USDT --pairs BNB/USDT",
+          ".venv/Scripts/freqtrade recursive-analysis --strategy AIStrategy --timeframe 5m --timerange 20240101-20240131 --pairs BTC/USDT --pairs ETH/USDT --pairs BNB/USDT"
+        ],
+        "artifact_references": [],
+        "started_at": "2026-07-12T09:05:15.453461Z",
+        "completed_at": "2026-07-12T09:05:23.112135Z",
+        "duration_seconds": 7.658674,
+        "policy_version": "1.0.0",
+        "input_identity": "AIStrategy_5m_20240101-20240131_BNB/USDT,BTC/USDT,ETH/USDT_1.0.0",
+        "timerange": "20240101-20240131",
+        "pairs": [
+          "BTC/USDT",
+          "ETH/USDT",
+          "BNB/USDT"
+        ]
+      }
+    }
+  },
+  "error": "Bias execution failure",
+  "created_at": "2026-07-12T09:05:09.795977Z",
+  "updated_at": "2026-07-12T09:05:23.112135Z",
+  "completed_at": "2026-07-12T09:05:23.112135Z",
+  "enable_pair_discovery": true,
+  "discovery_pairs": null,
+  "discovery_timerange": "20230101-20231231",
+  "confirmation_timerange": null,
+  "final_unseen_timerange": null,
+  "research_protocol": null,
+  "pair_selection_mode": null,
+  "target_pair_count": 4,
+  "manually_selected_pairs": null,
+  "exchange": "binance",
+  "trading_mode": "spot",
+  "max_open_trades": 4,
+  "dry_run_wallet": 1000.0,
+  "config_file": "config.json",
+  "enable_research_loop": false,
+  "enable_focused_hyperopt": false
+}
