@@ -2,22 +2,20 @@
 import { useState } from 'react';
 import { MainTab } from '@/lib/aeroStore';
 import { AeroLayout } from '@/components/aero/Layout';
-import { TabRead } from '@/components/aero/TabRead';
 import { TabLearn } from '@/components/aero/TabLearn';
-import { TabFix } from '@/components/aero/TabFix';
-import { TabTest } from '@/components/aero/TabTest';
+import { TabStrategies } from '@/components/aero/TabStrategies';
 import { TabAutoQuant } from '@/components/aero/TabAutoQuant';
+import { TabResults } from '@/components/aero/TabResults';
 import { TabSettings } from '@/components/aero/TabSettings';
 import { BootSequence } from '@/components/aero/BootSequence';
 import { GlitchTransition } from '@/components/aero/GlitchTransition';
 
 function TabContent({ tab }: { tab: MainTab }) {
-  if (tab === 'read')      return <TabRead />;
-  if (tab === 'learn')     return <TabLearn />;
-  if (tab === 'fix')       return <TabFix />;
-  if (tab === 'test')      return <TabTest />;
-  if (tab === 'autoquant') return <TabAutoQuant />;
-  if (tab === 'settings')  return <TabSettings />;
+  if (tab === 'learn')      return <TabLearn />;
+  if (tab === 'strategies') return <TabStrategies />;
+  if (tab === 'autoquant')  return <TabAutoQuant />;
+  if (tab === 'results')    return <TabResults />;
+  if (tab === 'settings')   return <TabSettings />;
   return null;
 }
 

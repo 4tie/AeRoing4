@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import type { Strategy, StrategyDetail, PipelineRun, StageStatus, AeRoing4RunState, WorkflowStep, BackendSettings } from './api';
 
-export type MainTab = 'read' | 'learn' | 'fix' | 'test' | 'autoquant' | 'settings';
+export type MainTab = 'learn' | 'strategies' | 'autoquant' | 'results' | 'settings';
 
 interface AeroState {
   // Navigation
@@ -69,7 +69,7 @@ interface AeroState {
 }
 
 export const useAeroStore = create<AeroState>((set) => ({
-  activeTab: 'read',
+  activeTab: 'learn',
   setActiveTab: (tab) => set({ activeTab: tab }),
 
   darkMode: true,

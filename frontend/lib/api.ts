@@ -309,7 +309,6 @@ function mapBackendRun(run: Record<string, unknown>): AeRoing4RunState {
   const rawDr = discData.discovery_result as Record<string, unknown> | undefined;
   if (rawDr) {
     const allEvals = (rawDr.all_evaluations ?? rawDr.ranked_pairs ?? []) as Array<Record<string, unknown>>;
-    const ranked = (rawDr.ranked_pairs ?? []) as Array<Record<string, unknown>>;
     const mappedPairs: DiscoveryPairResult[] = allEvals.map((e) => {
       const sc = e.score_components as Record<string, number> | undefined;
       return {
@@ -340,12 +339,12 @@ function mapBackendRun(run: Record<string, unknown>): AeRoing4RunState {
       };
     });
 
-    const validCount = (_mapped: DiscoveryPairResult[]) => mappedPairs.filter(p => p.status === 'VALID_CANDIDATE').length;
+    const validCount = () => mappedPairs.filter(p => p.status === 'VALID_CANDIDATE').length;
     discoveryResult = {
       universe_size: Number(rawDr.universe_size ?? 0),
       usable_pairs: Number(rawDr.usable_pairs_count ?? rawDr.usable_pairs ?? 0),
       evaluated_pairs: Number(rawDr.evaluated_pairs_count ?? rawDr.evaluated_pairs ?? 0),
-      valid_candidates: Number(rawDr.valid_candidates_count ?? rawDr.valid_candidates ?? validCount(mappedPairs)),
+      valid_candidates: Number(rawDr.valid_candidates_count ?? rawDr.valid_candidates ?? validCount()),
       rejected_pairs: Number(rawDr.rejected_pairs_count ?? rawDr.rejected_pairs ?? 0),
       discovery_timerange: String(rawDr.discovery_timerange ?? rawDr.timerange ?? ''),
       discovery_pairs: (rawDr.discovery_pairs_requested ?? rawDr.discovery_pairs ?? []) as string[],
@@ -765,6 +764,14 @@ export async function getAeRoing4Run(runId: string): Promise<AeRoing4RunState> {
   if (!res.ok) throw new Error(`Poll failed: ${res.status}`);
   const data = await res.json() as Record<string, unknown>;
   return mapBackendRun(data);
+}
+
+/** List all AeRoing4 runs from the backend. */
+export async function listAeRoing4Runs(): Promise<AeRoing4RunState[]> {
+  const res = await fetch(`${API_BASE_URL}/api/aeroing4/runs`, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`List runs failed: ${res.status}`);
+  const data = await res.json() as Record<string, unknown>[];
+  return data.map(run => mapBackendRun(run));
 }
 
 export async function getStrategyLibraryScan(): Promise<StrategyLibraryScan> {

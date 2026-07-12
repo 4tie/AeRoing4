@@ -88,7 +88,7 @@ export function EquityChart({ data }: Props) {
     ctx.beginPath();
     pts.forEach((p, i) => {
       const x = px(i), y = py(p.value);
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     });
     ctx.lineTo(px(pts.length - 1), PAD.top + innerH);
     ctx.lineTo(px(0),              PAD.top + innerH);
@@ -100,7 +100,7 @@ export function EquityChart({ data }: Props) {
     ctx.beginPath();
     pts.forEach((p, i) => {
       const x = px(i), y = py(p.value);
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     });
     ctx.strokeStyle = CYAN;
     ctx.lineWidth   = 1.8;

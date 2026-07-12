@@ -6,13 +6,6 @@ export type ApiResponse<T> = {
   error?: string
 }
 
-class RequestError extends Error {
-  constructor(public message: string, public status?: number) {
-    super(message)
-    this.name = 'RequestError'
-  }
-}
-
 async function request<T>(
   url: string,
   options: RequestInit = {}

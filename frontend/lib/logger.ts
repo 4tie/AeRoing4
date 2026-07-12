@@ -1,7 +1,7 @@
 type LogLevel = 'info' | 'warn' | 'error' | 'debug'
 
 class Logger {
-  private format(level: LogLevel, message: string, ...args: any[]) {
+  private format(level: LogLevel, message: string) {
     const timestamp = new Date().toISOString()
     return `[${timestamp}] [${level.toUpperCase()}] ${message}`
   }

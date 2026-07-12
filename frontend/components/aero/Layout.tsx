@@ -2,17 +2,16 @@
 import { useEffect, useRef } from 'react';
 import { useAeroStore, MainTab } from '@/lib/aeroStore';
 import { getStrategies, checkBackendHealth } from '@/lib/api';
-import { BookOpen, GraduationCap, Wrench, FlaskConical, Zap, Settings, Clock } from 'lucide-react';
+import { BookOpen, GraduationCap, Zap, Settings, Clock } from 'lucide-react';
 import { GlitchLogo } from '@/components/aero/GlitchLogo';
 import { StrategySpark } from '@/components/aero/StrategySpark';
 
 const TABS: { id: MainTab; label: string; sub: string; num: string; icon: React.ReactNode }[] = [
-  { id: 'read',      label: 'Read',      sub: 'Understand the code',  num: '1', icon: <BookOpen size={13} /> },
-  { id: 'learn',     label: 'Learn',     sub: 'AI teaches you',       num: '2', icon: <GraduationCap size={13} /> },
-  { id: 'fix',       label: 'Fix',       sub: 'Auto-improve',         num: '3', icon: <Wrench size={13} /> },
-  { id: 'test',      label: 'Test',      sub: 'Backtest verdict',     num: '4', icon: <FlaskConical size={13} /> },
-  { id: 'autoquant', label: 'AutoQuant', sub: 'Pipeline engine',      num: '5', icon: <Zap size={13} /> },
-  { id: 'settings',  label: 'Settings',  sub: 'Configure',            num: '6', icon: <Settings size={13} /> },
+  { id: 'learn',      label: 'Learn',     sub: 'AI teaches you',       num: '1', icon: <GraduationCap size={13} /> },
+  { id: 'strategies', label: 'Strategies', sub: 'Strategy Library',  num: '2', icon: <BookOpen size={13} /> },
+  { id: 'autoquant',  label: 'AutoQuant', sub: 'Pipeline engine',      num: '3', icon: <Zap size={13} /> },
+  { id: 'results',    label: 'Results',   sub: 'Run history',         num: '4', icon: <Clock size={13} /> },
+  { id: 'settings',   label: 'Settings',  sub: 'Configure',            num: '5', icon: <Settings size={13} /> },
 ];
 
 export function AeroLayout({ children }: { children: React.ReactNode }) {
@@ -58,7 +57,7 @@ export function AeroLayout({ children }: { children: React.ReactNode }) {
     setActiveTab(tabId);
   };
 
-  const showStrategySidebar = activeTab === 'read' || activeTab === 'learn' || activeTab === 'fix';
+  const showStrategySidebar = activeTab === 'learn';
 
   return (
     <div className="scanlines min-h-screen flex flex-col" style={{ background: 'var(--t-bg)', color: 'var(--t-text)', fontFamily: 'inherit' }}>
@@ -150,7 +149,7 @@ export function AeroLayout({ children }: { children: React.ReactNode }) {
         )}
 
         {/* Test run history sidebar */}
-        {activeTab === 'test' && (
+        {activeTab === 'results' && (
           <aside className="w-44 shrink-0 hidden md:flex flex-col"
             style={{ background: 'var(--t-surface)', borderRight: '1px solid var(--t-border)' }}>
             <div className="px-3 py-2" style={{ borderBottom: '1px solid var(--t-border)' }}>
@@ -165,8 +164,10 @@ export function AeroLayout({ children }: { children: React.ReactNode }) {
         )}
 
         {/* Main */}
-        <main className="flex-1 overflow-y-auto p-5">
-          {children}
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="max-w-[1600px] mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>

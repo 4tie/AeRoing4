@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAeroStore } from '@/lib/aeroStore';
 import { uploadStrategy } from '@/lib/api';
-import { UploadCloud, FileCode, Loader2 } from 'lucide-react';
+import { UploadCloud, FileCode } from 'lucide-react';
 
 const API_BASE_URL = '';
 
@@ -19,7 +19,6 @@ const Panel = ({ label, children, className = '' }: { label: string; children: R
 export function TabFix() {
   const { selectedStrategyName } = useAeroStore();
   const [code, setCode] = useState('');
-  const [codeLoading, setCodeLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadedName, setUploadedName] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -27,15 +26,13 @@ export function TabFix() {
   // Load strategy source from backend when strategy changes
   useEffect(() => {
     if (!selectedStrategyName) return;
-    setCodeLoading(true);
     fetch(`${API_BASE_URL}/api/strategies/content?filename=${encodeURIComponent(selectedStrategyName)}.py`)
       .then((r) => r.ok ? r.json() : null)
       .then((data: Record<string, unknown> | null) => {
         const src = String(data?.content ?? data?.file_content ?? '');
         setCode(src || `# Could not load ${selectedStrategyName}.py from backend`);
       })
-      .catch(() => setCode(`# Could not load ${selectedStrategyName}.py`))
-      .finally(() => setCodeLoading(false));
+      .catch(() => setCode(`# Could not load ${selectedStrategyName}.py`));
   }, [selectedStrategyName]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

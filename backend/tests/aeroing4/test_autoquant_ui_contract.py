@@ -7,6 +7,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 STRATEGY_VIEW = REPO_ROOT / "frontend" / "components" / "aero" / "StrategyLibraryView.tsx"
 AUTOQUANT_TAB = REPO_ROOT / "frontend" / "components" / "aero" / "TabAutoQuant.tsx"
+STRATEGIES_TAB = REPO_ROOT / "frontend" / "components" / "aero" / "TabStrategies.tsx"
 API_CLIENT = REPO_ROOT / "frontend" / "lib" / "api.ts"
 
 EMPTY_FLOW_RESPONSE_FIXTURE = {
@@ -420,11 +421,21 @@ def test_populated_fixture_does_not_trigger_real_research_or_late_stage_work():
 
 
 def test_autoquant_tab_includes_strategy_library_view():
+    # After UI/UX reset, Strategy Library is now in its own tab (TabStrategies.tsx)
+    # This test verifies the new structure
     tab_source = AUTOQUANT_TAB.read_text(encoding="utf-8")
+    strategies_tab_source = STRATEGIES_TAB.read_text(encoding="utf-8")
     api_source = API_CLIENT.read_text(encoding="utf-8")
 
-    assert "StrategyLibraryView" in tab_source
-    assert "@/components/aero/StrategyLibraryView" in tab_source
-    assert "<StrategyLibraryView />" in tab_source
+    # AutoQuant tab should NOT contain StrategyLibraryView anymore
+    assert "StrategyLibraryView" not in tab_source
+    assert "<StrategyLibraryView />" not in tab_source
+
+    # Strategy Library tab should contain StrategyLibraryView
+    assert "StrategyLibraryView" in strategies_tab_source
+    assert "@/components/aero/StrategyLibraryView" in strategies_tab_source
+    assert "<StrategyLibraryTable" in strategies_tab_source
+
+    # API should still have the endpoints
     assert "getStrategyLibraryScan" in api_source
     assert "getLatestAutoQuantFlow" in api_source

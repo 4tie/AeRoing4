@@ -64,7 +64,6 @@ function GaugeDial({ score }: { score: number }) {
   const R = 70;
   const CX = 90, CY = 90;
   const START_DEG = 210; // arc starts at lower-left
-  const END_DEG = -30;   // arc ends at lower-right → 240° sweep
   const SWEEP = 240;
 
   // Convert degrees to radians, origin top = 0 going clockwise
@@ -89,7 +88,6 @@ function GaugeDial({ score }: { score: number }) {
 
   // Needle angle: START_DEG + filledSweep
   const needleDeg = START_DEG + filledSweep;
-  const needleLen = R - 10;
   const needleTip = arcPoint(needleDeg);
   // Needle base is slightly offset from center
   const needleBase1 = {

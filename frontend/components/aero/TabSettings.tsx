@@ -60,7 +60,6 @@ export function TabSettings() {
   const [settings, setSettings] = useState<BackendSettings | null>(null);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
   const [retrying, setRetrying] = useState(false);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -81,7 +80,6 @@ export function TabSettings() {
       setBackendSettings(s);
       setBackendSettingsDirty(false);
       store.setDefaultStrategyPath(s.strategies_directory_path);
-      setRetryCount(0);
       setRetrying(false);
       settingsLoadedRef.current = true;
     }
@@ -98,7 +96,6 @@ export function TabSettings() {
     if (!s) {
       if (attempt < RETRY_DELAYS.length) {
         const delay = RETRY_DELAYS[attempt];
-        setRetryCount(attempt + 1);
         setRetrying(true);
         setError(
           `Backend unreachable. Retrying in ${delay / 1000}s… (attempt ${attempt + 1}/${RETRY_DELAYS.length})`
@@ -106,7 +103,6 @@ export function TabSettings() {
         retryTimer.current = setTimeout(() => load(attempt + 1), delay);
       } else {
         setRetrying(false);
-        setRetryCount(0);
         setError('Could not reach backend after 3 attempts. Is the API server running?');
       }
     }
@@ -162,7 +158,7 @@ export function TabSettings() {
     return (
       <div className="space-y-4 max-w-2xl">
         <div className="mb-4">
-          <span className="t-label block mb-1">TAB 06 · SETTINGS</span>
+          <span className="t-label block mb-1">TAB 05 · SETTINGS</span>
           <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--t-text)', letterSpacing: '-0.02em' }}>Settings</h1>
           <span className="text-xs font-mono" style={{ color: 'var(--t-muted)' }}>Configure backend &amp; AI services</span>
         </div>
