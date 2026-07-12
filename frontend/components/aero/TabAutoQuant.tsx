@@ -36,7 +36,9 @@ export function TabAutoQuant() {
     getStrategyLibraryScan().then(scan => {
       const strat = scan?.strategies.find(s => s.strategy_name === aering4StrategyName);
       setSelectedStrategy(strat ?? null);
-    }).catch(() => {});
+    }).catch(() => {
+      // Silently fail - strategy details are optional
+    });
   }, [aering4StrategyName]);
 
   const togglePair = (p: string) => setPairs(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);

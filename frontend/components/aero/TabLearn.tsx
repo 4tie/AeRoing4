@@ -21,20 +21,29 @@ export function TabLearn() {
   const [metrics, setMetrics] = useState<RiskMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   // Track the last run ID we refreshed metrics for to avoid duplicate fetches
   const lastRefreshedRun = useRef<string | null>(null);
 
   const fetchData = async (stratName: string, silent = false) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
-    const [d, m] = await Promise.all([
-      getStrategyDetail(stratName),
-      getRiskMetrics(stratName),
-    ]);
-    setDetail(d);
-    setMetrics(m);
-    setLoading(false);
-    setRefreshing(false);
+    setError(null);
+    try {
+      const [d, m] = await Promise.all([
+        getStrategyDetail(stratName),
+        getRiskMetrics(stratName),
+      ]);
+      setDetail(d);
+      setMetrics(m);
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : 'Failed to load strategy data');
+      setDetail(null);
+      setMetrics(null);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
   // Load when strategy changes
@@ -58,10 +67,23 @@ export function TabLearn() {
   /** Whether we have zero real metrics (no run data yet) */
   const hasNoRunData = metrics && metrics.winRate === 0 && metrics.sharpe === 0;
 
-  if (loading || !detail || !metrics) return (
+  if (loading) return (
     <div className="flex items-center gap-3 p-6" style={{ color: 'var(--t-muted)' }}>
       <span className="font-mono text-sm">analyzing strategy</span>
       <span className="cursor-blink font-mono" style={{ color: 'var(--t-cyan)' }}>█</span>
+    </div>
+  );
+
+  if (error) return (
+    <div className="flex items-center gap-3 p-6" style={{ color: 'var(--t-red)' }}>
+      <AlertTriangle size={16} />
+      <span className="font-mono text-sm">{error}</span>
+    </div>
+  );
+
+  if (!detail || !metrics) return (
+    <div className="flex items-center gap-3 p-6" style={{ color: 'var(--t-muted)' }}>
+      <span className="font-mono text-sm">No strategy selected</span>
     </div>
   );
 
