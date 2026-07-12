@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
   },
   serverExternalPackages: [],
   allowedDevOrigins: [
-    "**.*.*",
+    '**.*.*',
   ],
   // Proxy /api/* and /health to the FastAPI backend so the browser
   // never needs to reach port 8000 directly (works behind Replit's proxy).

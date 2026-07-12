@@ -406,6 +406,30 @@ class ExperimentStore:
             self._save_locked(run_id, updated)
             return target
 
+    def record_artifacts(
+        self,
+        run_id: str,
+        experiment_id: str,
+        artifacts: dict[str, str | None],
+    ) -> ExperimentRecord:
+        """Merge auditable artifact paths into an experiment record."""
+        lock = get_lock_for_path(self._experiment_file(run_id))
+        with lock:
+            records = self._load_locked(run_id)
+            target = self._find_by_id_in(records, experiment_id)
+            if target is None:
+                raise KeyError(f"Experiment '{experiment_id}' not found in run '{run_id}'")
+            cleaned = {
+                str(key): str(value)
+                for key, value in artifacts.items()
+                if value is not None
+            }
+            target.artifacts = {**target.artifacts, **cleaned}
+            target.updated_at = datetime.now(UTC)
+            updated = [target if e.experiment_id == experiment_id else e for e in records]
+            self._save_locked(run_id, updated)
+            return target
+
     def record_access_ledger_entry(
         self, run_id: str, experiment_id: str, access_ledger_entry_id: str,
         concrete_timerange: Optional[str] = None,

@@ -1,8 +1,8 @@
-"use client";
-import { create } from "zustand";
-import type { Strategy, StrategyDetail, PipelineRun, StageStatus, AeRoing4RunState, WorkflowStep, BackendSettings } from "./api";
+'use client';
+import { create } from 'zustand';
+import type { Strategy, StrategyDetail, PipelineRun, StageStatus, AeRoing4RunState, WorkflowStep, BackendSettings } from './api';
 
-export type MainTab = "read" | "learn" | "fix" | "test" | "autoquant" | "settings";
+export type MainTab = 'read' | 'learn' | 'fix' | 'test' | 'autoquant' | 'settings';
 
 interface AeroState {
   // Navigation
@@ -69,17 +69,17 @@ interface AeroState {
 }
 
 export const useAeroStore = create<AeroState>((set) => ({
-  activeTab: "read",
+  activeTab: 'read',
   setActiveTab: (tab) => set({ activeTab: tab }),
 
   darkMode: true,
   toggleDarkMode: () => set((s) => ({ darkMode: !s.darkMode })),
 
-  apiBaseUrl: "http://127.0.0.1:8000",
+  apiBaseUrl: 'http://127.0.0.1:8000',
   setApiBaseUrl: (url) => set({ apiBaseUrl: url }),
   backendConnected: false,
   setBackendConnected: (v) => set({ backendConnected: v }),
-  backendStatus: "CHECKING",
+  backendStatus: 'CHECKING',
   setBackendStatus: (v) => set({ backendStatus: v }),
   backendSettings: null,
   setBackendSettings: (s) => set({ backendSettings: s }),
@@ -88,18 +88,18 @@ export const useAeroStore = create<AeroState>((set) => ({
   backendSettingsDirty: false,
   setBackendSettingsDirty: (v) => set({ backendSettingsDirty: v }),
 
-  defaultStrategyPath: "/freqtrade/user_data/strategies",
+  defaultStrategyPath: '/freqtrade/user_data/strategies',
   setDefaultStrategyPath: (path) => set({ defaultStrategyPath: path }),
   hyperoptEpochs: 100,
   setHyperoptEpochs: (n) => set({ hyperoptEpochs: n }),
-  defaultTimerange: "20230101-20240101",
+  defaultTimerange: '20230101-20240101',
   setDefaultTimerange: (t) => set({ defaultTimerange: t }),
 
   strategies: [],
   setStrategies: (strategies) => set({ strategies }),
   selectedStrategy: null,
   setSelectedStrategy: (selectedStrategy) => set({ selectedStrategy }),
-  selectedStrategyName: "",
+  selectedStrategyName: '',
   setSelectedStrategyName: (selectedStrategyName) => set({ selectedStrategyName }),
 
   aering4Run: null,
@@ -118,9 +118,9 @@ export const useAeroStore = create<AeroState>((set) => ({
   setAering4Running: (aering4Running) => set({ aering4Running }),
   discoveryPairs: [],
   setDiscoveryPairs: (discoveryPairs) => set({ discoveryPairs }),
-  discoveryTimerange: "20230101-20231231",
+  discoveryTimerange: '20230101-20231231',
   setDiscoveryTimerange: (discoveryTimerange) => set({ discoveryTimerange }),
-  aering4StrategyName: "",
+  aering4StrategyName: '',
   setAering4StrategyName: (aering4StrategyName) => set({ aering4StrategyName }),
 
   pipelineRun: null,
@@ -151,6 +151,6 @@ export const useAeroStore = create<AeroState>((set) => ({
     }),
   pipelineRunning: false,
   setPipelineRunning: (pipelineRunning) => set({ pipelineRunning }),
-  selectedPairs: ["BTC/USDT", "ETH/USDT", "SOL/USDT"],
+  selectedPairs: ['BTC/USDT', 'ETH/USDT', 'SOL/USDT'],
   setSelectedPairs: (selectedPairs) => set({ selectedPairs }),
 }));

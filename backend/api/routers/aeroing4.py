@@ -16,6 +16,11 @@ from pydantic import BaseModel
 from ...core.errors import BackendError
 from ...services.aeroing4 import AeRoing4Run
 from ...services.aeroing4.orchestrator import AeRoing4Orchestrator
+from ...services.aeroing4.strategy_library import (
+    build_candidate_flow_for_run,
+    build_latest_candidate_flow,
+    scan_strategy_library,
+)
 from ..dependencies import get_services
 
 router = APIRouter(prefix="/api/aeroing4", tags=["AeRoing4"])
@@ -305,6 +310,60 @@ async def list_runs(
     orchestrator = services.aeroing4_orchestrator
     runs = orchestrator.list_runs()
     return [_run_to_response(run, services) for run in runs]
+
+
+@router.get(
+    "/strategy-library",
+    summary="Scan official strategy source-of-truth files",
+    description=(
+        "Returns structured strategy source-of-truth metadata from the official "
+        "user_data/strategies directory. Parsing and validation stay on the backend."
+    ),
+)
+async def get_strategy_library(services=Depends(get_services)) -> dict:
+    """Return strategy file/class/json/parameter visibility for the UI."""
+    scan = scan_strategy_library(services.paths.strategies_dir)
+    return scan.model_dump(mode="json")
+
+
+@router.get(
+    "/candidate-flow/latest",
+    summary="Get the latest AutoQuant candidate source-of-truth flow",
+    description=(
+        "Returns the newest candidate artifact/execution flow found under "
+        "user_data/aeroing4/runs. This endpoint is read-only."
+    ),
+)
+async def get_latest_candidate_flow(services=Depends(get_services)) -> dict:
+    """Return latest candidate flow metadata, if any exists."""
+    response = build_latest_candidate_flow(
+        runs_root=services.aeroing4_orchestrator.state_store.runs_root,
+        run_repository=services.run_repository,
+        strategies_dir=services.paths.strategies_dir,
+    )
+    return response.model_dump(mode="json")
+
+
+@router.get(
+    "/runs/{run_id}/candidate-flow",
+    summary="Get AutoQuant candidate source-of-truth flow for a run",
+    description=(
+        "Returns candidate source paths, copied artifacts, Freqtrade command, "
+        "output artifacts, metrics, decision, and step-level UI details."
+    ),
+)
+async def get_run_candidate_flow(
+    run_id: str,
+    services=Depends(get_services),
+) -> dict:
+    """Return candidate flow metadata for one AeRoing4 run."""
+    response = build_candidate_flow_for_run(
+        run_id=run_id,
+        runs_root=services.aeroing4_orchestrator.state_store.runs_root,
+        run_repository=services.run_repository,
+        strategies_dir=services.paths.strategies_dir,
+    )
+    return response.model_dump(mode="json")
 
 
 @router.post(

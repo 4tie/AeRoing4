@@ -10,7 +10,7 @@
 
 // Empty string = same-origin: Next.js rewrites /api/* → backend (port 8000).
 // This works in both the browser and Replit's proxy without hardcoding ports.
-export const API_BASE_URL = "";
+export const API_BASE_URL = '';
 
 // ── Shared types ──────────────────────────────────────────────────────────────
 
@@ -25,7 +25,7 @@ export interface Strategy {
 export interface Trade {
   timestamp: string;
   pair: string;
-  side: "long" | "short";
+  side: 'long' | 'short';
   profit: number;
   duration: string;
 }
@@ -53,7 +53,7 @@ export interface BacktestResult {
 export interface PipelineRun {
   id: string;
   createdAt: string;
-  status: "pending" | "running" | "done" | "error";
+  status: 'pending' | 'running' | 'done' | 'error';
   currentStage: number;
   stages: StageStatus[];
 }
@@ -61,7 +61,7 @@ export interface PipelineRun {
 export interface StageStatus {
   id: number;
   name: string;
-  status: "pending" | "running" | "done" | "error";
+  status: 'pending' | 'running' | 'done' | 'error';
   progress: number;
   logs: string[];
 }
@@ -69,11 +69,11 @@ export interface StageStatus {
 // ── AeRoing4 types ────────────────────────────────────────────────────────────
 
 export type PairStatus =
-  | "VALID_CANDIDATE"
-  | "ZERO_TRADES"
-  | "INSUFFICIENT_TRADES"
-  | "DATA_UNAVAILABLE"
-  | "EXECUTION_FAILURE";
+  | 'VALID_CANDIDATE'
+  | 'ZERO_TRADES'
+  | 'INSUFFICIENT_TRADES'
+  | 'DATA_UNAVAILABLE'
+  | 'EXECUTION_FAILURE';
 
 export interface DiscoveryPairResult {
   pair: string;
@@ -111,7 +111,7 @@ export interface PairDiscoveryResult {
   ranked_pairs: DiscoveryPairResult[];
 }
 
-export type WorkflowStepStatus = "pending" | "running" | "done" | "error" | "skipped";
+export type WorkflowStepStatus = 'pending' | 'running' | 'done' | 'error' | 'skipped';
 
 export interface WorkflowStep {
   id: string;
@@ -122,9 +122,9 @@ export interface WorkflowStep {
 }
 
 export type SmokeOutcome =
-  | "PASS_ACTIVITY"
-  | "NO_SIGNAL_ACTIVITY"
-  | "EXECUTION_FAILURE"
+  | 'PASS_ACTIVITY'
+  | 'NO_SIGNAL_ACTIVITY'
+  | 'EXECUTION_FAILURE'
   | null;
 
 export interface AeRoing4RunState {
@@ -136,8 +136,8 @@ export interface AeRoing4RunState {
   discovery_timerange: string;
   smoke_timerange: string;
   enable_pair_discovery: boolean;
-  status: "pending" | "running" | "done" | "error";
-  outcome: "IN_PROGRESS" | "SUCCESS" | "NO_PAIR_CANDIDATES" | "EXECUTION_FAILURE" | null;
+  status: 'pending' | 'running' | 'done' | 'error';
+  outcome: 'IN_PROGRESS' | 'SUCCESS' | 'NO_PAIR_CANDIDATES' | 'EXECUTION_FAILURE' | null;
   smoke_outcome: SmokeOutcome;
   steps: WorkflowStep[];
   discovery_result: PairDiscoveryResult | null;
@@ -150,40 +150,123 @@ export interface AeRoing4RunRequest {
   enable_pair_discovery?: boolean;
 }
 
+export interface StrategyLibraryWarning {
+  code: string;
+  message: string;
+  severity: string;
+}
+
+export interface StrategyLibraryParameter {
+  name: string;
+  source: string;
+  parameter_type?: string | null;
+  space?: string | null;
+  default?: unknown;
+  current?: unknown;
+  min_value?: unknown;
+  max_value?: unknown;
+  choices?: unknown[] | null;
+  optimizable?: boolean | null;
+  runtime_path?: string | null;
+  runtime_executable: boolean;
+}
+
+export interface StrategyLibraryItem {
+  strategy_name: string;
+  py_exists: boolean;
+  json_exists: boolean;
+  python_path?: string | null;
+  json_path?: string | null;
+  class_name?: string | null;
+  json_strategy_name?: string | null;
+  timeframe?: string | null;
+  python_parameters: StrategyLibraryParameter[];
+  json_runtime_params: StrategyLibraryParameter[];
+  python_only_params: string[];
+  json_only_params: string[];
+  warnings: StrategyLibraryWarning[];
+}
+
+export interface StrategyLibraryScan {
+  strategies_dir: string;
+  strategies: StrategyLibraryItem[];
+}
+
+export interface AutoQuantFlowStep {
+  name: string;
+  status: 'pending' | 'done' | 'error' | 'warning' | string;
+  paths: Record<string, string | null>;
+  message: string;
+  technical_details: Record<string, unknown>;
+}
+
+export type AutoQuantDecision = 'KEEP' | 'DROP' | 'INCONCLUSIVE' | 'REJECTED';
+
+export interface AutoQuantCandidateFlow {
+  run_id: string;
+  experiment_id?: string | null;
+  candidate_id?: string | null;
+  strategy_name?: string | null;
+  official_source_strategy_path?: string | null;
+  official_source_json_path?: string | null;
+  candidate_directory?: string | null;
+  copied_candidate_py?: string | null;
+  copied_candidate_json?: string | null;
+  official_files_unchanged?: boolean | null;
+  freqtrade_command?: string | null;
+  strategy_path_argument?: string | null;
+  strategy_path_points_to_candidate_dir: boolean;
+  strategy_path_points_to_run_dir: boolean;
+  strategy_path_points_to_candidate_or_run_dir: boolean;
+  output_zip_path?: string | null;
+  output_zip_contains_py?: boolean | null;
+  output_zip_contains_json?: boolean | null;
+  parsed_metrics: Record<string, unknown>;
+  decision: AutoQuantDecision;
+  reason_codes: string[];
+  steps: AutoQuantFlowStep[];
+}
+
+export interface AutoQuantFlowResponse {
+  run_id?: string | null;
+  candidate?: AutoQuantCandidateFlow | null;
+  message: string;
+}
+
 // ── Default discovery universe ────────────────────────────────────────────────
 
 export const DEFAULT_DISCOVERY_UNIVERSE: string[] = [
-  "BTC/USDT", "ETH/USDT", "BNB/USDT", "SOL/USDT", "ADA/USDT",
-  "AVAX/USDT", "DOT/USDT", "MATIC/USDT", "LINK/USDT", "UNI/USDT",
-  "ATOM/USDT", "LTC/USDT", "XRP/USDT", "DOGE/USDT", "NEAR/USDT",
-  "APE/USDT", "FTM/USDT", "ALGO/USDT", "ICP/USDT", "ETC/USDT",
-  "SAND/USDT", "MANA/USDT", "CRV/USDT", "AAVE/USDT", "SUSHI/USDT",
+  'BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'ADA/USDT',
+  'AVAX/USDT', 'DOT/USDT', 'MATIC/USDT', 'LINK/USDT', 'UNI/USDT',
+  'ATOM/USDT', 'LTC/USDT', 'XRP/USDT', 'DOGE/USDT', 'NEAR/USDT',
+  'APE/USDT', 'FTM/USDT', 'ALGO/USDT', 'ICP/USDT', 'ETC/USDT',
+  'SAND/USDT', 'MANA/USDT', 'CRV/USDT', 'AAVE/USDT', 'SUSHI/USDT',
 ];
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
-function mapBackendStatus(s: string): "pending" | "running" | "done" | "error" {
-  if (s === "completed" || s === "passed") return "done";
-  if (s === "failed" || s === "cancelled") return "error";
-  if (s === "running") return "running";
-  return "pending";
+function mapBackendStatus(s: string): 'pending' | 'running' | 'done' | 'error' {
+  if (s === 'completed' || s === 'passed') return 'done';
+  if (s === 'failed' || s === 'cancelled') return 'error';
+  if (s === 'running') return 'running';
+  return 'pending';
 }
 
 function mapStepStatus(s: string): WorkflowStepStatus {
   // Backend emits lowercase enum values (e.g. "passed", "failed", "running", "skipped")
   const lower = s.toLowerCase();
-  if (lower === "passed" || lower === "completed") return "done";
-  if (lower === "failed" || lower === "cancelled") return "error";
-  if (lower === "running") return "running";
-  if (lower === "skipped") return "skipped";
-  return "pending";
+  if (lower === 'passed' || lower === 'completed') return 'done';
+  if (lower === 'failed' || lower === 'cancelled') return 'error';
+  if (lower === 'running') return 'running';
+  if (lower === 'skipped') return 'skipped';
+  return 'pending';
 }
 
 const STEP_DISPLAY_NAMES: Record<string, string> = {
-  validation: "Strategy Validation",
-  data_preparation: "Smoke Data Prep",
-  smoke_backtest: "Smoke Backtest",
-  pair_discovery: "Pair Discovery",
+  validation: 'Strategy Validation',
+  data_preparation: 'Smoke Data Prep',
+  smoke_backtest: 'Smoke Backtest',
+  pair_discovery: 'Pair Discovery',
 };
 
 /** Convert the backend run shape to the frontend AeRoing4RunState. */
@@ -191,11 +274,11 @@ function mapBackendRun(run: Record<string, unknown>): AeRoing4RunState {
   const rawSteps = (run.steps ?? {}) as Record<string, Record<string, unknown>>;
 
   // Ordered step list (backend fills steps progressively)
-  const STEP_ORDER = ["validation", "data_preparation", "smoke_backtest", "pair_discovery"];
+  const STEP_ORDER = ['validation', 'data_preparation', 'smoke_backtest', 'pair_discovery'];
   const steps: WorkflowStep[] = STEP_ORDER.map((id) => {
     const s = rawSteps[id];
-    if (!s) return { id, name: STEP_DISPLAY_NAMES[id] ?? id, status: "pending", progress: 0, logs: [] };
-    const status = mapStepStatus(String(s.status ?? "PENDING"));
+    if (!s) return { id, name: STEP_DISPLAY_NAMES[id] ?? id, status: 'pending', progress: 0, logs: [] };
+    const status = mapStepStatus(String(s.status ?? 'PENDING'));
     const stepData = (s.data ?? {}) as Record<string, unknown>;
     const logs: string[] = [];
     if (stepData.outcome) logs.push(`[OK] outcome: ${stepData.outcome}`);
@@ -204,7 +287,7 @@ function mapBackendRun(run: Record<string, unknown>): AeRoing4RunState {
       id,
       name: STEP_DISPLAY_NAMES[id] ?? id,
       status,
-      progress: status === "done" ? 100 : status === "running" ? 50 : 0,
+      progress: status === 'done' ? 100 : status === 'running' ? 50 : 0,
       logs,
     };
   });
@@ -214,10 +297,10 @@ function mapBackendRun(run: Record<string, unknown>): AeRoing4RunState {
   const smokeData = (smokeStep?.data ?? {}) as Record<string, unknown>;
   let smokeOutcome: SmokeOutcome = null;
   // Backend emits lowercase enum values (e.g. "pass_activity")
-  const smokeOC = String(smokeData.outcome ?? "").toLowerCase();
-  if (smokeOC === "pass_activity") smokeOutcome = "PASS_ACTIVITY";
-  else if (smokeOC === "no_signal_activity") smokeOutcome = "NO_SIGNAL_ACTIVITY";
-  else if (smokeOC === "execution_failure") smokeOutcome = "EXECUTION_FAILURE";
+  const smokeOC = String(smokeData.outcome ?? '').toLowerCase();
+  if (smokeOC === 'pass_activity') smokeOutcome = 'PASS_ACTIVITY';
+  else if (smokeOC === 'no_signal_activity') smokeOutcome = 'NO_SIGNAL_ACTIVITY';
+  else if (smokeOC === 'execution_failure') smokeOutcome = 'EXECUTION_FAILURE';
 
   // Extract discovery result
   let discoveryResult: PairDiscoveryResult | null = null;
@@ -230,11 +313,11 @@ function mapBackendRun(run: Record<string, unknown>): AeRoing4RunState {
     const mappedPairs: DiscoveryPairResult[] = allEvals.map((e) => {
       const sc = e.score_components as Record<string, number> | undefined;
       return {
-        pair: String(e.pair ?? ""),
+        pair: String(e.pair ?? ''),
         rank: e.rank != null ? Number(e.rank) : null,
         rank_score: e.rank_score != null ? Number(e.rank_score) : null,
         // Backend emits lowercase; map to uppercase for UI STATUS_CFG keys
-        status: String(e.status ?? "data_unavailable").toUpperCase() as PairStatus,
+        status: String(e.status ?? 'data_unavailable').toUpperCase() as PairStatus,
         rejection_reasons: (e.rejection_reasons as string[]) ?? [],
         total_trades: e.total_trades != null ? Number(e.total_trades) : null,
         net_profit: e.net_profit_pct != null ? Number(e.net_profit_pct) * 10 : null,
@@ -244,7 +327,7 @@ function mapBackendRun(run: Record<string, unknown>): AeRoing4RunState {
         max_drawdown: e.max_drawdown_pct != null ? Number(e.max_drawdown_pct) : null,
         win_rate: e.win_rate != null ? Number(e.win_rate) : null,
         average_trade_duration: null,
-        backtest_run_id: String(e.explorer_session_id ?? ""),
+        backtest_run_id: String(e.explorer_session_id ?? ''),
         score_inputs: sc
           ? {
               profit_factor_score: sc.pf_score ?? null,
@@ -257,41 +340,41 @@ function mapBackendRun(run: Record<string, unknown>): AeRoing4RunState {
       };
     });
 
-    const validCount = (_mapped: DiscoveryPairResult[]) => mappedPairs.filter(p => p.status === "VALID_CANDIDATE").length;
+    const validCount = (_mapped: DiscoveryPairResult[]) => mappedPairs.filter(p => p.status === 'VALID_CANDIDATE').length;
     discoveryResult = {
       universe_size: Number(rawDr.universe_size ?? 0),
       usable_pairs: Number(rawDr.usable_pairs_count ?? rawDr.usable_pairs ?? 0),
       evaluated_pairs: Number(rawDr.evaluated_pairs_count ?? rawDr.evaluated_pairs ?? 0),
       valid_candidates: Number(rawDr.valid_candidates_count ?? rawDr.valid_candidates ?? validCount(mappedPairs)),
       rejected_pairs: Number(rawDr.rejected_pairs_count ?? rawDr.rejected_pairs ?? 0),
-      discovery_timerange: String(rawDr.discovery_timerange ?? rawDr.timerange ?? ""),
+      discovery_timerange: String(rawDr.discovery_timerange ?? rawDr.timerange ?? ''),
       discovery_pairs: (rawDr.discovery_pairs_requested ?? rawDr.discovery_pairs ?? []) as string[],
-      ranking_policy_version: String(rawDr.ranking_policy_version ?? ""),
+      ranking_policy_version: String(rawDr.ranking_policy_version ?? ''),
       ranked_pairs: mappedPairs,
     };
   }
 
   // Determine frontend outcome
-  let outcome: AeRoing4RunState["outcome"] = null;
-  const backendStatus = String(run.status ?? "");
-  if (backendStatus === "running" || backendStatus === "pending") {
-    outcome = "IN_PROGRESS";
-  } else if (backendStatus === "completed") {
-    if (discData.outcome === "valid_candidates_found") outcome = "SUCCESS";
-    else if (discData.outcome === "no_pair_candidates") outcome = "NO_PAIR_CANDIDATES";
-    else outcome = "SUCCESS";
-  } else if (backendStatus === "failed") {
-    outcome = "EXECUTION_FAILURE";
+  let outcome: AeRoing4RunState['outcome'] = null;
+  const backendStatus = String(run.status ?? '');
+  if (backendStatus === 'running' || backendStatus === 'pending') {
+    outcome = 'IN_PROGRESS';
+  } else if (backendStatus === 'completed') {
+    if (discData.outcome === 'valid_candidates_found') outcome = 'SUCCESS';
+    else if (discData.outcome === 'no_pair_candidates') outcome = 'NO_PAIR_CANDIDATES';
+    else outcome = 'SUCCESS';
+  } else if (backendStatus === 'failed') {
+    outcome = 'EXECUTION_FAILURE';
   }
 
   return {
-    id: String(run.run_id ?? ""),
+    id: String(run.run_id ?? ''),
     created_at: String(run.created_at ?? new Date().toISOString()),
-    strategy_name: String(run.strategy_name ?? ""),
-    strategy_timeframe: String(run.timeframe ?? "5m"),
+    strategy_name: String(run.strategy_name ?? ''),
+    strategy_timeframe: String(run.timeframe ?? '5m'),
     discovery_pairs: (run.discovery_pairs as string[]) ?? [],
-    discovery_timerange: String(run.discovery_timerange ?? ""),
-    smoke_timerange: String(run.smoke_timerange ?? ""),
+    discovery_timerange: String(run.discovery_timerange ?? ''),
+    smoke_timerange: String(run.smoke_timerange ?? ''),
     enable_pair_discovery: Boolean(run.enable_pair_discovery ?? false),
     status: mapBackendStatus(backendStatus),
     outcome,
@@ -321,16 +404,16 @@ export async function getStrategies(): Promise<Strategy[]> {
     // Build a lookup: normalised stem → timeframe from registry
     const timeframeLookup: Record<string, string> = {};
     for (const m of metaData.strategies ?? []) {
-      const key = String(m.strategy_name ?? m.name ?? "").toLowerCase().replace(/[_-]/g, "");
-      timeframeLookup[key] = String(m.timeframe ?? "5m");
+      const key = String(m.strategy_name ?? m.name ?? '').toLowerCase().replace(/[_-]/g, '');
+      timeframeLookup[key] = String(m.timeframe ?? '5m');
     }
 
     return (filesData.strategies ?? []).map((f) => {
-      const stem = String(f.name ?? "");
-      const key = stem.toLowerCase().replace(/[_-]/g, "");
+      const stem = String(f.name ?? '');
+      const key = stem.toLowerCase().replace(/[_-]/g, '');
       return {
         name: stem,
-        timeframe: timeframeLookup[key] ?? "5m",
+        timeframe: timeframeLookup[key] ?? '5m',
         stoploss: -0.10,
         roi: [],
         indicators: [],
@@ -343,7 +426,7 @@ export async function getStrategies(): Promise<Strategy[]> {
 
 /** Get strategy detail — fetches file content + raw Python to parse params. */
 export async function getStrategyDetail(name: string): Promise<StrategyDetail> {
-  if (!name) return { name: "", timeframe: "5m", stoploss: -0.10, roi: [], indicators: [], trades: [], equity: [] };
+  if (!name) return { name: '', timeframe: '5m', stoploss: -0.10, roi: [], indicators: [], trades: [], equity: [] };
   try {
     const [filesRes, contentRes] = await Promise.all([
       fetch(`${API_BASE_URL}/api/strategies/files/${encodeURIComponent(name)}`),
@@ -352,15 +435,15 @@ export async function getStrategyDetail(name: string): Promise<StrategyDetail> {
 
     // Parse JSON params (ROI, stoploss)
     let stoploss = -0.10;
-    let roi: Strategy["roi"] = [];
-    let timeframe = "5m";
+    let roi: Strategy['roi'] = [];
+    let timeframe = '5m';
     let indicators: string[] = [];
 
     if (filesRes.ok) {
       const data = await filesRes.json() as Record<string, unknown>;
       // Extract from embedded JSON params file
       try {
-        const jsonContent = typeof data.json_content === "string"
+        const jsonContent = typeof data.json_content === 'string'
           ? JSON.parse(data.json_content) as Record<string, unknown>
           : null;
         if (jsonContent) {
@@ -381,7 +464,7 @@ export async function getStrategyDetail(name: string): Promise<StrategyDetail> {
     // Extract from Python source
     if (contentRes.ok) {
       const contentData = await contentRes.json() as Record<string, unknown>;
-      const src = String(contentData.content ?? contentData.file_content ?? "");
+      const src = String(contentData.content ?? contentData.file_content ?? '');
       // Extract timeframe
       const tfMatch = src.match(/timeframe\s*=\s*['"]([^'"]+)['"]/);
       if (tfMatch) timeframe = tfMatch[1];
@@ -397,7 +480,7 @@ export async function getStrategyDetail(name: string): Promise<StrategyDetail> {
       const pta = /\.([a-z][a-z0-9_]+)\s*\(/g;
       while ((m = pta.exec(src)) !== null) {
         const fn = m[1].toUpperCase();
-        if (["EMA","SMA","RSI","MACD","BB","ATR","ADX","STOCH","BBANDS","MFI","ROC","CCI","OBV","SAR"].includes(fn))
+        if (['EMA','SMA','RSI','MACD','BB','ATR','ADX','STOCH','BBANDS','MFI','ROC','CCI','OBV','SAR'].includes(fn))
           seen.add(fn);
       }
       indicators = Array.from(seen);
@@ -405,17 +488,17 @@ export async function getStrategyDetail(name: string): Promise<StrategyDetail> {
 
     return { name, timeframe, stoploss, roi, indicators, trades: [], equity: [] };
   } catch { /* fall through */ }
-  return { name, timeframe: "5m", stoploss: -0.10, roi: [], indicators: [], trades: [], equity: [] };
+  return { name, timeframe: '5m', stoploss: -0.10, roi: [], indicators: [], trades: [], equity: [] };
 }
 
 /** Upload a strategy file to the backend. */
 export async function uploadStrategy(file: File): Promise<{ ok: boolean; name: string }> {
-  const name = file.name.replace(/\.py$/, "");
+  const name = file.name.replace(/\.py$/, '');
   try {
     const content = await file.text();
     const res = await fetch(`${API_BASE_URL}/api/strategies/save`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ filename: file.name, content }),
     });
     return { ok: res.ok, name };
@@ -432,7 +515,7 @@ export async function getRiskMetrics(strategyName: string): Promise<RiskMetrics>
     if (runsRes.ok) {
       const runsData = await runsRes.json() as { runs?: Array<Record<string, unknown>> };
       const match = (runsData.runs ?? []).find(
-        (r) => String(r.strategy_name ?? "").toLowerCase() === strategyName.toLowerCase()
+        (r) => String(r.strategy_name ?? '').toLowerCase() === strategyName.toLowerCase()
       );
       if (match) {
         // Pull from smoke/discovery step data if available
@@ -442,7 +525,7 @@ export async function getRiskMetrics(strategyName: string): Promise<RiskMetrics>
         const dr = discData.discovery_result as Record<string, unknown> | undefined;
         if (dr) {
           const ranked = (dr.ranked_pairs ?? dr.all_evaluations ?? []) as Array<Record<string, unknown>>;
-          const valid = ranked.filter((p) => String(p.status ?? "").toLowerCase() === "valid_candidate");
+          const valid = ranked.filter((p) => String(p.status ?? '').toLowerCase() === 'valid_candidate');
           if (valid.length > 0) {
             // Backend emits win_rate as 0–1 fraction; max_drawdown_pct as 0–1 fraction (negative sign)
             const avgWin = valid.reduce((s, p) => s + Number(p.win_rate ?? 0), 0) / valid.length;
@@ -455,10 +538,10 @@ export async function getRiskMetrics(strategyName: string): Promise<RiskMetrics>
               maxDrawdown: Math.round(avgDD * 100 * 10) / 10,
               sharpe: Math.round((avgPF - 1) * 10) / 10,
               lossBullets: [
-                "Based on pair discovery backtest results",
+                'Based on pair discovery backtest results',
                 valid.length < ranked.length
                   ? `${ranked.length - valid.length} pairs rejected in discovery`
-                  : "All evaluated pairs passed discovery",
+                  : 'All evaluated pairs passed discovery',
               ],
             };
           }
@@ -472,7 +555,7 @@ export async function getRiskMetrics(strategyName: string): Promise<RiskMetrics>
     const filesRes = await fetch(`${API_BASE_URL}/api/strategies/files/${encodeURIComponent(strategyName)}`);
     if (filesRes.ok) {
       const data = await filesRes.json() as Record<string, unknown>;
-      const jsonContent = typeof data.json_content === "string"
+      const jsonContent = typeof data.json_content === 'string'
         ? JSON.parse(data.json_content) as Record<string, unknown>
         : null;
       const params = (jsonContent?.params ?? {}) as Record<string, unknown>;
@@ -483,14 +566,14 @@ export async function getRiskMetrics(strategyName: string): Promise<RiskMetrics>
         maxDrawdown: sl,
         sharpe: 0,
         lossBullets: [
-          "No backtest results available yet — run AeRoing4 to see live metrics",
+          'No backtest results available yet — run AeRoing4 to see live metrics',
           `Stoploss configured at -${sl.toFixed(1)}%`,
         ],
       };
     }
   } catch { /* ignore */ }
 
-  return { maxDrawdown: 0, winRate: 0, sharpe: 0, lossBullets: ["Run AeRoing4 to generate metrics for this strategy"] };
+  return { maxDrawdown: 0, winRate: 0, sharpe: 0, lossBullets: ['Run AeRoing4 to generate metrics for this strategy'] };
 }
 
 /** Run a backtest — starts run then polls for completion. */
@@ -502,8 +585,8 @@ export async function runBacktest(config: {
   try {
     // Start the run
     const startRes = await fetch(`${API_BASE_URL}/api/backtest/run`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         pairs: config.pairs,
         timerange: config.timerange,
@@ -512,7 +595,7 @@ export async function runBacktest(config: {
     });
     if (!startRes.ok) throw new Error(`Start failed: ${startRes.status}`);
     const startData = await startRes.json() as Record<string, unknown>;
-    const sessionId = String(startData.session_id ?? startData.run_id ?? "");
+    const sessionId = String(startData.session_id ?? startData.run_id ?? '');
 
     // Poll for completion (max 5 minutes)
     if (sessionId) {
@@ -521,7 +604,7 @@ export async function runBacktest(config: {
         const statusRes = await fetch(`${API_BASE_URL}/api/session/status/${sessionId}`);
         if (!statusRes.ok) continue;
         const status = await statusRes.json() as Record<string, unknown>;
-        if (status.status === "completed" && status.run_id) {
+        if (status.status === 'completed' && status.run_id) {
           const resultRes = await fetch(`${API_BASE_URL}/api/backtest/results/${status.run_id}`);
           if (resultRes.ok) {
             const result = await resultRes.json() as Record<string, unknown>;
@@ -535,7 +618,7 @@ export async function runBacktest(config: {
             };
           }
         }
-        if (status.status === "failed") break;
+        if (status.status === 'failed') break;
       }
     }
   } catch { /* fall through */ }
@@ -550,46 +633,46 @@ export async function startPipelineRun(pairs: string[]): Promise<PipelineRun> {
   return {
     id: `run-${Date.now()}`,
     createdAt: new Date().toISOString(),
-    status: "running",
+    status: 'running',
     currentStage: 1,
-    stages: _buildStages("pending"),
+    stages: _buildStages('pending'),
   };
 }
 
 function _buildStages(
-  status: "pending" | "running" | "done" | "error",
+  status: 'pending' | 'running' | 'done' | 'error',
   errorAt?: number,
 ): StageStatus[] {
   const names = [
-    "Data Selection",
-    "Portfolio Baseline",
-    "WFA Hyperopt",
-    "Overfit Detection",
-    "Stress Test",
-    "Risk Assessment",
+    'Data Selection',
+    'Portfolio Baseline',
+    'WFA Hyperopt',
+    'Overfit Detection',
+    'Stress Test',
+    'Risk Assessment',
   ];
   return names.map((name, i) => ({
     id: i + 1,
     name,
     status: errorAt
       ? i + 1 < errorAt
-        ? "done"
+        ? 'done'
         : i + 1 === errorAt
-          ? "error"
-          : "pending"
-      : status === "done"
-        ? "done"
-        : status === "running" && i === 0
-          ? "running"
-          : "pending",
+          ? 'error'
+          : 'pending'
+      : status === 'done'
+        ? 'done'
+        : status === 'running' && i === 0
+          ? 'running'
+          : 'pending',
     progress:
-      errorAt ? (i + 1 < errorAt ? 100 : 0) : status === "done" ? 100 : 0,
+      errorAt ? (i + 1 < errorAt ? 100 : 0) : status === 'done' ? 100 : 0,
     logs:
-      i === 0 && status !== "pending"
+      i === 0 && status !== 'pending'
         ? [
-            "[INFO] Loading OHLCV data...",
-            "[INFO] 1247 candles loaded for BTC/USDT",
-            "[OK] Data validated",
+            '[INFO] Loading OHLCV data...',
+            '[INFO] 1247 candles loaded for BTC/USDT',
+            '[OK] Data validated',
           ]
         : [],
   }));
@@ -606,13 +689,13 @@ export async function startAeRoing4Run(
   },
 ): Promise<AeRoing4RunState & { _runId: string }> {
   const res = await fetch(`${API_BASE_URL}/api/aeroing4/runs`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       strategy_name: req.strategy_name,
-      timeframe: req.timeframe ?? "5m",
-      smoke_timerange: req.smoke_timerange ?? "20240101-20240131",
-      smoke_pairs: req.smoke_pairs ?? ["BTC/USDT", "ETH/USDT", "BNB/USDT"],
+      timeframe: req.timeframe ?? '5m',
+      smoke_timerange: req.smoke_timerange ?? '20240101-20240131',
+      smoke_pairs: req.smoke_pairs ?? ['BTC/USDT', 'ETH/USDT', 'BNB/USDT'],
       enable_pair_discovery: req.enable_pair_discovery ?? true,
       discovery_pairs: req.discovery_pairs ?? null,
       discovery_timerange: req.discovery_timerange ?? null,
@@ -625,26 +708,26 @@ export async function startAeRoing4Run(
   }
 
   const data = await res.json() as Record<string, unknown>;
-  const runId = String(data.run_id ?? "");
+  const runId = String(data.run_id ?? '');
 
   return {
     _runId: runId,
     id: runId,
     created_at: new Date().toISOString(),
     strategy_name: req.strategy_name,
-    strategy_timeframe: req.timeframe ?? "5m",
+    strategy_timeframe: req.timeframe ?? '5m',
     discovery_pairs: req.discovery_pairs ?? DEFAULT_DISCOVERY_UNIVERSE,
-    discovery_timerange: req.discovery_timerange ?? "",
-    smoke_timerange: req.smoke_timerange ?? "20240101-20240131",
+    discovery_timerange: req.discovery_timerange ?? '',
+    smoke_timerange: req.smoke_timerange ?? '20240101-20240131',
     enable_pair_discovery: req.enable_pair_discovery ?? true,
-    status: "running",
-    outcome: "IN_PROGRESS",
+    status: 'running',
+    outcome: 'IN_PROGRESS',
     smoke_outcome: null,
     steps: [
-      { id: "validation",       name: "Strategy Validation", status: "pending", progress: 0, logs: [] },
-      { id: "data_preparation", name: "Smoke Data Prep",      status: "pending", progress: 0, logs: [] },
-      { id: "smoke_backtest",   name: "Smoke Backtest",       status: "pending", progress: 0, logs: [] },
-      { id: "pair_discovery",   name: "Pair Discovery",       status: "pending", progress: 0, logs: [] },
+      { id: 'validation',       name: 'Strategy Validation', status: 'pending', progress: 0, logs: [] },
+      { id: 'data_preparation', name: 'Smoke Data Prep',      status: 'pending', progress: 0, logs: [] },
+      { id: 'smoke_backtest',   name: 'Smoke Backtest',       status: 'pending', progress: 0, logs: [] },
+      { id: 'pair_discovery',   name: 'Pair Discovery',       status: 'pending', progress: 0, logs: [] },
     ],
     discovery_result: null,
   };
@@ -656,6 +739,24 @@ export async function getAeRoing4Run(runId: string): Promise<AeRoing4RunState> {
   if (!res.ok) throw new Error(`Poll failed: ${res.status}`);
   const data = await res.json() as Record<string, unknown>;
   return mapBackendRun(data);
+}
+
+export async function getStrategyLibraryScan(): Promise<StrategyLibraryScan> {
+  const res = await fetch(`${API_BASE_URL}/api/aeroing4/strategy-library`, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`Strategy library scan failed: ${res.status}`);
+  return await res.json() as StrategyLibraryScan;
+}
+
+export async function getLatestAutoQuantFlow(): Promise<AutoQuantFlowResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/aeroing4/candidate-flow/latest`, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`Candidate flow load failed: ${res.status}`);
+  return await res.json() as AutoQuantFlowResponse;
+}
+
+export async function getAutoQuantFlowForRun(runId: string): Promise<AutoQuantFlowResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/aeroing4/runs/${runId}/candidate-flow`, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`Candidate flow load failed: ${res.status}`);
+  return await res.json() as AutoQuantFlowResponse;
 }
 
 // ── Backend Settings API ───────────────────────────────────────────────────────
@@ -730,8 +831,8 @@ export async function saveBackendSettings(
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     const res = await fetch(`${API_BASE_URL}/api/settings`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(settings),
     });
     if (!res.ok) {
@@ -740,18 +841,18 @@ export async function saveBackendSettings(
     }
     return { ok: true };
   } catch (exc) {
-    return { ok: false, error: exc instanceof Error ? exc.message : "Network error" };
+    return { ok: false, error: exc instanceof Error ? exc.message : 'Network error' };
   }
 }
 
 /** Ping the backend health endpoint. */
 export async function checkBackendHealth(): Promise<BackendHealth> {
   try {
-    const res = await fetch(`${API_BASE_URL}/health`, { cache: "no-store" });
+    const res = await fetch(`${API_BASE_URL}/health`, { cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json() as BackendHealth;
-    return { ok: true, services: data.services, message: data.message ?? "ok" };
+    return { ok: true, services: data.services, message: data.message ?? 'ok' };
   } catch (exc) {
-    return { ok: false, message: exc instanceof Error ? exc.message : "offline" };
+    return { ok: false, message: exc instanceof Error ? exc.message : 'offline' };
   }
 }

@@ -1,13 +1,13 @@
-"use client";
-import { useEffect, useRef, useState } from "react";
-import { useAeroStore } from "@/lib/aeroStore";
-import { getBackendSettings, saveBackendSettings, checkBackendHealth, BackendSettings } from "@/lib/api";
-import { Sun, Moon, RotateCcw, Check, AlertCircle, Loader2, Activity, RefreshCw } from "lucide-react";
+'use client';
+import { useEffect, useRef, useState } from 'react';
+import { useAeroStore } from '@/lib/aeroStore';
+import { getBackendSettings, saveBackendSettings, checkBackendHealth, BackendSettings } from '@/lib/api';
+import { Sun, Moon, RotateCcw, Check, AlertCircle, Loader2, Activity, RefreshCw } from 'lucide-react';
 
 const Panel = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <div className="t-card">
-    <div className="px-3 py-1.5 flex items-center gap-2" style={{ borderBottom: "1px solid var(--t-border)" }}>
-      <span className="w-1.5 h-1.5 shrink-0" style={{ background: "var(--t-cyan)" }} />
+    <div className="px-3 py-1.5 flex items-center gap-2" style={{ borderBottom: '1px solid var(--t-border)' }}>
+      <span className="w-1.5 h-1.5 shrink-0" style={{ background: 'var(--t-cyan)' }} />
       <span className="t-label">{label}</span>
     </div>
     <div className="p-4 space-y-4">{children}</div>
@@ -18,35 +18,35 @@ const Field = ({ label, hint, children }: { label: string; hint?: string; childr
   <div>
     <span className="t-label block mb-1.5">{label}</span>
     {children}
-    {hint && <span className="text-[10px] font-mono mt-1 block" style={{ color: "var(--t-muted)" }}>{hint}</span>}
+    {hint && <span className="text-[10px] font-mono mt-1 block" style={{ color: 'var(--t-muted)' }}>{hint}</span>}
   </div>
 );
 
-const TInput = ({ value, onChange, type = "text", placeholder = "" }: { value: string; onChange: (v: string) => void; type?: string; placeholder?: string }) => (
+const TInput = ({ value, onChange, type = 'text', placeholder = '' }: { value: string; onChange: (v: string) => void; type?: string; placeholder?: string }) => (
   <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
     className="w-full px-3 py-2 text-xs font-mono t-focus"
-    style={{ background: "var(--t-bg)", border: "1px solid var(--t-border)", color: "var(--t-text)", outline: "none" }} />
+    style={{ background: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)', outline: 'none' }} />
 );
 
 const TNumber = ({ value, onChange, min, max, step }: { value: number; onChange: (v: number) => void; min?: number; max?: number; step?: number }) => (
   <input type="number" min={min} max={max} step={step} value={value} onChange={e => onChange(Number(e.target.value))}
     className="w-full px-3 py-2 text-xs font-mono t-focus"
-    style={{ background: "var(--t-bg)", border: "1px solid var(--t-border)", color: "var(--t-text)", outline: "none" }} />
+    style={{ background: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)', outline: 'none' }} />
 );
 
 const TSwitch = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
   <button onClick={() => onChange(!checked)}
     className="relative h-5 w-9 transition-all"
-    style={{ border: "1px solid var(--t-border)", background: checked ? "rgba(0,229,255,0.2)" : "var(--t-bg)" }}>
+    style={{ border: '1px solid var(--t-border)', background: checked ? 'rgba(0,229,255,0.2)' : 'var(--t-bg)' }}>
     <span className="absolute top-0.5 h-3.5 w-3.5 transition-all"
-      style={{ left: checked ? "calc(100% - 18px)" : "3px", background: checked ? "var(--t-cyan)" : "var(--t-muted)" }} />
+      style={{ left: checked ? 'calc(100% - 18px)' : '3px', background: checked ? 'var(--t-cyan)' : 'var(--t-muted)' }} />
   </button>
 );
 
 /** Display a YYYYMMDD string as YYYY-MM-DD for readability */
 const fmtDate = (d: string) => d.length === 8 ? `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}` : d;
 /** Convert YYYY-MM-DD back to YYYYMMDD */
-const unfmtDate = (d: string) => d.replace(/-/g, "");
+const unfmtDate = (d: string) => d.replace(/-/g, '');
 
 // Exponential backoff delays (ms)
 const RETRY_DELAYS = [2000, 4000, 8000];
@@ -107,7 +107,7 @@ export function TabSettings() {
       } else {
         setRetrying(false);
         setRetryCount(0);
-        setError("Could not reach backend after 3 attempts. Is the API server running?");
+        setError('Could not reach backend after 3 attempts. Is the API server running?');
       }
     }
   };
@@ -122,7 +122,7 @@ export function TabSettings() {
       setBackendSettings(settings);
       setTimeout(() => setSaved(false), 2000);
     } else {
-      setError(res.error ?? "Save failed");
+      setError(res.error ?? 'Save failed');
     }
   };
 
@@ -135,7 +135,7 @@ export function TabSettings() {
     const wasOffline = prevConnectedRef.current === false;
     prevConnectedRef.current = h.ok;
     setBackendConnected(h.ok);
-    setBackendStatus(h.ok ? "CONNECTED" : "OFFLINE");
+    setBackendStatus(h.ok ? 'CONNECTED' : 'OFFLINE');
     // Trigger settings reload only on true offline→online transition with no loaded settings
     if (h.ok && wasOffline && !settingsLoadedRef.current) {
       load(0);
@@ -163,36 +163,36 @@ export function TabSettings() {
       <div className="space-y-4 max-w-2xl">
         <div className="mb-4">
           <span className="t-label block mb-1">TAB 06 · SETTINGS</span>
-          <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--t-text)", letterSpacing: "-0.02em" }}>Settings</h1>
-          <span className="text-xs font-mono" style={{ color: "var(--t-muted)" }}>Configure backend &amp; AI services</span>
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--t-text)', letterSpacing: '-0.02em' }}>Settings</h1>
+          <span className="text-xs font-mono" style={{ color: 'var(--t-muted)' }}>Configure backend &amp; AI services</span>
         </div>
 
         {retrying || backendSettingsLoading ? (
           <div className="p-5 t-card flex items-center gap-3">
-            <Loader2 size={15} className="animate-spin shrink-0" style={{ color: "var(--t-cyan)" }} />
+            <Loader2 size={15} className="animate-spin shrink-0" style={{ color: 'var(--t-cyan)' }} />
             <div>
-              <span className="text-xs font-mono block" style={{ color: "var(--t-text)" }}>
-                {retrying ? `Connecting to backend…` : "Loading settings…"}
+              <span className="text-xs font-mono block" style={{ color: 'var(--t-text)' }}>
+                {retrying ? 'Connecting to backend…' : 'Loading settings…'}
               </span>
               {error && (
-                <span className="text-[11px] font-mono block mt-0.5" style={{ color: "var(--t-muted)" }}>{error}</span>
+                <span className="text-[11px] font-mono block mt-0.5" style={{ color: 'var(--t-muted)' }}>{error}</span>
               )}
             </div>
           </div>
         ) : error ? (
-          <div className="p-4 t-card" style={{ borderColor: "rgba(255,59,92,0.35)" }}>
+          <div className="p-4 t-card" style={{ borderColor: 'rgba(255,59,92,0.35)' }}>
             <div className="flex items-start gap-3 mb-3">
-              <AlertCircle size={14} style={{ color: "var(--t-red)", flexShrink: 0, marginTop: 2 }} />
+              <AlertCircle size={14} style={{ color: 'var(--t-red)', flexShrink: 0, marginTop: 2 }} />
               <div>
-                <span className="text-xs font-mono block font-bold" style={{ color: "var(--t-red)" }}>BACKEND UNREACHABLE</span>
-                <span className="text-xs font-mono block mt-1" style={{ color: "var(--t-muted)" }}>{error}</span>
+                <span className="text-xs font-mono block font-bold" style={{ color: 'var(--t-red)' }}>BACKEND UNREACHABLE</span>
+                <span className="text-xs font-mono block mt-1" style={{ color: 'var(--t-muted)' }}>{error}</span>
               </div>
             </div>
             <button onClick={() => load(0)}
               className="flex items-center gap-2 px-4 py-2 text-xs font-mono transition-all"
-              style={{ border: "1px solid var(--t-border-hi)", color: "var(--t-cyan)", background: "rgba(0,229,255,0.06)" }}
-              onMouseEnter={e => (e.currentTarget.style.background = "rgba(0,229,255,0.12)")}
-              onMouseLeave={e => (e.currentTarget.style.background = "rgba(0,229,255,0.06)")}>
+              style={{ border: '1px solid var(--t-border-hi)', color: 'var(--t-cyan)', background: 'rgba(0,229,255,0.06)' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,229,255,0.12)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,229,255,0.06)')}>
               <RefreshCw size={12} /> RETRY NOW
             </button>
           </div>
@@ -205,48 +205,48 @@ export function TabSettings() {
     <div className="space-y-4 max-w-3xl">
       <div className="mb-4">
         <span className="t-label block mb-1">TAB 06 · SETTINGS</span>
-        <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--t-text)", letterSpacing: "-0.02em" }}>Settings</h1>
-        <span className="text-xs font-mono" style={{ color: "var(--t-muted)" }}>Backend configuration, paths, Ollama &amp; research pipeline</span>
+        <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--t-text)', letterSpacing: '-0.02em' }}>Settings</h1>
+        <span className="text-xs font-mono" style={{ color: 'var(--t-muted)' }}>Backend configuration, paths, Ollama &amp; research pipeline</span>
       </div>
 
       {/* Connection banner */}
       <div className="t-card p-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2" style={{ background: backendConnected ? "var(--t-green)" : "var(--t-red)", boxShadow: backendConnected ? "0 0 8px var(--t-green)" : "0 0 8px var(--t-red)" }} />
-            <span className="text-xs font-mono font-semibold" style={{ color: backendConnected ? "var(--t-green)" : "var(--t-red)" }}>{backendStatus}</span>
+            <span className="w-2 h-2" style={{ background: backendConnected ? 'var(--t-green)' : 'var(--t-red)', boxShadow: backendConnected ? '0 0 8px var(--t-green)' : '0 0 8px var(--t-red)' }} />
+            <span className="text-xs font-mono font-semibold" style={{ color: backendConnected ? 'var(--t-green)' : 'var(--t-red)' }}>{backendStatus}</span>
           </div>
-          <span className="text-[10px] font-mono" style={{ color: "var(--t-muted)" }}>Backend API</span>
+          <span className="text-[10px] font-mono" style={{ color: 'var(--t-muted)' }}>Backend API</span>
         </div>
         <button onClick={checkHealth}
           className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-mono transition-all"
-          style={{ border: "1px solid var(--t-border)", color: "var(--t-label)", background: "transparent" }}
-          onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--t-border-hi)")}
-          onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--t-border)")}>
+          style={{ border: '1px solid var(--t-border)', color: 'var(--t-label)', background: 'transparent' }}
+          onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--t-border-hi)')}
+          onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--t-border)')}>
           <Activity size={11} /> REFRESH
         </button>
       </div>
 
       {error && !retrying && (
-        <div className="p-3 flex items-start gap-2" style={{ background: "rgba(255,59,92,0.08)", border: "1px solid rgba(255,59,92,0.35)" }}>
-          <AlertCircle size={14} style={{ color: "var(--t-red)", flexShrink: 0, marginTop: 1 }} />
-          <span className="text-xs font-mono flex-1" style={{ color: "var(--t-red)" }}>{error}</span>
+        <div className="p-3 flex items-start gap-2" style={{ background: 'rgba(255,59,92,0.08)', border: '1px solid rgba(255,59,92,0.35)' }}>
+          <AlertCircle size={14} style={{ color: 'var(--t-red)', flexShrink: 0, marginTop: 1 }} />
+          <span className="text-xs font-mono flex-1" style={{ color: 'var(--t-red)' }}>{error}</span>
         </div>
       )}
 
       <Panel label="APPEARANCE">
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-xs font-mono" style={{ color: "var(--t-text)" }}>Theme</span>
-            <span className="text-[11px] font-mono block" style={{ color: "var(--t-muted)" }}>Toggle dark / light mode</span>
+            <span className="text-xs font-mono" style={{ color: 'var(--t-text)' }}>Theme</span>
+            <span className="text-[11px] font-mono block" style={{ color: 'var(--t-muted)' }}>Toggle dark / light mode</span>
           </div>
           <button onClick={toggleDarkMode}
             className="flex items-center gap-2 px-3 py-1.5 text-xs font-mono transition-all"
-            style={{ border: "1px solid var(--t-border)", color: "var(--t-label)", background: "transparent" }}
-            onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--t-border-hi)")}
-            onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--t-border)")}>
+            style={{ border: '1px solid var(--t-border)', color: 'var(--t-label)', background: 'transparent' }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--t-border-hi)')}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--t-border)')}>
             {darkMode ? <Moon size={12} /> : <Sun size={12} />}
-            {darkMode ? "DARK" : "LIGHT"}
+            {darkMode ? 'DARK' : 'LIGHT'}
           </button>
         </div>
       </Panel>
@@ -268,13 +268,13 @@ export function TabSettings() {
 
       {/* ── Research Data Zones ───────────────────────────────────────── */}
       <Panel label="RESEARCH DATA ZONES">
-        <div className="mb-2 text-[11px] font-mono" style={{ color: "var(--t-muted)" }}>
+        <div className="mb-2 text-[11px] font-mono" style={{ color: 'var(--t-muted)' }}>
           Data is split into three locked zones — AI never touches Confirmation or Unseen data.
         </div>
         <div className="grid grid-cols-1 gap-3">
           {/* Development zone */}
-          <div className="p-3" style={{ background: "rgba(0,229,255,0.03)", border: "1px solid var(--t-border)" }}>
-            <span className="t-label block mb-2" style={{ color: "var(--t-cyan)" }}>DEVELOPMENT</span>
+          <div className="p-3" style={{ background: 'rgba(0,229,255,0.03)', border: '1px solid var(--t-border)' }}>
+            <span className="t-label block mb-2" style={{ color: 'var(--t-cyan)' }}>DEVELOPMENT</span>
             <div className="grid grid-cols-2 gap-3">
               <Field label="START DATE" hint="YYYY-MM-DD">
                 <TInput value={fmtDate(settings.research_development_start)} onChange={v => patch({ research_development_start: unfmtDate(v) })} placeholder="2024-06-01" />
@@ -283,13 +283,13 @@ export function TabSettings() {
                 <TInput value={fmtDate(settings.research_development_end)} onChange={v => patch({ research_development_end: unfmtDate(v) })} placeholder="2025-09-30" />
               </Field>
             </div>
-            <div className="text-[10px] font-mono mt-1.5" style={{ color: "var(--t-muted)" }}>
+            <div className="text-[10px] font-mono mt-1.5" style={{ color: 'var(--t-muted)' }}>
               Used for Pair Discovery · Hyperopt · AI Research Loop
             </div>
           </div>
           {/* Confirmation zone */}
-          <div className="p-3" style={{ background: "rgba(255,184,0,0.03)", border: "1px solid var(--t-border)" }}>
-            <span className="t-label block mb-2" style={{ color: "var(--t-yellow)" }}>CONFIRMATION</span>
+          <div className="p-3" style={{ background: 'rgba(255,184,0,0.03)', border: '1px solid var(--t-border)' }}>
+            <span className="t-label block mb-2" style={{ color: 'var(--t-yellow)' }}>CONFIRMATION</span>
             <div className="grid grid-cols-2 gap-3">
               <Field label="START DATE" hint="YYYY-MM-DD">
                 <TInput value={fmtDate(settings.research_confirmation_start)} onChange={v => patch({ research_confirmation_start: unfmtDate(v) })} placeholder="2025-10-01" />
@@ -298,19 +298,19 @@ export function TabSettings() {
                 <TInput value={fmtDate(settings.research_confirmation_end)} onChange={v => patch({ research_confirmation_end: unfmtDate(v) })} placeholder="2025-12-31" />
               </Field>
             </div>
-            <div className="text-[10px] font-mono mt-1.5" style={{ color: "var(--t-muted)" }}>
+            <div className="text-[10px] font-mono mt-1.5" style={{ color: 'var(--t-muted)' }}>
               One final check after Sensitivity · Never used for tuning
             </div>
           </div>
           {/* Final Unseen zone */}
-          <div className="p-3" style={{ background: "rgba(255,59,92,0.03)", border: "1px solid var(--t-border)" }}>
-            <span className="t-label block mb-2" style={{ color: "var(--t-red)" }}>FINAL UNSEEN</span>
+          <div className="p-3" style={{ background: 'rgba(255,59,92,0.03)', border: '1px solid var(--t-border)' }}>
+            <span className="t-label block mb-2" style={{ color: 'var(--t-red)' }}>FINAL UNSEEN</span>
             <div className="grid grid-cols-1 gap-3">
               <Field label="START DATE" hint="YYYY-MM-DD — end is always today">
                 <TInput value={fmtDate(settings.research_unseen_start)} onChange={v => patch({ research_unseen_start: unfmtDate(v) })} placeholder="2026-01-01" />
               </Field>
             </div>
-            <div className="text-[10px] font-mono mt-1.5" style={{ color: "var(--t-muted)" }}>
+            <div className="text-[10px] font-mono mt-1.5" style={{ color: 'var(--t-muted)' }}>
               Locked completely · Never shown to AI · Never used by Hyperopt · Verdict only
             </div>
           </div>
@@ -329,8 +329,8 @@ export function TabSettings() {
         </div>
         <Field label="SMOKE TEST PAIRS" hint="4 fixed pairs used in the initial smoke test.">
           <TInput
-            value={settings.research_smoke_pairs.join(", ")}
-            onChange={v => patch({ research_smoke_pairs: v.split(",").map(s => s.trim().toUpperCase()).filter(s => s.includes("/")) })}
+            value={settings.research_smoke_pairs.join(', ')}
+            onChange={v => patch({ research_smoke_pairs: v.split(',').map(s => s.trim().toUpperCase()).filter(s => s.includes('/')) })}
             placeholder="BTC/USDT, ETH/USDT, BNB/USDT, SOL/USDT"
           />
         </Field>
@@ -398,7 +398,7 @@ export function TabSettings() {
             <TNumber value={settings.hyperopt_workers} onChange={v => patch({ hyperopt_workers: v })} min={1} />
           </Field>
           <Field label="RETRY DELAYS (comma-separated seconds)">
-            <TInput value={settings.ollama_retry_delays.join(", ")} onChange={v => patch({ ollama_retry_delays: v.split(",").map(x => parseInt(x.trim(), 10) || 0).filter(Boolean) })} />
+            <TInput value={settings.ollama_retry_delays.join(', ')} onChange={v => patch({ ollama_retry_delays: v.split(',').map(x => parseInt(x.trim(), 10) || 0).filter(Boolean) })} />
           </Field>
           <Field label="CIRCUIT BREAKER THRESHOLD">
             <TNumber value={settings.ollama_circuit_breaker_threshold} onChange={v => patch({ ollama_circuit_breaker_threshold: v })} />
@@ -417,18 +417,18 @@ export function TabSettings() {
           </Field>
         </div>
         <div className="flex items-center justify-between pt-2">
-          <span className="text-xs font-mono" style={{ color: "var(--t-text)" }}>Enable Ollama health check</span>
+          <span className="text-xs font-mono" style={{ color: 'var(--t-text)' }}>Enable Ollama health check</span>
           <TSwitch checked={settings.ollama_enable_health_check} onChange={v => patch({ ollama_enable_health_check: v })} />
         </div>
       </Panel>
 
       <Panel label="WORKFLOW FLAGS">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-mono" style={{ color: "var(--t-text)" }}>Self-healing (Ollama auto-retry)</span>
+          <span className="text-xs font-mono" style={{ color: 'var(--t-text)' }}>Self-healing (Ollama auto-retry)</span>
           <TSwitch checked={settings.ollama_self_healing_enabled} onChange={v => patch({ ollama_self_healing_enabled: v })} />
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-xs font-mono" style={{ color: "var(--t-text)" }}>AI assistant sandbox mode</span>
+          <span className="text-xs font-mono" style={{ color: 'var(--t-text)' }}>AI assistant sandbox mode</span>
           <TSwitch checked={settings.ai_assistant_sandbox_enabled} onChange={v => patch({ ai_assistant_sandbox_enabled: v })} />
         </div>
       </Panel>
@@ -437,31 +437,31 @@ export function TabSettings() {
       <div className="flex items-center gap-3">
         <button onClick={save} disabled={!backendSettingsDirty}
           className="flex items-center gap-2 px-5 py-2.5 text-sm font-mono font-bold transition-all disabled:opacity-40"
-          style={{ background: "rgba(0,229,255,0.08)", border: "1px solid var(--t-border-hi)", color: "var(--t-cyan)" }}
-          onMouseEnter={e => !backendSettingsDirty && (e.currentTarget.style.background = "rgba(0,229,255,0.15)")}
-          onMouseLeave={e => !backendSettingsDirty && (e.currentTarget.style.background = "rgba(0,229,255,0.08)")}>
+          style={{ background: 'rgba(0,229,255,0.08)', border: '1px solid var(--t-border-hi)', color: 'var(--t-cyan)' }}
+          onMouseEnter={e => !backendSettingsDirty && (e.currentTarget.style.background = 'rgba(0,229,255,0.15)')}
+          onMouseLeave={e => !backendSettingsDirty && (e.currentTarget.style.background = 'rgba(0,229,255,0.08)')}>
           {saved ? <Check size={13} /> : backendSettingsLoading ? <Loader2 size={13} className="animate-spin" /> : null}
-          {saved ? "SAVED" : backendSettingsLoading ? "LOADING..." : "SAVE SETTINGS"}
+          {saved ? 'SAVED' : backendSettingsLoading ? 'LOADING...' : 'SAVE SETTINGS'}
         </button>
         <button onClick={() => load(0)}
           className="flex items-center gap-2 px-4 py-2.5 text-sm font-mono transition-all"
-          style={{ border: "1px solid var(--t-border)", color: "var(--t-label)", background: "transparent" }}
-          onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--t-border-hi)")}
-          onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--t-border)")}>
+          style={{ border: '1px solid var(--t-border)', color: 'var(--t-label)', background: 'transparent' }}
+          onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--t-border-hi)')}
+          onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--t-border)')}>
           <RotateCcw size={12} /> RELOAD FROM BACKEND
         </button>
       </div>
 
       {/* Integration guide */}
-      <div className="p-4" style={{ background: "rgba(0,229,255,0.03)", border: "1px solid var(--t-border)" }}>
-        <span className="text-[10px] font-mono font-bold mb-2 block" style={{ color: "var(--t-cyan)" }}>// INTEGRATION NOTES</span>
+      <div className="p-4" style={{ background: 'rgba(0,229,255,0.03)', border: '1px solid var(--t-border)' }}>
+        <span className="text-[10px] font-mono font-bold mb-2 block" style={{ color: 'var(--t-cyan)' }}>{'// INTEGRATION NOTES'}</span>
         {[
-          "Settings are read from /api/settings and persisted with POST /api/settings",
-          "Research data zones are locked — AI never sees Confirmation or Unseen data",
-          "Backend validates paths and reloads services immediately after save",
-          "Ollama temperature 0.1–0.3 produces more reliable structured JSON proposals",
+          'Settings are read from /api/settings and persisted with POST /api/settings',
+          'Research data zones are locked — AI never sees Confirmation or Unseen data',
+          'Backend validates paths and reloads services immediately after save',
+          'Ollama temperature 0.1–0.3 produces more reliable structured JSON proposals',
         ].map((line, i) => (
-          <div key={i} className="text-xs font-mono" style={{ color: "var(--t-muted)" }}>{i + 1}. {line}</div>
+          <div key={i} className="text-xs font-mono" style={{ color: 'var(--t-muted)' }}>{i + 1}. {line}</div>
         ))}
       </div>
     </div>

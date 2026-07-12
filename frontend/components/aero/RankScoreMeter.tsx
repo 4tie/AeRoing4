@@ -1,5 +1,5 @@
-"use client";
-import { useEffect, useRef } from "react";
+'use client';
+import { useEffect, useRef } from 'react';
 
 interface Props { score: number; width?: number; height?: number }
 
@@ -11,8 +11,8 @@ export function RankScoreMeter({ score, width = 80, height = 8 }: Props) {
   useEffect(() => {
     startRef.current = null;
     const DURATION = 700;
-    const color = score >= 60 ? "#00FF88" : score >= 35 ? "#FFB800" : "#FF3B5C";
-    const glow  = score >= 60 ? "rgba(0,255,136,0.5)" : score >= 35 ? "rgba(255,184,0,0.5)" : "rgba(255,59,92,0.5)";
+    const color = score >= 60 ? '#00FF88' : score >= 35 ? '#FFB800' : '#FF3B5C';
+    const glow  = score >= 60 ? 'rgba(0,255,136,0.5)' : score >= 35 ? 'rgba(255,184,0,0.5)' : 'rgba(255,59,92,0.5)';
 
     const draw = (progress: number) => {
       const canvas = canvasRef.current;
@@ -22,11 +22,11 @@ export function RankScoreMeter({ score, width = 80, height = 8 }: Props) {
       canvas.height = height * dpr;
       canvas.style.width  = `${width}px`;
       canvas.style.height = `${height}px`;
-      const ctx = canvas.getContext("2d")!;
+      const ctx = canvas.getContext('2d')!;
       ctx.scale(dpr, dpr);
       ctx.clearRect(0, 0, width, height);
       // Track
-      ctx.fillStyle = "rgba(255,255,255,0.06)";
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
       ctx.fillRect(0, 0, width, height);
       // Fill
       const filled = (score / 100) * progress * width;
@@ -50,5 +50,5 @@ export function RankScoreMeter({ score, width = 80, height = 8 }: Props) {
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [score, width, height]);
 
-  return <canvas ref={canvasRef} style={{ width, height, display: "block" }} />;
+  return <canvas ref={canvasRef} style={{ width, height, display: 'block' }} />;
 }

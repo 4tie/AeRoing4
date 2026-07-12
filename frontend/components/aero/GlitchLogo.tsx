@@ -1,6 +1,6 @@
-"use client";
-import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
+'use client';
+import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 
 // Filled in below
 export function GlitchLogo() {
@@ -26,11 +26,11 @@ export function GlitchLogo() {
   }, []);
 
   return (
-    <div className="flex items-center gap-2 pr-4 shrink-0" style={{ borderRight: "1px solid var(--t-border)" }}>
-      <div className="glitch-icon-wrap" data-glitch={glitch ? "1" : "0"}>
+    <div className="flex items-center gap-2 pr-4 shrink-0" style={{ borderRight: '1px solid var(--t-border)' }}>
+      <div className="glitch-icon-wrap" data-glitch={glitch ? '1' : '0'}>
         <Image src="/logo.png" alt="AeRo" width={16} height={16} className="object-contain" priority />
       </div>
-      <span className="glitch-text" data-text="AeRo" data-glitch={glitch ? "1" : "0"}>
+      <span className="glitch-text" data-text="AeRo" data-glitch={glitch ? '1' : '0'}>
         Ae<span>Ro</span>
       </span>
     </div>

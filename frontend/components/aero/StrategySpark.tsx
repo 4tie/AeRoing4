@@ -1,5 +1,5 @@
-"use client";
-import { useEffect, useRef, useState } from "react";
+'use client';
+import { useEffect, useRef, useState } from 'react';
 
 // Deterministic pseudo-random equity curve seeded by strategy name
 function seededCurve(name: string, points = 20): number[] {
@@ -24,7 +24,7 @@ export function StrategySpark({ name, selected, width = 48, height = 22 }: Props
   const maxV = Math.max(...curve);
   const range = maxV - minV || 1;
   const isPositive = curve[curve.length - 1] >= curve[0];
-  const color = selected ? "#00E5FF" : isPositive ? "#00FF88" : "#FF3B5C";
+  const color = selected ? '#00E5FF' : isPositive ? '#00FF88' : '#FF3B5C';
   const dim = selected ? 1 : 0.55;
 
   // Animate draw-on when first mounted
@@ -40,13 +40,13 @@ export function StrategySpark({ name, selected, width = 48, height = 22 }: Props
     };
     rafRef.current = requestAnimationFrame(go);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [name]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
     const dpr = window.devicePixelRatio || 1;
     canvas.width = width * dpr;
@@ -91,7 +91,7 @@ export function StrategySpark({ name, selected, width = 48, height = 22 }: Props
     });
     ctx.strokeStyle = color;
     ctx.lineWidth = 1.5;
-    ctx.lineJoin = "round";
+    ctx.lineJoin = 'round';
     ctx.globalAlpha = dim;
     ctx.stroke();
 
@@ -107,5 +107,5 @@ export function StrategySpark({ name, selected, width = 48, height = 22 }: Props
     }
   }, [animT, color, dim, curve, minV, range, width, height]);
 
-  return <canvas ref={canvasRef} style={{ width, height, display: "block" }} />;
+  return <canvas ref={canvasRef} style={{ width, height, display: 'block' }} />;
 }

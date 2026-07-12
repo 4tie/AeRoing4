@@ -1,10 +1,10 @@
-"use client";
-import { useEffect, useRef, useState, useCallback } from "react";
+'use client';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 interface Point { time: string; value: number }
 interface Props  { data: Point[] }
 
-const CYAN  = "#00E5FF";
+const CYAN  = '#00E5FF';
 const PAD   = { top: 12, right: 8, bottom: 28, left: 42 };
 const DURATION_MS = 1400; // line draw duration
 
@@ -35,7 +35,7 @@ export function EquityChart({ data }: Props) {
     canvas.height = h * dpr;
     canvas.style.width  = `${w}px`;
     canvas.style.height = `${h}px`;
-    const ctx = canvas.getContext("2d")!;
+    const ctx = canvas.getContext('2d')!;
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, w, h);
 
@@ -50,7 +50,7 @@ export function EquityChart({ data }: Props) {
     const py = (v: number) => PAD.top  + innerH - ((v - minV) / range) * innerH;
 
     // ── Grid lines ────────────────────────────────────────────
-    ctx.strokeStyle = "rgba(255,255,255,0.04)";
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
     ctx.lineWidth   = 1;
     for (let g = 0; g <= 4; g++) {
       const y = PAD.top + (g / 4) * innerH;
@@ -58,9 +58,9 @@ export function EquityChart({ data }: Props) {
     }
 
     // ── Y-axis labels ─────────────────────────────────────────
-    ctx.fillStyle  = "#444";
-    ctx.font       = `10px monospace`;
-    ctx.textAlign  = "right";
+    ctx.fillStyle  = '#444';
+    ctx.font       = '10px monospace';
+    ctx.textAlign  = 'right';
     for (let g = 0; g <= 4; g++) {
       const v = minV + ((4 - g) / 4) * range;
       const y = PAD.top + (g / 4) * innerH;
@@ -68,8 +68,8 @@ export function EquityChart({ data }: Props) {
     }
 
     // ── X-axis labels (sparse) ────────────────────────────────
-    ctx.textAlign  = "center";
-    ctx.fillStyle  = "#444";
+    ctx.textAlign  = 'center';
+    ctx.fillStyle  = '#444';
     const step = Math.floor(data.length / 5);
     for (let i = 0; i < data.length; i += step) {
       ctx.fillText(data[i].time, px(i), h - 6);
@@ -81,9 +81,9 @@ export function EquityChart({ data }: Props) {
 
     // ── Filled area (clip to drawn path + baseline) ───────────
     const grad = ctx.createLinearGradient(0, PAD.top, 0, PAD.top + innerH);
-    grad.addColorStop(0,   "rgba(0,229,255,0.22)");
-    grad.addColorStop(0.6, "rgba(0,229,255,0.06)");
-    grad.addColorStop(1,   "rgba(0,229,255,0)");
+    grad.addColorStop(0,   'rgba(0,229,255,0.22)');
+    grad.addColorStop(0.6, 'rgba(0,229,255,0.06)');
+    grad.addColorStop(1,   'rgba(0,229,255,0)');
 
     ctx.beginPath();
     pts.forEach((p, i) => {
@@ -104,8 +104,8 @@ export function EquityChart({ data }: Props) {
     });
     ctx.strokeStyle = CYAN;
     ctx.lineWidth   = 1.8;
-    ctx.lineJoin    = "round";
-    ctx.shadowColor = "rgba(0,229,255,0.55)";
+    ctx.lineJoin    = 'round';
+    ctx.shadowColor = 'rgba(0,229,255,0.55)';
     ctx.shadowBlur  = 6;
     ctx.stroke();
     ctx.shadowBlur  = 0;
@@ -119,14 +119,14 @@ export function EquityChart({ data }: Props) {
       // outer ring
       ctx.beginPath();
       ctx.arc(tx, ty, 5, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(0,229,255,0.18)";
+      ctx.fillStyle = 'rgba(0,229,255,0.18)';
       ctx.fill();
 
       // inner dot
       ctx.beginPath();
       ctx.arc(tx, ty, 2.5, 0, Math.PI * 2);
       ctx.fillStyle = CYAN;
-      ctx.shadowColor = "rgba(0,229,255,0.9)";
+      ctx.shadowColor = 'rgba(0,229,255,0.9)';
       ctx.shadowBlur  = 8;
       ctx.fill();
       ctx.shadowBlur  = 0;
@@ -187,12 +187,12 @@ export function EquityChart({ data }: Props) {
           style={{
             left: tooltip.x + 10,
             top:  Math.max(4, tooltip.y - 36),
-            background: "#0d0d0d",
-            border: "1px solid rgba(0,229,255,0.35)",
+            background: '#0d0d0d',
+            border: '1px solid rgba(0,229,255,0.35)',
             color: CYAN,
-            whiteSpace: "nowrap",
+            whiteSpace: 'nowrap',
           }}>
-          <div style={{ color: "#555" }}>{tooltip.point.time}</div>
+          <div style={{ color: '#555' }}>{tooltip.point.time}</div>
           <div style={{ color: CYAN }}>${tooltip.point.value}</div>
         </div>
       )}

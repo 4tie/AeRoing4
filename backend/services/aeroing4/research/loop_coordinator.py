@@ -461,6 +461,21 @@ class ResearchLoopCoordinator:
             run_id=run_id, strategy_name=strategy_name, champion=champion,
             exact_change=exact_change,
         )
+        self.experiment_store.record_artifacts(
+            run_id,
+            experiment_id,
+            {
+                "official_source_strategy_path": artifact.strategy_artifact.original_source_path,
+                "official_source_strategy_hash": artifact.strategy_artifact.original_source_hash,
+                "official_source_json_path": artifact.parameter_artifact.original_source_path,
+                "official_source_json_hash": artifact.parameter_artifact.original_source_hash,
+                "candidate_dir": artifact.candidate_dir,
+                "candidate_strategy": str(self.runs_root / artifact.strategy_artifact.artifact_path),
+                "candidate_sidecar": str(self.runs_root / artifact.parameter_artifact.artifact_path),
+                "candidate_strategy_hash": artifact.strategy_artifact.artifact_hash,
+                "candidate_sidecar_hash": artifact.parameter_artifact.artifact_hash,
+            },
+        )
         self.experiment_store.record_execution_reference(
             run_id, experiment_id,
             underlying_execution_id=artifact.candidate_dir,
@@ -484,6 +499,28 @@ class ResearchLoopCoordinator:
                 max_open_trades=self.max_open_trades,
                 config_file=self.config_file,
             )
+            execution_artifacts = dict(exec_result.artifacts)
+            if exec_result.underlying_execution_id:
+                execution_artifacts["freqtrade_execution_id"] = exec_result.underlying_execution_id
+                try:
+                    execution_artifacts["underlying_run_dir"] = str(
+                        self.executor.backtest_runner.run_repository.find_run_dir(
+                            exec_result.underlying_execution_id
+                        )
+                    )
+                except Exception:
+                    pass
+                self.experiment_store.record_execution_reference(
+                    run_id,
+                    experiment_id,
+                    underlying_execution_id=exec_result.underlying_execution_id,
+                )
+            if execution_artifacts:
+                self.experiment_store.record_artifacts(
+                    run_id,
+                    experiment_id,
+                    execution_artifacts,
+                )
         except Exception as exc:  # noqa: BLE001 - surface as system failure, no decision
             self.experiment_store.record_decision(
                 run_id, experiment_id, ExperimentDecision.INCONCLUSIVE,

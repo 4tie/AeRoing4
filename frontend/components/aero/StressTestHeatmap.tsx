@@ -1,9 +1,9 @@
-"use client";
-import { useEffect, useState, useRef } from "react";
+'use client';
+import { useEffect, useState, useRef } from 'react';
 
 // Scenarios × Metrics grid
-const SCENARIOS = ["Bear 2022", "Flash Jun'23", "Bull 2021", "Flat 2023", "Crash Mar'20"];
-const METRICS   = ["Profit %", "Drawdown", "Win Rate", "Sharpe", "Recovery"];
+const SCENARIOS = ['Bear 2022', "Flash Jun'23", 'Bull 2021', 'Flat 2023', "Crash Mar'20"];
+const METRICS   = ['Profit %', 'Drawdown', 'Win Rate', 'Sharpe', 'Recovery'];
 
 // Final target values — positive = green, negative = red
 const TARGET: number[][] = [
@@ -24,7 +24,7 @@ function cellColor(val: number, animated: number): string {
 }
 
 function textColor(val: number) {
-  return val >= 0 ? "#00FF88" : "#FF3B5C";
+  return val >= 0 ? '#00FF88' : '#FF3B5C';
 }
 
 export function StressTestHeatmap({ active }: { active: boolean }) {
@@ -74,8 +74,8 @@ export function StressTestHeatmap({ active }: { active: boolean }) {
       <div className="flex items-center gap-2 mb-1">
         <span className="t-label">STRESS TEST MATRIX</span>
         {active && (
-          <span className="text-[10px] font-mono animate-pulse flex items-center gap-1" style={{ color: "var(--t-cyan)" }}>
-            <span className="w-1.5 h-1.5 inline-block" style={{ background: "var(--t-cyan)" }} />
+          <span className="text-[10px] font-mono animate-pulse flex items-center gap-1" style={{ color: 'var(--t-cyan)' }}>
+            <span className="w-1.5 h-1.5 inline-block" style={{ background: 'var(--t-cyan)' }} />
             RUNNING
           </span>
         )}
@@ -85,16 +85,16 @@ export function StressTestHeatmap({ active }: { active: boolean }) {
         <table className="w-full text-xs border-collapse font-mono">
           <thead>
             <tr>
-              <th className="text-left pr-3 pb-2 font-medium w-28" style={{ color: "rgba(255,255,255,0.15)" }}>Scenario</th>
+              <th className="text-left pr-3 pb-2 font-medium w-28" style={{ color: 'rgba(255,255,255,0.15)' }}>Scenario</th>
               {METRICS.map((m) => (
-                <th key={m} className="pb-2 text-center font-medium px-1 min-w-[72px]" style={{ color: "var(--t-muted)" }}>{m}</th>
+                <th key={m} className="pb-2 text-center font-medium px-1 min-w-[72px]" style={{ color: 'var(--t-muted)' }}>{m}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {TARGET.map((row, ri) => (
               <tr key={ri}>
-                <td className="pr-3 py-1 font-mono whitespace-nowrap" style={{ color: "var(--t-muted)" }}>{SCENARIOS[ri]}</td>
+                <td className="pr-3 py-1 font-mono whitespace-nowrap" style={{ color: 'var(--t-muted)' }}>{SCENARIOS[ri]}</td>
                 {row.map((val, ci) => {
                   const t = animT[ri]?.[ci] ?? 0;
                   const displayed = val * t;
@@ -104,14 +104,14 @@ export function StressTestHeatmap({ active }: { active: boolean }) {
                         className="rounded-md px-1.5 py-1.5 text-center font-mono font-semibold transition-all duration-75 min-w-[64px]"
                         style={{
                           background: cellColor(val, t),
-                          color: t > 0.1 ? textColor(val) : "#334155",
+                          color: t > 0.1 ? textColor(val) : '#334155',
                           transform: `scale(${0.92 + t * 0.08})`,
                           opacity: 0.3 + t * 0.7,
                         }}
                       >
                         {t > 0.05
-                          ? `${val >= 0 ? "+" : ""}${displayed.toFixed(1)}${METRICS[ci].includes("%") || ci === 0 || ci === 4 ? "%" : ci === 1 ? "%" : ""}`
-                          : "···"}
+                          ? `${val >= 0 ? '+' : ''}${displayed.toFixed(1)}${METRICS[ci].includes('%') || ci === 0 || ci === 4 ? '%' : ci === 1 ? '%' : ''}`
+                          : '···'}
                       </div>
                     </td>
                   );
@@ -124,8 +124,8 @@ export function StressTestHeatmap({ active }: { active: boolean }) {
 
       {/* Legend */}
       <div className="flex items-center gap-4 pt-1">
-        {[["rgba(0,255,136,0.4)","Positive"],["rgba(255,59,92,0.4)","Negative"],["rgba(255,59,92,0.7)","Critical (<-15%)"]].map(([bg, label]) => (
-          <div key={label} className="flex items-center gap-1.5 text-[10px] font-mono" style={{ color: "var(--t-muted)" }}>
+        {[['rgba(0,255,136,0.4)','Positive'],['rgba(255,59,92,0.4)','Negative'],['rgba(255,59,92,0.7)','Critical (<-15%)']].map(([bg, label]) => (
+          <div key={label} className="flex items-center gap-1.5 text-[10px] font-mono" style={{ color: 'var(--t-muted)' }}>
             <span className="w-2.5 h-2.5 inline-block" style={{ background: bg }} />
             {label}
           </div>
