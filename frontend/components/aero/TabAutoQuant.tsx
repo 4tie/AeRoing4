@@ -1,9 +1,9 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAeroStore } from '@/lib/aeroStore';
-import { Play, Loader2, BookOpen } from 'lucide-react';
+import { Play, Loader2, BookOpen, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import { AeRoing4Panel } from '@/components/aero/AeRoing4Panel';
-import { getStrategyLibraryScan, type StrategyLibraryItem } from '@/lib/api';
+import { getStrategyLibraryScan, startAeRoing4Run, getAeRoing4Run, type StrategyLibraryItem } from '@/lib/api';
 
 const TIMEFRAMES = ['1m', '5m', '15m', '1h', '4h', '1d'];
 
@@ -22,13 +22,20 @@ const ALL_PAIRS = [
 ];
 
 export function TabAutoQuant() {
-  const { strategies, aering4StrategyName, setAering4StrategyName, setActiveTab, aering4Running } = useAeroStore();
+  const { strategies, aering4StrategyName, setAering4StrategyName, setActiveTab, aering4Running, setAering4Run, setAering4Running } = useAeroStore();
   const [selectedStrategy, setSelectedStrategy] = useState<StrategyLibraryItem | null>(null);
   const [timeframe, setTimeframe] = useState('5m');
   const [timerangePreset, setTimerangePreset] = useState('20230101-20240101');
   const [timerangeCustom, setTimerangeCustom] = useState('');
   const [maxOpenTrades, setMaxOpenTrades] = useState(5);
   const [pairs, setPairs] = useState(['BTC/USDT','ETH/USDT']);
+  
+  // DEVELOP run state
+  const [isStartingDevelopRun, setIsStartingDevelopRun] = useState(false);
+  const [developRunError, setDevelopRunError] = useState<string | null>(null);
+  const [developRunDebug, setDevelopRunDebug] = useState<Record<string, unknown> | null>(null);
+  const [showDebug, setShowDebug] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load selected strategy details
   useEffect(() => {
@@ -44,6 +51,118 @@ export function TabAutoQuant() {
   const togglePair = (p: string) => setPairs(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
 
   const strategyNames = strategies.map(s => s.name);
+
+  // Get actual timerange value (preset or custom)
+  const getTimerange = () => {
+    if (timerangePreset) return timerangePreset;
+    return timerangeCustom || '20240101-20240108';
+  };
+
+  // Handle RUN DEVELOP TEST button click
+  const handleRunDevelopTest = async () => {
+    // Validation
+    if (!aering4StrategyName) {
+      setDevelopRunError('Please select a strategy');
+      return;
+    }
+    if (pairs.length === 0) {
+      setDevelopRunError('Please select at least one pair');
+      return;
+    }
+    if (!timeframe) {
+      setDevelopRunError('Please select a timeframe');
+      return;
+    }
+    const timerange = getTimerange();
+    if (!timerange) {
+      setDevelopRunError('Please select a timerange');
+      return;
+    }
+    if (maxOpenTrades < 1) {
+      setDevelopRunError('Max open trades must be at least 1');
+      return;
+    }
+
+    // Prevent duplicate clicks
+    if (isStartingDevelopRun || aering4Running) return;
+
+    setIsStartingDevelopRun(true);
+    setDevelopRunError(null);
+    setDevelopRunDebug({
+      endpoint: '/api/aeroing4/runs',
+      method: 'POST',
+      strategy: aering4StrategyName,
+      timeframe,
+      timerange,
+      pairs,
+      maxOpenTrades,
+      mode: 'DEVELOP',
+      enable_pair_discovery: false,
+    });
+
+    try {
+      // Start DEVELOP run (no pair discovery)
+      const initial = await startAeRoing4Run({
+        strategy_name: aering4StrategyName,
+        timeframe,
+        smoke_timerange: timerange,
+        smoke_pairs: pairs,
+        enable_pair_discovery: false, // Key difference: no discovery
+        discovery_pairs: undefined,
+        discovery_timerange: undefined,
+      });
+
+      setAering4Run(initial);
+      setAering4Running(true);
+      const runId = initial._runId;
+
+      setDevelopRunDebug(prev => ({
+        ...prev,
+        run_id: runId,
+        status: 'started',
+      }));
+
+      // Poll for run status
+      const poll = async () => {
+        try {
+          const updated = await getAeRoing4Run(runId);
+          setAering4Run(updated);
+          setDevelopRunDebug(prev => ({
+            ...prev,
+            current_status: updated.status,
+            outcome: updated.outcome,
+          }));
+
+          if (updated.status === 'running' || updated.status === 'pending') {
+            pollRef.current = setTimeout(poll, 2000);
+          } else {
+            setAering4Running(false);
+            setIsStartingDevelopRun(false);
+          }
+        } catch (e) {
+          setAering4Running(false);
+          setIsStartingDevelopRun(false);
+          setDevelopRunError(e instanceof Error ? e.message : 'Polling failed');
+        }
+      };
+
+      pollRef.current = setTimeout(poll, 2000);
+    } catch (e) {
+      setIsStartingDevelopRun(false);
+      setDevelopRunError(e instanceof Error ? e.message : 'Failed to start run');
+      setDevelopRunDebug(prev => ({
+        ...prev,
+        error: e instanceof Error ? e.message : 'Unknown error',
+      }));
+    }
+  };
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearTimeout(pollRef.current);
+    };
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -197,16 +316,26 @@ export function TabAutoQuant() {
       {/* Step 3: Run */}
       <div className="flex items-center gap-3">
         <button 
-          disabled={!aering4StrategyName || pairs.length === 0 || aering4Running}
+          disabled={!aering4StrategyName || pairs.length === 0 || aering4Running || isStartingDevelopRun}
+          onClick={handleRunDevelopTest}
           className="flex items-center gap-2 px-5 py-2.5 text-sm font-mono font-bold transition-all disabled:opacity-40"
           style={{ background: 'rgba(0,229,255,0.08)', border: '1px solid var(--t-border-hi)', color: 'var(--t-cyan)' }}
-          onMouseEnter={e => !aering4Running && (e.currentTarget.style.background = 'rgba(0,229,255,0.15)')}
-          onMouseLeave={e => !aering4Running && (e.currentTarget.style.background = 'rgba(0,229,255,0.08)')}
+          onMouseEnter={e => !aering4Running && !isStartingDevelopRun && (e.currentTarget.style.background = 'rgba(0,229,255,0.15)')}
+          onMouseLeave={e => !aering4Running && !isStartingDevelopRun && (e.currentTarget.style.background = 'rgba(0,229,255,0.08)')}
         >
-          {aering4Running ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
-          {aering4Running ? 'RUNNING...' : 'RUN DEVELOP TEST'}
+          {isStartingDevelopRun || aering4Running ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
+          {isStartingDevelopRun ? 'STARTING...' : aering4Running ? 'RUNNING...' : 'RUN DEVELOP TEST'}
         </button>
         <button 
+          onClick={() => {
+            setPairs(['BTC/USDT','ETH/USDT']);
+            setTimeframe('5m');
+            setTimerangePreset('20230101-20240101');
+            setTimerangeCustom('');
+            setMaxOpenTrades(5);
+            setDevelopRunError(null);
+            setDevelopRunDebug(null);
+          }}
           className="flex items-center gap-2 px-4 py-2.5 text-sm font-mono transition-all"
           style={{ border: '1px solid var(--t-border)', color: 'var(--t-label)', background: 'transparent' }}
           onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--t-border-hi)')}
@@ -215,6 +344,45 @@ export function TabAutoQuant() {
           RESET
         </button>
       </div>
+
+      {/* Error message */}
+      {developRunError && (
+        <div className="px-4 py-2 text-xs font-mono flex items-center gap-2" style={{ background: 'rgba(255,59,92,0.06)', border: '1px solid rgba(255,59,92,0.3)', color: 'var(--t-red)' }}>
+          <AlertCircle size={12} />
+          {developRunError}
+        </div>
+      )}
+
+      {/* Debug details */}
+      {developRunDebug && (
+        <div className="t-card">
+          <button 
+            onClick={() => setShowDebug(!showDebug)}
+            className="w-full px-3 py-2 flex items-center justify-between text-xs font-mono"
+            style={{ color: 'var(--t-muted)' }}
+          >
+            <span>DEBUG DETAILS</span>
+            {showDebug ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          </button>
+          {showDebug && (
+            <div className="px-3 pb-3 text-[10px] font-mono space-y-1" style={{ color: 'var(--t-muted)' }}>
+              <div>Endpoint: {developRunDebug.endpoint as string}</div>
+              <div>Method: {developRunDebug.method as string}</div>
+              <div>Strategy: {developRunDebug.strategy as string}</div>
+              <div>Timeframe: {developRunDebug.timeframe as string}</div>
+              <div>Timerange: {developRunDebug.timerange as string}</div>
+              <div>Pairs: {(developRunDebug.pairs as string[]).join(', ')}</div>
+              <div>Max Open Trades: {developRunDebug.maxOpenTrades as number}</div>
+              <div>Mode: {developRunDebug.mode as string}</div>
+              <div>Pair Discovery: {developRunDebug.enable_pair_discovery ? 'enabled' : 'disabled'}</div>
+              {developRunDebug.run_id && <div>Run ID: {String(developRunDebug.run_id)}</div>}
+              {developRunDebug.current_status && <div>Status: {String(developRunDebug.current_status)}</div>}
+              {developRunDebug.outcome && <div>Outcome: {String(developRunDebug.outcome)}</div>}
+              {developRunDebug.error && <div style={{ color: 'var(--t-red)' }}>Error: {String(developRunDebug.error)}</div>}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Step 4: Current Flow - AeRoing4 Panel */}
       <AeRoing4Panel />

@@ -1,5 +1,5 @@
 {
-  "freqtrade_executable_path": "freqtrade.exe",
+  "freqtrade_executable_path": "4t\\Scripts\\freqtrade.exe",
   "strategies_directory_path": "user_data\\strategies",
   "user_data_directory_path": "user_data",
   "default_config_file_path": "user_data\\config.json",

@@ -1,0 +1,50 @@
+{
+  "run_id": "5ec78f34-ab1d-4c43-9472-73ad3b0480d3",
+  "strategy_name": "MultiMa",
+  "timeframe": "5m",
+  "smoke_pairs": [
+    "BTC/USDT"
+  ],
+  "smoke_timerange": "20240101-20240108",
+  "status": "failed",
+  "current_step": "validation",
+  "steps": {
+    "validation": {
+      "step_name": "validation",
+      "status": "failed",
+      "started_at": "2026-07-12T07:28:18.673295Z",
+      "completed_at": "2026-07-12T07:28:18.679547Z",
+      "error": "Freqtrade validation unavailable: freqtrade not found at 'py -m freqtrade'.",
+      "data": {
+        "valid": false,
+        "errors": [
+          "Freqtrade validation unavailable"
+        ],
+        "warnings": [
+          "freqtrade not found at 'py -m freqtrade'."
+        ],
+        "output_summary": "✓ Python syntax OK\n⚠ freqtrade not found — skipping structural check."
+      }
+    }
+  },
+  "error": "Freqtrade validation unavailable: freqtrade not found at 'py -m freqtrade'.",
+  "created_at": "2026-07-12T07:28:18.658561Z",
+  "updated_at": "2026-07-12T07:28:18.679935Z",
+  "completed_at": "2026-07-12T07:28:18.679935Z",
+  "enable_pair_discovery": false,
+  "discovery_pairs": null,
+  "discovery_timerange": null,
+  "confirmation_timerange": null,
+  "final_unseen_timerange": null,
+  "research_protocol": null,
+  "pair_selection_mode": null,
+  "target_pair_count": 4,
+  "manually_selected_pairs": null,
+  "exchange": "binance",
+  "trading_mode": "spot",
+  "max_open_trades": 4,
+  "dry_run_wallet": 1000.0,
+  "config_file": "config.json",
+  "enable_research_loop": false,
+  "enable_focused_hyperopt": false
+}
